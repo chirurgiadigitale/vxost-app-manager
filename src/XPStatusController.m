@@ -8,14 +8,14 @@
 #import "XPPaths.h"
 #import "XPService.h"
 #import "XPServiceMonitor.h"
-#import "XPTaskRunner.h"
+#import "XPActions.h"
 #import "XPLogWindowController.h"
+#import "XPMainWindowController.h"
 
 @interface XPStatusController () <XPPanelViewDelegate, NSPopoverDelegate>
 @property (nonatomic, strong) NSStatusItem *statusItem;
 @property (nonatomic, strong) NSPopover *popover;
 @property (nonatomic, strong) XPPanelView *panel;
-@property (nonatomic, strong) id eventMonitor;
 @end
 
 
@@ -27,7 +27,7 @@
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     self.statusItem.button.target = self;
     self.statusItem.button.action = @selector(togglePopover:);
-    self.statusItem.button.toolTip = @"XAMPP Manager";
+    self.statusItem.button.toolTip = @"XAMPP";
     [self.statusItem.button sendActionOn:(NSEventMaskLeftMouseUp | NSEventMaskRightMouseUp)];
 
     self.panel = [[XPPanelView alloc] initWithServices:[XPServiceMonitor shared].services];
@@ -46,6 +46,10 @@
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(servicesDidChange:)
                                                  name:XPServicesDidChangeNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(actionDidReport:)
+                                                 name:XPActionMessageNotification
                                                object:nil];
 
     [self updateStatusIcon];
@@ -125,11 +129,17 @@
 }
 
 - (void)popoverDidClose:(NSNotification *)notification {
-    [[XPServiceMonitor shared] setFastPolling:NO];
+    // Il polling rapido resta se la finestra principale è aperta: anche lei
+    // mostra lo stato in tempo reale.
+    if (![XPMainWindowController shared].window.isVisible) {
+        [[XPServiceMonitor shared] setFastPolling:NO];
+    }
 }
 
 - (void)showContextMenu {
     NSMenu *menu = [[NSMenu alloc] init];
+    [menu addItemWithTitle:@"Apri finestra XAMPP" action:@selector(menuOpenWindow:) keyEquivalent:@""].target = self;
+    [menu addItem:[NSMenuItem separatorItem]];
     [menu addItemWithTitle:@"Apri Dashboard" action:@selector(menuOpenDashboard:) keyEquivalent:@""].target = self;
     [menu addItemWithTitle:@"Log…" action:@selector(menuOpenLogs:) keyEquivalent:@""].target = self;
     [menu addItem:[NSMenuItem separatorItem]];
@@ -142,9 +152,10 @@
     self.statusItem.menu = nil;
 }
 
-- (void)menuOpenDashboard:(id)sender { [self panelDidRequestOpenDashboard]; }
-- (void)menuOpenLogs:(id)sender      { [self panelDidRequestOpenLogs]; }
-- (void)menuQuit:(id)sender          { [self panelDidRequestQuit]; }
+- (void)menuOpenWindow:(id)sender    { [[XPMainWindowController shared] present]; }
+- (void)menuOpenDashboard:(id)sender { [[XPActions shared] openDashboard]; }
+- (void)menuOpenLogs:(id)sender      { [[XPLogWindowController shared] showWindowAndReload]; }
+- (void)menuQuit:(id)sender          { [NSApp terminate:nil]; }
 
 #pragma mark - Aggiornamenti di stato
 
@@ -153,94 +164,34 @@
     [self.panel refresh];
 }
 
-#pragma mark - Esecuzione azioni
-
-/// Esegue un'azione dello script xampp marcando i servizi come "in transizione".
-- (void)performAction:(NSString *)action
-            onServices:(NSArray<XPService *> *)services
-           description:(NSString *)description {
-
-    for (XPService *service in services) service.state = XPServiceStateBusy;
-    [self.panel refresh];
-    [self updateStatusIcon];
-    [self.panel showMessage:[NSString stringWithFormat:@"%@…", description] isError:NO];
-
-    [XPTaskRunner runPrivilegedXamppAction:action completion:^(XPTaskResult *result) {
-        // Lo stato torna a essere dedotto dai processi reali.
-        for (XPService *service in services) service.state = XPServiceStateStopped;
-
-        if (result.cancelled) {
-            [self.panel showMessage:@"Operazione annullata" isError:NO];
-        } else if (!result.succeeded) {
-            [self.panel showMessage:[self firstMeaningfulLine:result.output] isError:YES];
-        } else {
-            [self.panel showMessage:[NSString stringWithFormat:@"%@: fatto", description] isError:NO];
-        }
-
-        // I demoni impiegano un istante a comparire o sparire dalla tabella
-        // dei processi: si rilegge subito e poi ancora dopo un secondo.
-        [[XPServiceMonitor shared] refreshNow];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2 * NSEC_PER_SEC)),
-                       dispatch_get_main_queue(), ^{
-            [[XPServiceMonitor shared] refreshNow];
-        });
-    }];
-}
-
-/// Estrae dall'output la prima riga utile da mostrare all'utente.
-- (NSString *)firstMeaningfulLine:(NSString *)output {
-    for (NSString *line in [output componentsSeparatedByString:@"\n"]) {
-        NSString *trimmed = [line stringByTrimmingCharactersInSet:
-                             [NSCharacterSet whitespaceAndNewlineCharacterSet]];
-        if (trimmed.length > 0) return trimmed;
-    }
-    return @"Comando fallito";
+- (void)actionDidReport:(NSNotification *)note {
+    [self.panel showMessage:note.userInfo[@"message"]
+                    isError:[note.userInfo[@"isError"] boolValue]];
 }
 
 #pragma mark - XPPanelViewDelegate
+//
+// Il pannello non conosce le operazioni: le inoltra tutte a XPActions, che è
+// la stessa logica usata dalla finestra principale.
 
-- (void)panelDidToggleService:(XPService *)service {
-    BOOL running = (service.state == XPServiceStateRunning);
-    NSString *action = running ? service.stopAction : service.startAction;
-    NSString *description = [NSString stringWithFormat:@"%@ di %@",
-                             running ? @"Arresto" : @"Avvio", service.name];
-    [self performAction:action onServices:@[service] description:description];
-}
-
-- (void)panelDidRequestReload:(XPService *)service {
-    [self performAction:service.reloadAction
-             onServices:@[service]
-            description:[NSString stringWithFormat:@"Ricarica di %@", service.name]];
-}
-
-- (void)panelDidRequestStartAll {
-    [self performAction:@"start"
-             onServices:[XPServiceMonitor shared].services
-            description:@"Avvio dei servizi"];
-}
-
-- (void)panelDidRequestStopAll {
-    [self performAction:@"stop"
-             onServices:[XPServiceMonitor shared].services
-            description:@"Arresto dei servizi"];
-}
-
-- (void)panelDidRequestRestart {
-    [self performAction:@"restart"
-             onServices:[XPServiceMonitor shared].services
-            description:@"Riavvio dei servizi"];
-}
+- (void)panelDidToggleService:(XPService *)service { [[XPActions shared] toggleService:service]; }
+- (void)panelDidRequestReload:(XPService *)service { [[XPActions shared] reloadService:service]; }
+- (void)panelDidRequestStartAll { [[XPActions shared] startAll]; }
+- (void)panelDidRequestStopAll  { [[XPActions shared] stopAll]; }
+- (void)panelDidRequestRestart  { [[XPActions shared] restartAll]; }
 
 - (void)panelDidRequestOpenDashboard {
-    [self openURLString:@"http://localhost/dashboard/"];
+    [[XPActions shared] openDashboard];
+    [self.popover performClose:nil];
 }
 
 - (void)panelDidRequestOpenPhpMyAdmin {
-    [self openURLString:@"http://localhost/phpmyadmin/"];
+    [[XPActions shared] openPhpMyAdmin];
+    [self.popover performClose:nil];
 }
 
 - (void)panelDidRequestOpenHtdocs {
-    [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:[XPPaths htdocs]]];
+    [[XPActions shared] openHtdocs];
     [self.popover performClose:nil];
 }
 
@@ -249,76 +200,30 @@
     [self.popover performClose:nil];
 }
 
-- (void)panelDidRequestOpenFile:(NSString *)path {
-    if (!path) return;
-    BOOL isDirectory = NO;
-    [[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDirectory];
+- (void)panelDidRequestOpenMainWindow {
+    [[XPMainWindowController shared] present];
+    [self.popover performClose:nil];
+}
 
-    if (isDirectory) {
-        [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:path]];
-    } else {
-        // Mostra il file selezionato nel Finder: aprirlo direttamente
-        // rischierebbe di lanciare un editor che poi non può salvare, visto
-        // che i file di configurazione appartengono a root.
-        [[NSWorkspace sharedWorkspace] selectFile:path inFileViewerRootedAtPath:@""];
-    }
+- (void)panelDidRequestOpenFile:(NSString *)path {
+    [[XPActions shared] revealFile:path];
     [self.popover performClose:nil];
 }
 
 - (void)panelDidRequestXamppAction:(NSString *)action confirmMessage:(NSString *)message {
-    // security e backup pongono domande interattive: vanno eseguiti in un
-    // terminale, altrimenti resterebbero bloccati in attesa di input.
-    if ([action isEqualToString:@"security"] || [action isEqualToString:@"backup"]) {
-        [self runInTerminal:action];
-        return;
-    }
-
-    if (message) {
-        NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = @"Confermi l'operazione?";
-        alert.informativeText = message;
-        [alert addButtonWithTitle:@"Procedi"];
-        [alert addButtonWithTitle:@"Annulla"];
-        alert.alertStyle = NSAlertStyleWarning;
-
-        [self.popover performClose:nil];
-        [NSApp activateIgnoringOtherApps:YES];
-        if ([alert runModal] != NSAlertFirstButtonReturn) return;
-    }
-
-    NSString *description = [action isEqualToString:@"enablessl"] ? @"Abilitazione SSL" : @"Disabilitazione SSL";
-    [self performAction:action onServices:[XPServiceMonitor shared].services description:description];
-}
-
-/// Apre il Terminale sul comando indicato, per le operazioni interattive.
-- (void)runInTerminal:(NSString *)action {
-    NSString *command = [NSString stringWithFormat:@"sudo '%@' %@", XPControlScript, action];
-    NSString *script = [NSString stringWithFormat:
-        @"tell application \"Terminal\"\n"
-        @"  activate\n"
-        @"  do script \"%@\"\n"
-        @"end tell", command];
-
     [self.popover performClose:nil];
 
-    NSAppleScript *appleScript = [[NSAppleScript alloc] initWithSource:script];
-    NSDictionary *error = nil;
-    [appleScript executeAndReturnError:&error];
-    if (error) {
-        [self.panel showMessage:@"Impossibile aprire il Terminale" isError:YES];
-    }
+    if ([action isEqualToString:@"security"])      [[XPActions shared] runSecurityCheck];
+    else if ([action isEqualToString:@"backup"])   [[XPActions shared] runBackup];
+    else if ([action isEqualToString:@"enablessl"])[[XPActions shared] enableSSL];
+    else                                           [[XPActions shared] disableSSL];
 }
 
 - (void)panelDidRequestQuit {
     [NSApp terminate:nil];
 }
 
-#pragma mark - Utilità
-
-- (void)openURLString:(NSString *)urlString {
-    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:urlString]];
-    [self.popover performClose:nil];
-}
+#pragma mark - Avvisi
 
 - (void)showInstallationMissingAlert {
     NSAlert *alert = [[NSAlert alloc] init];

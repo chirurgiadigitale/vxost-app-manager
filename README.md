@@ -15,9 +15,17 @@ di rete. Binario arm64 nativo di circa 100 KB.
 
 ## Cosa fa
 
+L'app sta in due posti contemporaneamente, e da entrambi si arriva alle stesse
+funzioni: l'icona nel Dock apre la finestra completa, quella nella barra di
+stato dà accesso rapido senza lasciare il lavoro in corso.
+
 **Barra di stato** — tre barrette, una per servizio, colorate quando il
 servizio è attivo e in solo contorno quando è fermo. Lo stato dell'intero
 stack si legge senza aprire nulla.
+
+**Finestra** — servizi, controllo, collegamenti, strumenti e file di
+configurazione, tutti raggiungibili senza passare da un menu. Si apre dal Dock,
+dal menu contestuale dell'icona di stato o con ⌘0.
 
 **Pannello** — stato, PID e porte in ascolto di ogni servizio; avvio e arresto
 singolo o complessivo; riavvio; ricarica del singolo servizio dal menu
