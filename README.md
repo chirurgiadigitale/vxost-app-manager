@@ -68,9 +68,43 @@ non un rettangolo con angoli circolari — con l'ombra applicata dai 64 px in su
 
 Si rigenera da sola quando il logo cambia, oppure con `make icon`.
 
+## Installazione
+
+Scarica il `.dmg` dalla pagina delle release, aprilo e trascina `XAMPP.app`
+dove preferisci — `/Applications` oppure `/Applications/XAMPP` accanto al resto
+dell'installazione.
+
+### Al primo avvio macOS la blocca
+
+L'app è firmata ad-hoc e non notarizzata da Apple, quindi Gatekeeper si oppone
+al primo avvio con un messaggio del tipo *"impossibile aprire perché Apple non
+può verificare che sia priva di malware"*. Non è un difetto dell'app: succede a
+qualsiasi programma distribuito senza un abbonamento Apple Developer da 99 €
+l'anno.
+
+Per autorizzarla una volta sola:
+
+1. prova ad aprirla con un doppio clic e chiudi l'avviso;
+2. vai in **Impostazioni di Sistema → Privacy e sicurezza**;
+3. scorri fino in fondo: compare *"XAMPP è stata bloccata"* con il pulsante
+   **Apri comunque**;
+4. conferma con la password.
+
+Dalle volte successive parte normalmente.
+
+In alternativa, da Terminale:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/XAMPP.app
+```
+
+Chi preferisce non fidarsi di un binario può compilare dai sorgenti: il
+risultato è identico e non incontra nessun blocco.
+
 ## Requisiti
 
-macOS 13 o successivo, Command Line Tools. Xcode non serve.
+macOS 13 o successivo su Apple Silicon o Intel. Per compilare bastano i
+Command Line Tools, Xcode non serve.
 
 ## Build
 
@@ -79,8 +113,13 @@ make          # compila in build/XAMPP.app
 make icon     # rigenera l'icona dal logo
 make run      # compila e avvia
 make install  # copia in /Applications/XAMPP/
+make dist     # crea dist/ con .dmg, .zip e SHA256SUMS.txt
 make clean
 ```
+
+`make dist` produce i pacchetti pubblicabili. L'archivio zip è creato con
+`ditto`: un `zip` normale perderebbe i metadati del bundle e invaliderebbe la
+firma.
 
 ## Licenza
 
