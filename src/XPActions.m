@@ -120,6 +120,22 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:[XPPaths htdocs]]];
 }
 
+- (void)openVirtualHost:(XPVirtualHost *)host {
+    if (!host) return;
+
+    if (host.state == XPVHostStateDisabled) {
+        [self postMessage:[NSString stringWithFormat:
+            @"La porta %ld è commentata in httpd-vhosts.conf", (long)host.port] isError:YES];
+        return;
+    }
+    if (host.state != XPVHostStateListening) {
+        [self postMessage:[NSString stringWithFormat:
+            @"Nessuna risposta sulla porta %ld: Apache è fermo?", (long)host.port] isError:YES];
+        return;
+    }
+    [[NSWorkspace sharedWorkspace] openURL:[host url]];
+}
+
 - (void)openXamppFolder {
     [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:XPRoot]];
 }

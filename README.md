@@ -27,9 +27,16 @@ stato dà accesso rapido senza lasciare il lavoro in corso.
 servizio è attivo e in solo contorno quando è fermo. Lo stato dell'intero
 stack si legge senza aprire nulla.
 
-**Finestra** — servizi, controllo, collegamenti, strumenti e file di
+**Finestra** — servizi, progetti, controllo, collegamenti, strumenti e file di
 configurazione, tutti raggiungibili senza passare da un menu. Si apre dal Dock,
 dal menu contestuale dell'icona di stato o con ⌘0.
+
+**Progetti** — la sezione risponde alla domanda "la porta 4002 di chi è?".
+Legge i `<VirtualHost>` da `httpd-vhosts.conf` e mostra porta, progetto servito
+e stato, con i pulsanti per aprirlo nel browser o nel Finder. Distingue tre
+casi: in ascolto, configurato ma Apache non risponde, e blocco commentato nella
+configurazione — quest'ultimo è il motivo per cui una porta attesa risulta
+chiusa, e senza questa sezione lo si scopre solo aprendo il file.
 
 **Pannello** — stato, PID e porte in ascolto di ogni servizio; avvio e arresto
 singolo o complessivo; riavvio; ricarica del singolo servizio dal menu

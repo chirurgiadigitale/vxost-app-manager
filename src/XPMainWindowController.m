@@ -11,6 +11,8 @@
 #import "XPServiceRowView.h"
 #import "XPActions.h"
 #import "XPLogWindowController.h"
+#import "XPVirtualHost.h"
+#import "XPVHostRowView.h"
 
 static const CGFloat XPWinWidth   = 560.0;
 static const CGFloat XPWinPadding = 22.0;
@@ -40,6 +42,8 @@ static const CGFloat XPRowHeight  = 56.0;
 @property (nonatomic, strong) NSTextField *statusBadge;
 @property (nonatomic, strong) NSTextField *messageLabel;
 @property (nonatomic, strong) NSTimer *messageTimer;
+@property (nonatomic, strong) NSArray<XPVirtualHost *> *hosts;
+@property (nonatomic, strong) NSTextField *hostsSummary;
 @end
 
 
@@ -126,6 +130,7 @@ static const CGFloat XPRowHeight  = 56.0;
     y = [self addServiceRowsTo:content atY:y];
     y = [self addSectionTitle:@"Controllo" to:content atY:y];
     y = [self addControlButtonsTo:content atY:y];
+    y = [self addProjectsSectionTo:content atY:y];
     y = [self addSectionTitle:@"Collegamenti" to:content atY:y];
     y = [self addShortcutsTo:content atY:y];
     y = [self addSectionTitle:@"Strumenti" to:content atY:y];
@@ -244,6 +249,47 @@ static const CGFloat XPRowHeight  = 56.0;
         x += width + gap;
     }
     return y + 34 + 18;
+}
+
+/// Sezione Progetti: quale porta serve quale virtual host.
+///
+/// I virtual host vengono letti prima di costruire il layout perché il numero
+/// di righe decide l'altezza della finestra. La lettura è un file di pochi
+/// kilobyte più una connect() per porta: pochi millisecondi.
+- (CGFloat)addProjectsSectionTo:(NSView *)content atY:(CGFloat)y {
+    self.hosts = [XPVirtualHost allHosts];
+    if (self.hosts.count == 0) return y;
+
+    NSUInteger listening = 0, disabled = 0;
+    for (XPVirtualHost *host in self.hosts) {
+        if (host.state == XPVHostStateListening) listening++;
+        else if (host.state == XPVHostStateDisabled) disabled++;
+    }
+
+    y = [self addSectionTitle:@"Progetti" to:content atY:y];
+
+    // Riepilogo allineato a destra, sulla stessa riga del titolo di sezione.
+    NSString *summaryText = (disabled > 0)
+        ? [NSString stringWithFormat:@"%lu in ascolto · %lu disattivato",
+           (unsigned long)listening, (unsigned long)disabled]
+        : [NSString stringWithFormat:@"%lu in ascolto", (unsigned long)listening];
+
+    self.hostsSummary = [self labelWithText:summaryText
+                                       font:[XPTheme fontSmall]
+                                      color:[XPTheme textMuted]
+                                      frame:NSMakeRect(XPWinWidth - XPWinPadding - 240,
+                                                       y - 19, 240, 14)];
+    self.hostsSummary.alignment = NSTextAlignmentRight;
+    [content addSubview:self.hostsSummary];
+
+    for (XPVirtualHost *host in self.hosts) {
+        XPVHostRowView *row = [[XPVHostRowView alloc] initWithHost:host];
+        row.frame = NSMakeRect(XPWinPadding - 8, y, XPWinWidth - (XPWinPadding - 8) * 2, 30);
+        [content addSubview:row];
+        y += 30;
+    }
+
+    return y + 14;
 }
 
 - (CGFloat)addShortcutsTo:(NSView *)content atY:(CGFloat)y {
