@@ -1,0 +1,18 @@
+# Build
+build/
+*.o
+*.iconset/
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# File di contesto Claude — restano in locale, fuori dal repository
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.claude*/
+**/CLAUDE.md
+**/*.claude.md

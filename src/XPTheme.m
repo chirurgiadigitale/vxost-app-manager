@@ -1,0 +1,72 @@
+//
+//  XPTheme.m
+//
+
+#import "XPTheme.h"
+
+/// Costruisce un colore da esadecimale (#RRGGBB) con alpha opzionale.
+static NSColor *Hex(uint32_t rgb, CGFloat alpha) {
+    return [NSColor colorWithSRGBRed:((rgb >> 16) & 0xFF) / 255.0
+                               green:((rgb >>  8) & 0xFF) / 255.0
+                                blue:( rgb        & 0xFF) / 255.0
+                               alpha:alpha];
+}
+
+/// Sceglie fra variante scura e chiara in base all'aspetto corrente.
+static NSColor *Dyn(NSColor *dark, NSColor *light) {
+    return [XPTheme isDark] ? dark : light;
+}
+
+@implementation XPTheme
+
++ (BOOL)isDark {
+    NSAppearance *appearance = NSApp.effectiveAppearance;
+    NSAppearanceName name = [appearance bestMatchFromAppearancesWithNames:@[
+        NSAppearanceNameAqua, NSAppearanceNameDarkAqua
+    ]];
+    return [name isEqualToString:NSAppearanceNameDarkAqua];
+}
+
+#pragma mark - Superfici
+
++ (NSColor *)bg           { return Dyn(Hex(0x070B16, 1.0), Hex(0xF4F7FC, 1.0)); }
++ (NSColor *)bgElev       { return Dyn(Hex(0x0B1220, 1.0), Hex(0xFFFFFF, 1.0)); }
++ (NSColor *)surface      { return Dyn(Hex(0x94A3B8, 0.05), Hex(0x0F172A, 0.03)); }
++ (NSColor *)surface2     { return Dyn(Hex(0x94A3B8, 0.08), Hex(0x0F172A, 0.06)); }
++ (NSColor *)surfaceSolid { return Dyn(Hex(0x0F172A, 1.0), Hex(0xFFFFFF, 1.0)); }
+
+#pragma mark - Testo
+
++ (NSColor *)text      { return Dyn(Hex(0xE9EFFA, 1.0), Hex(0x0B1220, 1.0)); }
++ (NSColor *)textSoft  { return Dyn(Hex(0xB7C3D6, 1.0), Hex(0x33415A, 1.0)); }
++ (NSColor *)textMuted { return Dyn(Hex(0x8493AB, 1.0), Hex(0x5A6B85, 1.0)); }
+
+#pragma mark - Bordi
+
++ (NSColor *)border       { return Dyn(Hex(0x94A3B8, 0.16), Hex(0x0F172A, 0.12)); }
++ (NSColor *)borderStrong { return Dyn(Hex(0x94A3B8, 0.30), Hex(0x0F172A, 0.24)); }
+
+#pragma mark - Accenti
+
++ (NSColor *)accent    { return Dyn(Hex(0xFB7A24, 1.0), Hex(0xA8480B, 1.0)); }
++ (NSColor *)accentInk { return Dyn(Hex(0x1A0A00, 1.0), Hex(0xFFFFFF, 1.0)); }
++ (NSColor *)cyan      { return Dyn(Hex(0xFFB35C, 1.0), Hex(0x8A4A08, 1.0)); }
++ (NSColor *)violet    { return Dyn(Hex(0xFF6B3D, 1.0), Hex(0xA8380F, 1.0)); }
++ (NSColor *)amber     { return Dyn(Hex(0xFFC15E, 1.0), Hex(0x7A4E10, 1.0)); }
++ (NSColor *)danger    { return Dyn(Hex(0xE5341C, 1.0), Hex(0xA3200D, 1.0)); }
++ (NSColor *)running   { return Dyn(Hex(0x3FD68C, 1.0), Hex(0x0F7A47, 1.0)); }
+
+#pragma mark - Tipografia
+
++ (NSFont *)fontTitle { return [NSFont systemFontOfSize:13 weight:NSFontWeightSemibold]; }
++ (NSFont *)fontBody  { return [NSFont systemFontOfSize:12 weight:NSFontWeightMedium]; }
++ (NSFont *)fontSmall { return [NSFont systemFontOfSize:10 weight:NSFontWeightRegular]; }
++ (NSFont *)fontMono  { return [NSFont monospacedSystemFontOfSize:10 weight:NSFontWeightRegular]; }
+
+#pragma mark - Raggi
+
++ (CGFloat)radiusSmall  { return 6.0; }
++ (CGFloat)radiusMedium { return 10.0; }
++ (CGFloat)radiusLarge  { return 14.0; }
+
+@end
