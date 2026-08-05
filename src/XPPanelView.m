@@ -1,0 +1,283 @@
+//
+//  XPPanelView.m
+//
+
+#import "XPPanelView.h"
+#import "XPTheme.h"
+#import "XPButton.h"
+#import "XPServiceRowView.h"
+#import "XPServiceMonitor.h"
+#import "XPPaths.h"
+
+static const CGFloat XPPanelWidth   = 320.0;
+static const CGFloat XPPanelPadding = 8.0;
+static const CGFloat XPRowH         = 52.0;
+
+@interface XPPanelView ()
+@property (nonatomic, strong) NSArray<XPService *> *services;
+@property (nonatomic, strong) NSMutableArray<XPServiceRowView *> *rows;
+@property (nonatomic, strong) XPButton *startAllButton;
+@property (nonatomic, strong) XPButton *stopAllButton;
+@property (nonatomic, strong) XPButton *restartButton;
+@property (nonatomic, strong) NSTextField *messageLabel;
+@property (nonatomic, strong) NSTimer *messageTimer;
+@property (nonatomic, assign) CGFloat requiredHeight;
+@end
+
+
+@implementation XPPanelView
+
+- (instancetype)initWithServices:(NSArray<XPService *> *)services {
+    if ((self = [super initWithFrame:NSMakeRect(0, 0, XPPanelWidth, 420)])) {
+        _services = services;
+        _rows = [NSMutableArray array];
+        self.wantsLayer = YES;
+        [self buildInterface];
+    }
+    return self;
+}
+
+// Layout dall'alto verso il basso: più naturale da leggere nel codice.
+- (BOOL)isFlipped { return YES; }
+
+#pragma mark - Costruzione
+
+- (void)buildInterface {
+    CGFloat y = 54.0;   // sotto l'intestazione, disegnata in drawRect
+
+    // Righe dei servizi
+    for (XPService *service in self.services) {
+        XPServiceRowView *row = [[XPServiceRowView alloc] initWithService:service];
+        row.frame = NSMakeRect(XPPanelPadding, y, XPPanelWidth - XPPanelPadding * 2, XPRowH);
+        row.onToggle = ^(XPService *s) { [self.delegate panelDidToggleService:s]; };
+        row.onReload = ^(XPService *s) { [self.delegate panelDidRequestReload:s]; };
+        [self addSubview:row];
+        [self.rows addObject:row];
+        y += XPRowH;
+    }
+
+    y += 10;
+
+    // Azioni globali: tre pulsanti affiancati
+    CGFloat gap = 8.0;
+    CGFloat available = XPPanelWidth - XPPanelPadding * 2 - 12 - gap * 2;
+    CGFloat buttonWidth = available / 3.0;
+    CGFloat x = XPPanelPadding + 6;
+
+    self.startAllButton = [XPButton buttonWithTitle:@"Avvia tutto" style:XPButtonStylePrimary onClick:^(XPButton *b) {
+        [self.delegate panelDidRequestStartAll];
+    }];
+    self.startAllButton.frame = NSMakeRect(x, y, buttonWidth, 30);
+    [self addSubview:self.startAllButton];
+    x += buttonWidth + gap;
+
+    self.stopAllButton = [XPButton buttonWithTitle:@"Ferma tutto" style:XPButtonStyleGhost onClick:^(XPButton *b) {
+        [self.delegate panelDidRequestStopAll];
+    }];
+    self.stopAllButton.frame = NSMakeRect(x, y, buttonWidth, 30);
+    [self addSubview:self.stopAllButton];
+    x += buttonWidth + gap;
+
+    self.restartButton = [XPButton buttonWithTitle:@"Riavvia" style:XPButtonStyleGhost onClick:^(XPButton *b) {
+        [self.delegate panelDidRequestRestart];
+    }];
+    self.restartButton.frame = NSMakeRect(x, y, buttonWidth, 30);
+    [self addSubview:self.restartButton];
+
+    y += 30 + 16;
+
+    // Scorciatoie, due per riga
+    NSArray *shortcuts = @[
+        @{@"title": @"Dashboard",  @"symbol": @"safari",             @"sel": @"openDashboard"},
+        @{@"title": @"phpMyAdmin", @"symbol": @"cylinder.split.1x2", @"sel": @"openPhpMyAdmin"},
+        @{@"title": @"htdocs",     @"symbol": @"folder",             @"sel": @"openHtdocs"},
+        @{@"title": @"Log",        @"symbol": @"doc.text.magnifyingglass", @"sel": @"openLogs"},
+    ];
+
+    CGFloat shortcutWidth = (XPPanelWidth - XPPanelPadding * 2 - 12 - gap) / 2.0;
+    for (NSUInteger i = 0; i < shortcuts.count; i++) {
+        NSDictionary *item = shortcuts[i];
+        NSString *selectorName = item[@"sel"];
+
+        XPButton *button = [XPButton buttonWithTitle:item[@"title"] style:XPButtonStyleGhost onClick:^(XPButton *b) {
+            if ([selectorName isEqualToString:@"openDashboard"])  [self.delegate panelDidRequestOpenDashboard];
+            else if ([selectorName isEqualToString:@"openPhpMyAdmin"]) [self.delegate panelDidRequestOpenPhpMyAdmin];
+            else if ([selectorName isEqualToString:@"openHtdocs"]) [self.delegate panelDidRequestOpenHtdocs];
+            else [self.delegate panelDidRequestOpenLogs];
+        }];
+        button.symbolName = item[@"symbol"];
+
+        CGFloat col = (i % 2) * (shortcutWidth + gap);
+        CGFloat rowY = y + (i / 2) * (28 + gap);
+        button.frame = NSMakeRect(XPPanelPadding + 6 + col, rowY, shortcutWidth, 28);
+        [self addSubview:button];
+    }
+
+    y += (28 + gap) * 2 + 6;
+
+    // Riga di messaggio (esiti e errori)
+    self.messageLabel = [[NSTextField alloc] initWithFrame:
+                         NSMakeRect(XPPanelPadding + 6, y, XPPanelWidth - XPPanelPadding * 2 - 12, 16)];
+    self.messageLabel.editable = NO;
+    self.messageLabel.bordered = NO;
+    self.messageLabel.drawsBackground = NO;
+    self.messageLabel.font = [XPTheme fontSmall];
+    self.messageLabel.textColor = [XPTheme textMuted];
+    self.messageLabel.stringValue = @"";
+    self.messageLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+    [self addSubview:self.messageLabel];
+
+    y += 20;
+
+    // Footer: menu "Altro" e uscita
+    XPButton *moreButton = [XPButton buttonWithTitle:@"Altro…" style:XPButtonStyleQuiet onClick:^(XPButton *b) {
+        [self showMoreMenuFromButton:b];
+    }];
+    moreButton.frame = NSMakeRect(XPPanelPadding + 6, y, 70, 24);
+    [self addSubview:moreButton];
+
+    XPButton *quitButton = [XPButton buttonWithTitle:@"Esci" style:XPButtonStyleQuiet onClick:^(XPButton *b) {
+        [self.delegate panelDidRequestQuit];
+    }];
+    quitButton.frame = NSMakeRect(XPPanelWidth - XPPanelPadding - 6 - 60, y, 60, 24);
+    [self addSubview:quitButton];
+
+    y += 24 + XPPanelPadding;
+
+    self.requiredHeight = y;
+    self.frame = NSMakeRect(0, 0, XPPanelWidth, y);
+}
+
+#pragma mark - Menu "Altro"
+
+- (void)showMoreMenuFromButton:(XPButton *)button {
+    NSMenu *menu = [[NSMenu alloc] init];
+
+    [menu addItemWithTitle:@"Abilita SSL" action:@selector(enableSSL:) keyEquivalent:@""].target = self;
+    [menu addItemWithTitle:@"Disabilita SSL" action:@selector(disableSSL:) keyEquivalent:@""].target = self;
+    [menu addItem:[NSMenuItem separatorItem]];
+    [menu addItemWithTitle:@"Controllo sicurezza…" action:@selector(securityCheck:) keyEquivalent:@""].target = self;
+    [menu addItemWithTitle:@"Backup configurazione…" action:@selector(backup:) keyEquivalent:@""].target = self;
+    [menu addItem:[NSMenuItem separatorItem]];
+
+    // Sottomenu con i file di configurazione presenti
+    NSMenuItem *configItem = [[NSMenuItem alloc] initWithTitle:@"File di configurazione" action:nil keyEquivalent:@""];
+    NSMenu *configMenu = [[NSMenu alloc] init];
+    for (NSDictionary *cfg in [XPPaths configFiles]) {
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:cfg[@"title"]
+                                                      action:@selector(openConfigFile:)
+                                               keyEquivalent:@""];
+        item.target = self;
+        item.representedObject = cfg[@"path"];
+        [configMenu addItem:item];
+    }
+    configItem.submenu = configMenu;
+    [menu addItem:configItem];
+
+    [menu addItemWithTitle:@"Apri cartella XAMPP" action:@selector(openXamppFolder:) keyEquivalent:@""].target = self;
+
+    NSPoint point = NSMakePoint(0, NSHeight(button.bounds) + 4);
+    [menu popUpMenuPositioningItem:nil atLocation:point inView:button];
+}
+
+- (void)enableSSL:(id)sender {
+    [self.delegate panelDidRequestXamppAction:@"enablessl"
+                               confirmMessage:@"Abilitare il supporto SSL di Apache? Apache verrà riavviato."];
+}
+
+- (void)disableSSL:(id)sender {
+    [self.delegate panelDidRequestXamppAction:@"disablessl"
+                               confirmMessage:@"Disabilitare il supporto SSL di Apache? Apache verrà riavviato."];
+}
+
+- (void)securityCheck:(id)sender {
+    [self.delegate panelDidRequestXamppAction:@"security" confirmMessage:nil];
+}
+
+- (void)backup:(id)sender {
+    [self.delegate panelDidRequestXamppAction:@"backup"
+                               confirmMessage:@"Creare un backup di configurazione, log e database? Può richiedere qualche minuto."];
+}
+
+- (void)openConfigFile:(NSMenuItem *)sender {
+    [self.delegate panelDidRequestOpenFile:sender.representedObject];
+}
+
+- (void)openXamppFolder:(id)sender {
+    [self.delegate panelDidRequestOpenFile:XPRoot];
+}
+
+#pragma mark - Aggiornamento
+
+- (void)refresh {
+    for (XPServiceRowView *row in self.rows) [row refresh];
+
+    XPServiceMonitor *monitor = [XPServiceMonitor shared];
+    BOOL busy = monitor.anyBusy;
+
+    self.startAllButton.enabled = !busy && !monitor.allRunning;
+    self.stopAllButton.enabled  = !busy && monitor.anyRunning;
+    self.restartButton.enabled  = !busy && monitor.anyRunning;
+
+    [self setNeedsDisplay:YES];
+}
+
+- (void)showMessage:(NSString *)message isError:(BOOL)isError {
+    self.messageLabel.stringValue = message ?: @"";
+    self.messageLabel.textColor = isError ? [XPTheme danger] : [XPTheme textMuted];
+
+    [self.messageTimer invalidate];
+    if (message.length > 0) {
+        // I messaggi si cancellano da soli: il pannello resta pulito.
+        self.messageTimer = [NSTimer scheduledTimerWithTimeInterval:(isError ? 10.0 : 5.0)
+                                                            repeats:NO
+                                                              block:^(NSTimer *t) {
+            self.messageLabel.stringValue = @"";
+        }];
+    }
+}
+
+#pragma mark - Disegno
+
+- (void)drawRect:(NSRect)dirtyRect {
+    // Fondo del pannello
+    [[XPTheme bgElev] setFill];
+    NSRectFill(self.bounds);
+
+    // Intestazione
+    NSRect header = NSMakeRect(0, 0, NSWidth(self.bounds), 46);
+
+    NSDictionary *titleAttrs = @{
+        NSFontAttributeName: [NSFont systemFontOfSize:15 weight:NSFontWeightBold],
+        NSForegroundColorAttributeName: [XPTheme text]
+    };
+    [@"XAMPP" drawAtPoint:NSMakePoint(20, 13) withAttributes:titleAttrs];
+
+    // Badge di stato complessivo, allineato a destra
+    XPServiceMonitor *monitor = [XPServiceMonitor shared];
+    NSString *badgeText;
+    NSColor *badgeColor;
+    if (monitor.anyBusy)         { badgeText = @"in corso";  badgeColor = [XPTheme amber]; }
+    else if (monitor.allRunning) { badgeText = @"tutto attivo"; badgeColor = [XPTheme running]; }
+    else if (monitor.anyRunning) { badgeText = @"parziale";  badgeColor = [XPTheme amber]; }
+    else                         { badgeText = @"fermo";     badgeColor = [XPTheme textMuted]; }
+
+    NSDictionary *badgeAttrs = @{
+        NSFontAttributeName: [XPTheme fontSmall],
+        NSForegroundColorAttributeName: badgeColor
+    };
+    NSSize badgeSize = [badgeText sizeWithAttributes:badgeAttrs];
+    NSRect badgeRect = NSMakeRect(NSWidth(self.bounds) - badgeSize.width - 30,
+                                  15, badgeSize.width + 16, 18);
+    NSBezierPath *badge = [NSBezierPath bezierPathWithRoundedRect:badgeRect xRadius:9 yRadius:9];
+    [[badgeColor colorWithAlphaComponent:0.14] setFill];
+    [badge fill];
+    [badgeText drawAtPoint:NSMakePoint(NSMinX(badgeRect) + 8, NSMinY(badgeRect) + 3)
+            withAttributes:badgeAttrs];
+
+    // Linea di separazione sotto l'intestazione
+    [[XPTheme border] setFill];
+    NSRectFill(NSMakeRect(0, NSMaxY(header) - 1, NSWidth(self.bounds), 1));
+}
+
+@end
