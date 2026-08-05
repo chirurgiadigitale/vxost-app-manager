@@ -4,6 +4,10 @@
 
 #import "XPTheme.h"
 
+NSString *const XPThemeDidChangeNotification = @"XPThemeDidChangeNotification";
+
+static NSString *const XPThemeDefaultsKey = @"ThemePreference";
+
 /// Costruisce un colore da esadecimale (#RRGGBB) con alpha opzionale.
 static NSColor *Hex(uint32_t rgb, CGFloat alpha) {
     return [NSColor colorWithSRGBRed:((rgb >> 16) & 0xFF) / 255.0
@@ -18,6 +22,48 @@ static NSColor *Dyn(NSColor *dark, NSColor *light) {
 }
 
 @implementation XPTheme
+
+#pragma mark - Preferenza
+
++ (XPThemePreference)preference {
+    // Come nella dashboard, in assenza di scelta il tema scuro è il default
+    // del design system, non l'impostazione di sistema.
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:XPThemeDefaultsKey] == nil) return XPThemePreferenceDark;
+    return (XPThemePreference)[defaults integerForKey:XPThemeDefaultsKey];
+}
+
++ (void)setPreference:(XPThemePreference)preference {
+    [[NSUserDefaults standardUserDefaults] setInteger:preference forKey:XPThemeDefaultsKey];
+    [self applyStoredPreference];
+    [[NSNotificationCenter defaultCenter] postNotificationName:XPThemeDidChangeNotification
+                                                        object:nil];
+}
+
++ (void)applyStoredPreference {
+    switch ([self preference]) {
+        case XPThemePreferenceDark:
+            NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+            break;
+        case XPThemePreferenceLight:
+            NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+            break;
+        case XPThemePreferenceAuto:
+            // appearance a nil restituisce il controllo a macOS.
+            NSApp.appearance = nil;
+            break;
+    }
+}
+
++ (NSString *)nameForPreference:(XPThemePreference)preference {
+    switch (preference) {
+        case XPThemePreferenceDark:  return @"Scuro";
+        case XPThemePreferenceLight: return @"Chiaro";
+        default:                     return @"Automatico";
+    }
+}
+
+#pragma mark - Aspetto corrente
 
 + (BOOL)isDark {
     NSAppearance *appearance = NSApp.effectiveAppearance;

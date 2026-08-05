@@ -51,6 +51,10 @@
                                              selector:@selector(actionDidReport:)
                                                  name:XPActionMessageNotification
                                                object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(themeDidChange:)
+                                                 name:XPThemeDidChangeNotification
+                                               object:nil];
 
     [self updateStatusIcon];
 
@@ -167,6 +171,30 @@
 - (void)actionDidReport:(NSNotification *)note {
     [self.panel showMessage:note.userInfo[@"message"]
                     isError:[note.userInfo[@"isError"] boolValue]];
+}
+
+/// Al cambio di tema il pannello viene ricostruito: i colori delle etichette
+/// sono assegnati alla creazione e non seguirebbero da soli.
+- (void)themeDidChange:(NSNotification *)note {
+    BOOL wasShown = self.popover.isShown;
+    if (wasShown) [self.popover performClose:nil];
+
+    self.panel = [[XPPanelView alloc] initWithServices:[XPServiceMonitor shared].services];
+    self.panel.delegate = self;
+
+    NSViewController *contentController = [[NSViewController alloc] init];
+    contentController.view = self.panel;
+    self.popover.contentViewController = contentController;
+    self.popover.contentSize = NSMakeSize(NSWidth(self.panel.frame), self.panel.requiredHeight);
+
+    [self.panel refresh];
+    [self updateStatusIcon];
+
+    if (wasShown) {
+        [self.popover showRelativeToRect:self.statusItem.button.bounds
+                                  ofView:self.statusItem.button
+                           preferredEdge:NSRectEdgeMinY];
+    }
 }
 
 #pragma mark - XPPanelViewDelegate

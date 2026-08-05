@@ -58,6 +58,10 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
                                                  selector:@selector(windowWillClose:)
                                                      name:NSWindowWillCloseNotification
                                                    object:window];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(themeDidChange:)
+                                                     name:XPThemeDidChangeNotification
+                                                   object:nil];
     }
     return self;
 }
@@ -216,6 +220,18 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
 - (void)windowWillClose:(NSNotification *)note {
     [self.refreshTimer invalidate];
     self.refreshTimer = nil;
+}
+
+/// Qui basta riassegnare i colori: la finestra è fatta di controlli di sistema
+/// più una sola area di testo, e ricostruirla perderebbe il punto di lettura.
+- (void)themeDidChange:(NSNotification *)note {
+    self.textView.backgroundColor = [XPTheme bg];
+    self.textView.textColor = [XPTheme textSoft];
+    self.statusLabel.textColor = [XPTheme textMuted];
+
+    NSView *toolbar = self.logSelector.superview;
+    toolbar.layer.backgroundColor = [XPTheme bgElev].CGColor;
+    [self.window.contentView setNeedsDisplay:YES];
 }
 
 - (void)reloadLogList {

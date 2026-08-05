@@ -39,4 +39,8 @@ extern NSString *const XPControlScript;
 /// Document root di Apache.
 + (NSString *)htdocs;
 
+/// Versione di XAMPP installata, letta da lib/VERSION (es. "8.2.4").
+/// Nil se il file manca.
++ (NSString *)xamppVersion;
+
 @end

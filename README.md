@@ -3,12 +3,16 @@
 Sostituto nativo di `manager-osx.app` per XAMPP su macOS: un'app nella barra di
 stato che avvia, ferma e sorveglia Apache, MySQL e ProFTPD.
 
-Nasce da un problema concreto: il manager originale è un binario BitRock
-InstallBuilder del 2018, distribuito solo per `i386`, `ppc` e `x86_64`. Il suo
-launcher decide quale eseguibile lanciare leggendo `uname -p`, e su Apple
-Silicon quel valore è `arm`, che non corrisponde a nessun ramo: l'app termina
-con *"The current OS X version is not supported"*. Non è ristilizzabile perché
-l'interfaccia è compilata dentro il binario, quindi è stata riscritta.
+Il manager originale è un binario BitRock InstallBuilder del 2018, distribuito
+solo per `i386`, `ppc` e `x86_64`. Su Apple Silicon funziona ancora, ma solo
+perché macOS lo esegue tramite Rosetta 2: il bundle non contiene alcuna slice
+`arm64`. Lanciato invece da una shell nativa termina subito, perché il suo
+launcher sceglie l'eseguibile leggendo `uname -p` e non ha un ramo per il
+valore `arm`.
+
+Non è ristilizzabile: l'interfaccia è compilata dentro l'eseguibile e le
+uniche risorse sostituibili sono l'icona. Da qui la riscrittura, che elimina
+anche la dipendenza da Rosetta.
 
 Nessuna dipendenza esterna, nessun framework di terze parti, nessuna richiesta
 di rete. Binario arm64 nativo di circa 100 KB.

@@ -22,6 +22,21 @@ NSString *const XPControlScript = @"/Applications/XAMPP/xamppfiles/xampp";
     return [self root:@"htdocs"];
 }
 
++ (NSString *)xamppVersion {
+    // Stessa fonte usata dallo script di controllo: `cat $XAMPP_ROOT/lib/VERSION`.
+    NSString *raw = [NSString stringWithContentsOfFile:[self root:@"lib/VERSION"]
+                                              encoding:NSUTF8StringEncoding
+                                                 error:NULL];
+    if (!raw) return nil;
+
+    NSString *version = [raw stringByTrimmingCharactersInSet:
+                         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    // Il file riporta "8.2.4-0": il suffisso di build non interessa.
+    NSRange dash = [version rangeOfString:@"-"];
+    if (dash.location != NSNotFound) version = [version substringToIndex:dash.location];
+    return version.length > 0 ? version : nil;
+}
+
 #pragma mark - Log
 
 + (NSArray<NSDictionary *> *)systemLogs {

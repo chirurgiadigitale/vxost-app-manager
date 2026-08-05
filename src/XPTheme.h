@@ -10,7 +10,29 @@
 
 #import <Cocoa/Cocoa.h>
 
+/// Preferenza di tema, come il selettore della dashboard.
+typedef NS_ENUM(NSInteger, XPThemePreference) {
+    XPThemePreferenceAuto = 0,  ///< segue macOS
+    XPThemePreferenceDark,      ///< sempre scuro (il default del design system)
+    XPThemePreferenceLight      ///< sempre chiaro
+};
+
+/// Inviata quando la preferenza cambia: le viste custom si ridisegnano.
+extern NSString *const XPThemeDidChangeNotification;
+
 @interface XPTheme : NSObject
+
+#pragma mark - Preferenza
+
+/// Preferenza salvata fra un avvio e l'altro.
++ (XPThemePreference)preference;
++ (void)setPreference:(XPThemePreference)preference;
+
+/// Applica la preferenza salvata a NSApp. Da chiamare all'avvio.
++ (void)applyStoredPreference;
+
+/// Nome leggibile della preferenza.
++ (NSString *)nameForPreference:(XPThemePreference)preference;
 
 #pragma mark - Superfici
 
