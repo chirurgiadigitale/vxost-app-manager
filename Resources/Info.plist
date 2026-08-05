@@ -28,8 +28,6 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>GNU GPL — stessi termini di XAMPP</string>
-	<key>LSUIElement</key>
-	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Serve per eseguire i comandi di avvio e arresto di XAMPP con privilegi di amministratore e per aprire il Terminale sulle operazioni interattive.</string>
 </dict>

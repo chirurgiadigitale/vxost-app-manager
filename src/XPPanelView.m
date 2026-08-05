@@ -129,11 +129,18 @@ static const CGFloat XPRowH         = 52.0;
 
     y += 20;
 
-    // Footer: menu "Altro" e uscita
+    // Footer: finestra completa, menu "Altro" e uscita
+    XPButton *windowButton = [XPButton buttonWithTitle:@"Finestra" style:XPButtonStyleQuiet onClick:^(XPButton *b) {
+        [self.delegate panelDidRequestOpenMainWindow];
+    }];
+    windowButton.symbolName = @"macwindow";
+    windowButton.frame = NSMakeRect(XPPanelPadding + 6, y, 92, 24);
+    [self addSubview:windowButton];
+
     XPButton *moreButton = [XPButton buttonWithTitle:@"Altro…" style:XPButtonStyleQuiet onClick:^(XPButton *b) {
         [self showMoreMenuFromButton:b];
     }];
-    moreButton.frame = NSMakeRect(XPPanelPadding + 6, y, 70, 24);
+    moreButton.frame = NSMakeRect(XPPanelPadding + 6 + 96, y, 70, 24);
     [self addSubview:moreButton];
 
     XPButton *quitButton = [XPButton buttonWithTitle:@"Esci" style:XPButtonStyleQuiet onClick:^(XPButton *b) {
