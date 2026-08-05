@@ -12,6 +12,9 @@ CONTENTS  := $(BUNDLE)/Contents
 MACOS_DIR := $(CONTENTS)/MacOS
 RES_DIR   := $(CONTENTS)/Resources
 
+VERSION   := $(shell /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
+DIST_DIR  := dist
+
 SOURCES := $(wildcard src/*.m)
 LOGO    := Resources/xampp-logo.svg
 ICON    := Resources/AppIcon.icns
@@ -21,7 +24,7 @@ ICON    := Resources/AppIcon.icns
 CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2
 LDFLAGS := -framework Cocoa
 
-.PHONY: all icon run install clean uninstall
+.PHONY: all icon run install clean uninstall dist
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
@@ -66,6 +69,27 @@ uninstall:
 	@rm -rf "/Applications/XAMPP/$(APP_NAME).app"
 	@echo "Rimossa da /Applications/XAMPP/"
 
+# Pacchetti pronti da pubblicare: uno zip e un'immagine disco.
+#
+# L'app è firmata ad-hoc, non con un Developer ID Apple: su un altro Mac
+# Gatekeeper la bloccherà al primo avvio e l'utente dovrà autorizzarla dalle
+# Impostazioni di Sistema. È il prezzo di non avere l'abbonamento sviluppatore
+# e va spiegato a chi scarica, non nascosto.
+dist: all
+	@rm -rf $(DIST_DIR) build/dmg
+	@mkdir -p $(DIST_DIR) build/dmg
+	@# ditto è il modo corretto di archiviare un bundle: zip normale
+	@# perderebbe i metadati e invaliderebbe la firma.
+	@ditto -c -k --sequesterRsrc --keepParent "$(BUNDLE)" "$(DIST_DIR)/$(APP_NAME)-$(VERSION).zip"
+	@cp -R "$(BUNDLE)" build/dmg/
+	@ln -s /Applications build/dmg/Applications
+	@hdiutil create -volname "$(APP_NAME) $(VERSION)" -srcfolder build/dmg \
+		-ov -format UDZO -quiet "$(DIST_DIR)/$(APP_NAME)-$(VERSION).dmg"
+	@rm -rf build/dmg
+	@shasum -a 256 $(DIST_DIR)/* | sed 's|$(DIST_DIR)/||' > $(DIST_DIR)/SHA256SUMS.txt
+	@echo "Pacchetti in $(DIST_DIR)/:"
+	@ls -lh $(DIST_DIR) | tail -n +2 | awk '{printf "  %-28s %s\n", $$9, $$5}'
+
 clean:
-	@rm -rf build
+	@rm -rf build $(DIST_DIR)
 	@echo "Pulito."
