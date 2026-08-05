@@ -13,6 +13,7 @@
 #import "XPMainWindowController.h"
 #import "XPLogWindowController.h"
 #import "XPActions.h"
+#import "XPTheme.h"
 
 @interface XPAppDelegate : NSObject <NSApplicationDelegate>
 @property (nonatomic, strong) XPStatusController *statusController;
@@ -21,6 +22,8 @@
 @implementation XPAppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
+    // Prima di costruire qualsiasi vista: il tema decide i colori.
+    [XPTheme applyStoredPreference];
     [self buildMainMenu];
 
     self.statusController = [[XPStatusController alloc] init];
@@ -90,6 +93,21 @@
                                    keyEquivalent:@"l"];
     logs.target = self;
 
+    // Sottomenu del tema, con il segno di spunta sulla scelta corrente.
+    NSMenuItem *themeItem = [[NSMenuItem alloc] initWithTitle:@"Tema" action:nil keyEquivalent:@""];
+    NSMenu *themeMenu = [[NSMenu alloc] initWithTitle:@"Tema"];
+    for (XPThemePreference pref = XPThemePreferenceAuto; pref <= XPThemePreferenceLight; pref++) {
+        NSMenuItem *item = [themeMenu addItemWithTitle:[XPTheme nameForPreference:pref]
+                                                 action:@selector(changeTheme:)
+                                          keyEquivalent:@""];
+        item.target = self;
+        item.tag = pref;
+        item.state = ([XPTheme preference] == pref) ? NSControlStateValueOn : NSControlStateValueOff;
+    }
+    themeItem.submenu = themeMenu;
+    [appMenu addItem:[NSMenuItem separatorItem]];
+    [appMenu addItem:themeItem];
+
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Nascondi XAMPP" action:@selector(hide:) keyEquivalent:@"h"];
     [appMenu addItemWithTitle:@"Esci da XAMPP" action:@selector(terminate:) keyEquivalent:@"q"];
@@ -145,6 +163,14 @@
 }
 
 #pragma mark - Voci di menu
+
+- (void)changeTheme:(NSMenuItem *)sender {
+    [XPTheme setPreference:(XPThemePreference)sender.tag];
+    // Riallinea i segni di spunta del sottomenu.
+    for (NSMenuItem *item in sender.menu.itemArray) {
+        item.state = (item.tag == sender.tag) ? NSControlStateValueOn : NSControlStateValueOff;
+    }
+}
 
 - (void)openDashboard:(id)sender    { [[XPActions shared] openDashboard]; }
 - (void)openPhpMyAdmin:(id)sender   { [[XPActions shared] openPhpMyAdmin]; }

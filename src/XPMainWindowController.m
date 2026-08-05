@@ -83,12 +83,29 @@ static const CGFloat XPRowHeight  = 56.0;
                                                  selector:@selector(windowWillClose:)
                                                      name:NSWindowWillCloseNotification
                                                    object:window];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(themeDidChange:)
+                                                     name:XPThemeDidChangeNotification
+                                                   object:nil];
     }
     return self;
 }
 
 - (void)windowWillClose:(NSNotification *)note {
     [[XPServiceMonitor shared] setFastPolling:NO];
+}
+
+/// Al cambio di tema la finestra si ricostruisce da capo.
+///
+/// Le etichette hanno il colore assegnato alla creazione: aggiornarle una per
+/// una significherebbe tenere un elenco di riferimenti sempre allineato al
+/// layout. La finestra non contiene dati inseriti dall'utente, quindi
+/// ricostruirla è più semplice e non perde nulla.
+- (void)themeDidChange:(NSNotification *)note {
+    self.window.backgroundColor = [XPTheme bg];
+    [self.rows removeAllObjects];
+    [self buildInterface];
+    [self refresh];
 }
 
 - (void)dealloc {
@@ -115,6 +132,8 @@ static const CGFloat XPRowHeight  = 56.0;
     y = [self addToolsTo:content atY:y];
     y = [self addSectionTitle:@"Configurazione" to:content atY:y];
     y = [self addConfigButtonsTo:content atY:y];
+    y = [self addSectionTitle:@"Aspetto" to:content atY:y];
+    y = [self addThemePickerTo:content atY:y];
     y = [self addMessageBarTo:content atY:y];
 
     // La finestra si adatta al contenuto invece di imporgli un'altezza fissa.
@@ -141,10 +160,15 @@ static const CGFloat XPRowHeight  = 56.0;
                                        frame:NSMakeRect(XPWinPadding + 56, y + 2, 300, 28)];
     [content addSubview:title];
 
-    NSString *version = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-    NSTextField *subtitle = [self labelWithText:
-                             [NSString stringWithFormat:@"Apache · MariaDB · ProFTPD — versione %@",
-                              version ?: @"1.0"]
+    // Stessa dicitura del footer della dashboard: la versione di XAMPP letta
+    // dall'installazione, poi quella del restyling.
+    NSString *appVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+    NSString *xamppVersion = [XPPaths xamppVersion];
+    NSString *subtitleText = xamppVersion
+        ? [NSString stringWithFormat:@"XAMPP %@ · v%@ restyling", xamppVersion, appVersion]
+        : [NSString stringWithFormat:@"v%@ restyling", appVersion];
+
+    NSTextField *subtitle = [self labelWithText:subtitleText
                                            font:[XPTheme fontSmall]
                                           color:[XPTheme textMuted]
                                           frame:NSMakeRect(XPWinPadding + 56, y + 28, 340, 16)];
@@ -324,6 +348,32 @@ static const CGFloat XPRowHeight  = 56.0;
     [content addSubview:folderButton];
 
     return y + 26 + 14;
+}
+
+/// Selettore del tema, gli stessi tre stati del sito.
+- (CGFloat)addThemePickerTo:(NSView *)content atY:(CGFloat)y {
+    NSSegmentedControl *picker = [NSSegmentedControl
+        segmentedControlWithLabels:@[@"Automatico", @"Scuro", @"Chiaro"]
+                      trackingMode:NSSegmentSwitchTrackingSelectOne
+                            target:self
+                            action:@selector(themeChanged:)];
+    picker.frame = NSMakeRect(XPWinPadding, y, 260, 26);
+
+    // L'ordine dei segmenti segue quello di XPThemePreference.
+    picker.selectedSegment = [XPTheme preference];
+    [content addSubview:picker];
+
+    NSTextField *hint = [self labelWithText:@"Automatico segue l'impostazione di macOS"
+                                       font:[XPTheme fontSmall]
+                                      color:[XPTheme textMuted]
+                                      frame:NSMakeRect(XPWinPadding + 272, y + 5, 260, 16)];
+    [content addSubview:hint];
+
+    return y + 26 + 16;
+}
+
+- (void)themeChanged:(NSSegmentedControl *)sender {
+    [XPTheme setPreference:(XPThemePreference)sender.selectedSegment];
 }
 
 - (CGFloat)addMessageBarTo:(NSView *)content atY:(CGFloat)y {
