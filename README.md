@@ -133,6 +133,14 @@ make clean
 `ditto`: un `zip` normale perderebbe i metadati del bundle e invaliderebbe la
 firma.
 
+## Lingue
+
+L'interfaccia è per ora solo in italiano. La localizzazione nelle 15 lingue
+della dashboard — inglese, italiano, tedesco, spagnolo, francese, portoghese
+brasiliano, rumeno, ungherese, polacco, russo, turco, giapponese, cinese
+semplificato, cinese tradizionale e urdu — è in corso, e sarà completata prima
+della prima release pubblica.
+
 ## Licenza
 
 GNU GPL, gli stessi termini di XAMPP.
