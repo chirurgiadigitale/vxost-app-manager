@@ -13,6 +13,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "XPService.h"
+#import "XPVirtualHost.h"
 
 /// Inviata a ogni esito. userInfo: @{@"message": NSString, @"isError": NSNumber}
 extern NSString *const XPActionMessageNotification;
@@ -39,6 +40,8 @@ extern NSString *const XPActionMessageNotification;
 - (void)openHtdocs;
 - (void)openXamppFolder;
 - (void)revealFile:(NSString *)path;
+/// Apre nel browser il progetto servito da un virtual host.
+- (void)openVirtualHost:(XPVirtualHost *)host;
 
 #pragma mark - Strumenti
 
