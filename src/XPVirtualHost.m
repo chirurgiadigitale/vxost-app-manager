@@ -144,6 +144,12 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
         if (serverName) current.serverName = serverName;
     }
 
+    // Il repository si cerca una volta sola per host: sono due file di testo
+    // per progetto, non vale la pena rifarlo a ogni ridisegno.
+    for (XPVirtualHost *host in hosts) {
+        host.git = [XPGitInfo infoForPath:host.documentRoot];
+    }
+
     // Lo stato reale delle porte si verifica solo per i blocchi attivi: una
     // porta commentata resta "disattivata" anche se qualcos'altro la occupa.
     if (probe) {

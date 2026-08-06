@@ -7,11 +7,13 @@
 #import "XPButton.h"
 #import "XPActions.h"
 #import "XPLayout.h"
+#import "XPGitInfo.h"
 
 @interface XPVHostRowView ()
 @property (nonatomic, strong, readwrite) XPVirtualHost *host;
 @property (nonatomic, strong) XPButton *openButton;
 @property (nonatomic, strong) XPButton *folderButton;
+@property (nonatomic, strong) XPButton *repoButton;
 @end
 
 
@@ -44,6 +46,23 @@
         [[XPActions shared] revealFile:host.documentRoot];
     }];
     [self addSubview:self.folderButton];
+
+    // Il repository, se c'è: cliccandolo si apre su GitHub.
+    if (host.git.webURL) {
+        XPGitInfo *git = host.git;
+        self.repoButton = [XPButton buttonWithTitle:git.shortName
+                                               style:XPButtonStyleQuiet
+                                             onClick:^(XPButton *b) {
+            [[NSWorkspace sharedWorkspace] openURL:git.webURL];
+        }];
+        self.repoButton.symbolName = git.isGitHub ? @"chevron.left.forwardslash.chevron.right"
+                                                  : @"arrow.triangle.branch";
+        self.repoButton.toolTip = git.branch
+            ? [NSString stringWithFormat:@"%@ · %@\n%@", git.shortName, git.branch,
+               git.webURL.absoluteString]
+            : git.webURL.absoluteString;
+        [self addSubview:self.repoButton];
+    }
 }
 
 - (void)layout {
@@ -57,6 +76,12 @@
     // In urdu i pulsanti passano sul lato opposto, come il resto della riga.
     self.folderButton.frame = XPMirror(NSMakeRect(right - 74, y, 74, 24), width);
     self.openButton.frame   = XPMirror(NSMakeRect(right - 74 - 4 - 58, y, 58, 24), width);
+
+    if (self.repoButton) {
+        CGFloat repoWidth = MIN(190, MAX(120, width - 470));
+        self.repoButton.frame = XPMirror(NSMakeRect(right - 74 - 4 - 58 - 6 - repoWidth,
+                                                    y, repoWidth, 24), width);
+    }
 }
 
 - (void)drawRect:(NSRect)dirtyRect {
@@ -91,7 +116,8 @@
 
     // Nome del progetto, troncato se non ci sta.
     CGFloat nameX = 70;
-    CGFloat available = NSWidth(self.bounds) - nameX - (disabled ? 200 : 150);
+    CGFloat available = NSWidth(self.bounds) - nameX - (disabled ? 200 : 150)
+                        - (self.repoButton ? NSWidth(self.repoButton.frame) + 6 : 0);
 
     NSDictionary *nameAttrs = @{
         NSFontAttributeName: [XPTheme fontBody],
