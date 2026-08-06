@@ -7,6 +7,9 @@
 #import "XPTracker.h"
 #import "XPTimeEntry.h"
 #import "XPTimerSectionView.h"
+#import "XPReport.h"
+#import "XPButton.h"
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 @interface XPHistoryWindowController () <NSTableViewDataSource, NSTableViewDelegate>
 @property (nonatomic, strong) NSTableView *daysTable;
@@ -18,6 +21,14 @@
 @property (nonatomic, strong) NSTextField *emptyLabel;
 @property (nonatomic, strong) NSDateFormatter *dayFormatter;
 @property (nonatomic, strong) NSDateFormatter *timeFormatter;
+
+// Riepilogo da mandare al cliente
+@property (nonatomic, strong) NSPopUpButton *periodPicker;
+@property (nonatomic, strong) NSPopUpButton *projectPicker;
+@property (nonatomic, strong) NSTextField *reportTotalLabel;
+@property (nonatomic, strong) XPButton *clipboardButton;
+@property (nonatomic, strong) XPButton *csvButton;
+@property (nonatomic, strong) NSArray<NSString *> *reportProjectKeys;
 @end
 
 
@@ -143,10 +154,83 @@
     [content addSubview:detailScroll];
     [content addSubview:self.emptyLabel];
 
+    // --- Barra del riepilogo, in fondo ---
+    NSView *reportBar = [[NSView alloc] init];
+    reportBar.translatesAutoresizingMaskIntoConstraints = NO;
+    reportBar.wantsLayer = YES;
+    reportBar.layer.backgroundColor = [XPTheme surface].CGColor;
+    reportBar.layer.cornerRadius = [XPTheme radiusMedium];
+    reportBar.layer.borderWidth = 1.0;
+    reportBar.layer.borderColor = [XPTheme border].CGColor;
+    [content addSubview:reportBar];
+
+    self.periodPicker = [[NSPopUpButton alloc] init];
+    self.periodPicker.translatesAutoresizingMaskIntoConstraints = NO;
+    self.periodPicker.target = self;
+    self.periodPicker.action = @selector(reportSelectionChanged:);
+
+    self.projectPicker = [[NSPopUpButton alloc] init];
+    self.projectPicker.translatesAutoresizingMaskIntoConstraints = NO;
+    self.projectPicker.target = self;
+    self.projectPicker.action = @selector(reportSelectionChanged:);
+
+    self.reportTotalLabel = [self labelWithFont:[NSFont monospacedDigitSystemFontOfSize:13
+                                                                                weight:NSFontWeightBold]
+                                          color:[XPTheme accent]];
+
+    self.clipboardButton = [XPButton buttonWithTitle:@"" style:XPButtonStylePrimary onClick:^(XPButton *b) {
+        [self copyReport];
+    }];
+    self.clipboardButton.symbolName = @"doc.on.doc";
+    self.clipboardButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+    self.csvButton = [XPButton buttonWithTitle:@"" style:XPButtonStyleGhost onClick:^(XPButton *b) {
+        [self saveCSV];
+    }];
+    self.csvButton.symbolName = @"tablecells";
+    self.csvButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+    for (NSView *view in @[self.periodPicker, self.projectPicker,
+                           self.reportTotalLabel, self.clipboardButton, self.csvButton]) {
+        [reportBar addSubview:view];
+    }
+
+    [NSLayoutConstraint activateConstraints:@[
+        [reportBar.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:12],
+        [reportBar.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-12],
+        [reportBar.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-12],
+        [reportBar.heightAnchor constraintEqualToConstant:52],
+
+        [self.periodPicker.leadingAnchor constraintEqualToAnchor:reportBar.leadingAnchor constant:12],
+        [self.periodPicker.centerYAnchor constraintEqualToAnchor:reportBar.centerYAnchor],
+        [self.periodPicker.widthAnchor constraintGreaterThanOrEqualToConstant:150],
+
+        [self.projectPicker.leadingAnchor constraintEqualToAnchor:self.periodPicker.trailingAnchor
+                                                          constant:8],
+        [self.projectPicker.centerYAnchor constraintEqualToAnchor:reportBar.centerYAnchor],
+        [self.projectPicker.widthAnchor constraintGreaterThanOrEqualToConstant:160],
+
+        [self.reportTotalLabel.leadingAnchor constraintEqualToAnchor:self.projectPicker.trailingAnchor
+                                                            constant:14],
+        [self.reportTotalLabel.centerYAnchor constraintEqualToAnchor:reportBar.centerYAnchor],
+        [self.reportTotalLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.csvButton.leadingAnchor
+                                                                      constant:-10],
+
+        [self.clipboardButton.trailingAnchor constraintEqualToAnchor:reportBar.trailingAnchor constant:-12],
+        [self.clipboardButton.centerYAnchor constraintEqualToAnchor:reportBar.centerYAnchor],
+        [self.clipboardButton.widthAnchor constraintGreaterThanOrEqualToConstant:190],
+        [self.clipboardButton.heightAnchor constraintEqualToConstant:30],
+
+        [self.csvButton.trailingAnchor constraintEqualToAnchor:self.clipboardButton.leadingAnchor constant:-8],
+        [self.csvButton.centerYAnchor constraintEqualToAnchor:reportBar.centerYAnchor],
+        [self.csvButton.widthAnchor constraintGreaterThanOrEqualToConstant:100],
+        [self.csvButton.heightAnchor constraintEqualToConstant:30],
+    ]];
+
     [NSLayoutConstraint activateConstraints:@[
         [daysScroll.topAnchor constraintEqualToAnchor:content.topAnchor constant:12],
         [daysScroll.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:8],
-        [daysScroll.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-12],
+        [daysScroll.bottomAnchor constraintEqualToAnchor:reportBar.topAnchor constant:-12],
         [daysScroll.widthAnchor constraintEqualToConstant:236],
 
         [self.dayTitle.topAnchor constraintEqualToAnchor:content.topAnchor constant:18],
@@ -160,7 +244,7 @@
         [detailScroll.topAnchor constraintEqualToAnchor:self.dayTitle.bottomAnchor constant:12],
         [detailScroll.leadingAnchor constraintEqualToAnchor:daysScroll.trailingAnchor constant:16],
         [detailScroll.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-16],
-        [detailScroll.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-12],
+        [detailScroll.bottomAnchor constraintEqualToAnchor:reportBar.topAnchor constant:-12],
 
         [detailContent.widthAnchor constraintEqualToAnchor:detailScroll.widthAnchor],
 
@@ -210,11 +294,121 @@
     if (self.window.isVisible) [self reload];
 }
 
+#pragma mark - Riepilogo per il cliente
+
+- (void)rebuildReportPickers {
+    NSInteger period = MAX(0, self.periodPicker.indexOfSelectedItem);
+    [self.periodPicker removeAllItems];
+    for (XPReportPeriod p = XPReportPeriodToday; p <= XPReportPeriodAll; p++) {
+        [self.periodPicker addItemWithTitle:[XPReport nameForPeriod:p]];
+    }
+    [self.periodPicker selectItemAtIndex:MIN(period, self.periodPicker.numberOfItems - 1)];
+
+    NSString *previous = self.projectPicker.titleOfSelectedItem;
+    [self.projectPicker removeAllItems];
+
+    // Prima voce: tutti i progetti. Le altre vengono dai progetti tracciabili.
+    NSMutableArray<NSString *> *keys = [NSMutableArray arrayWithObject:@""];
+    [self.projectPicker addItemWithTitle:NSLocalizedString(@"report.allProjects", nil)];
+    for (XPTrackableProject *project in [[XPTracker shared] allProjects]) {
+        [self.projectPicker addItemWithTitle:project.name];
+        [keys addObject:project.key];
+    }
+    self.reportProjectKeys = keys;
+
+    if (previous && [self.projectPicker itemWithTitle:previous]) {
+        [self.projectPicker selectItemWithTitle:previous];
+    }
+
+    self.clipboardButton.title = NSLocalizedString(@"report.copy", nil);
+    self.csvButton.title = NSLocalizedString(@"report.csv", nil);
+    [self updateReportTotal];
+}
+
+- (XPReportPeriod)selectedPeriod {
+    return (XPReportPeriod)MAX(0, self.periodPicker.indexOfSelectedItem);
+}
+
+/// nil quando è selezionato "tutti i progetti".
+- (NSString *)selectedProjectKey {
+    NSInteger index = self.projectPicker.indexOfSelectedItem;
+    if (index <= 0 || index >= (NSInteger)self.reportProjectKeys.count) return nil;
+    return self.reportProjectKeys[index];
+}
+
+- (NSString *)selectedProjectName {
+    return [self selectedProjectKey] ? self.projectPicker.titleOfSelectedItem : nil;
+}
+
+- (void)reportSelectionChanged:(id)sender {
+    [self updateReportTotal];
+}
+
+- (void)updateReportTotal {
+    NSTimeInterval total = [XPReport totalForPeriod:[self selectedPeriod]
+                                         projectKey:[self selectedProjectKey]];
+    NSUInteger count = [XPReport entriesForPeriod:[self selectedPeriod]
+                                       projectKey:[self selectedProjectKey]].count;
+
+    self.reportTotalLabel.stringValue =
+        [NSString stringWithFormat:NSLocalizedString(@"report.summary", nil),
+         [XPTimeEntry shortStringFromInterval:total], (unsigned long)count];
+
+    BOOL hasData = (count > 0);
+    self.clipboardButton.enabled = hasData;
+    self.csvButton.enabled = hasData;
+}
+
+- (void)copyReport {
+    NSString *text = [XPReport plainTextReportForPeriod:[self selectedPeriod]
+                                             projectKey:[self selectedProjectKey]
+                                            projectName:[self selectedProjectName]];
+
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    [pasteboard clearContents];
+    [pasteboard setString:text forType:NSPasteboardTypeString];
+
+    // Conferma sul pulsante stesso: un avviso modale per un copia sarebbe
+    // di troppo, ma senza riscontro non si capisce se è successo qualcosa.
+    NSString *original = self.clipboardButton.title;
+    self.clipboardButton.title = NSLocalizedString(@"report.copied", nil);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.6 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        self.clipboardButton.title = original;
+    });
+}
+
+- (void)saveCSV {
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.allowedContentTypes = @[UTTypeCommaSeparatedText];
+
+    NSDateFormatter *stamp = [[NSDateFormatter alloc] init];
+    stamp.dateFormat = @"yyyy-MM-dd";
+    stamp.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+
+    NSString *project = [self selectedProjectName] ?: @"all-projects";
+    // Il nome del progetto arriva da un percorso: le barre non possono finire
+    // in un nome di file.
+    project = [project stringByReplacingOccurrencesOfString:@"/" withString:@"-"];
+    panel.nameFieldStringValue = [NSString stringWithFormat:@"%@-%@.csv",
+                                  project, [stamp stringFromDate:[NSDate date]]];
+
+    [panel beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse result) {
+        if (result != NSModalResponseOK) return;
+        NSString *csv = [XPReport csvReportForPeriod:[self selectedPeriod]
+                                          projectKey:[self selectedProjectKey]];
+        [csv writeToURL:panel.URL atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    }];
+}
+
+#pragma mark - Ricarica
+
 - (void)reload {
     NSInteger selected = self.daysTable.selectedRow;
     NSDate *previouslySelected = (selected >= 0 && selected < (NSInteger)self.days.count)
         ? self.days[selected] : nil;
 
+    [self rebuildReportPickers];
     self.days = [[XPTracker shared] daysWithEntries];
 
     // Il giorno corrente compare anche prima della prima sessione chiusa, se

@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "Deteniendo servicios…";
 
+"report.allProjects" = "Todos los proyectos";
+
+"report.copied" = "Copiado";
+
+"report.copy" = "Copiar para email";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "Ninguna sesión en este periodo";
+
+"report.ongoing" = "en curso";
+
+"report.period.all" = "Todo";
+
+"report.period.lastMonth" = "Mes pasado";
+
+"report.period.month" = "Este mes";
+
+"report.period.today" = "Hoy";
+
+"report.period.week" = "Esta semana";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu sesiones";
+
+"report.total" = "Total";
+
 "section.appearance" = "Apariencia";
 
 "section.config" = "Configuración";

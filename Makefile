@@ -22,7 +22,7 @@ ICON    := Resources/AppIcon.icns
 # -fobjc-arc: gestione automatica della memoria
 # -Wall -Wextra: nessun warning tollerato
 CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2
-LDFLAGS := -framework Cocoa
+LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers
 
 .PHONY: all icon strings run install clean uninstall dist
 

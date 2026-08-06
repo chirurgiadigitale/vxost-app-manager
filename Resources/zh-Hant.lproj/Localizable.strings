@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "正在停止服務…";
 
+"report.allProjects" = "所有專案";
+
+"report.copied" = "已複製";
+
+"report.copy" = "複製到郵件";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "該期間沒有記錄";
+
+"report.ongoing" = "進行中";
+
+"report.period.all" = "全部時間";
+
+"report.period.lastMonth" = "上個月";
+
+"report.period.month" = "本月";
+
+"report.period.today" = "今天";
+
+"report.period.week" = "本週";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu 個工作階段";
+
+"report.total" = "合計";
+
 "section.appearance" = "外觀";
 
 "section.config" = "設定檔";

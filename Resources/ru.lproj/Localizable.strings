@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "Остановка служб…";
 
+"report.allProjects" = "Все проекты";
+
+"report.copied" = "Скопировано";
+
+"report.copy" = "Копировать для письма";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "В этот период сессий нет";
+
+"report.ongoing" = "идёт";
+
+"report.period.all" = "За всё время";
+
+"report.period.lastMonth" = "Прошлый месяц";
+
+"report.period.month" = "Этот месяц";
+
+"report.period.today" = "Сегодня";
+
+"report.period.week" = "Эта неделя";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu сессий";
+
+"report.total" = "Итого";
+
 "section.appearance" = "Оформление";
 
 "section.config" = "Конфигурация";

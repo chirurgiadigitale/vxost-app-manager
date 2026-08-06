@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "Se opresc serviciile…";
 
+"report.allProjects" = "Toate proiectele";
+
+"report.copied" = "Copiat";
+
+"report.copy" = "Copiază pentru email";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "Nicio sesiune în această perioadă";
+
+"report.ongoing" = "în curs";
+
+"report.period.all" = "Tot";
+
+"report.period.lastMonth" = "Luna trecută";
+
+"report.period.month" = "Luna aceasta";
+
+"report.period.today" = "Azi";
+
+"report.period.week" = "Săptămâna aceasta";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu sesiuni";
+
+"report.total" = "Total";
+
 "section.appearance" = "Aspect";
 
 "section.config" = "Configurare";

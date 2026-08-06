@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "正在停止服务…";
 
+"report.allProjects" = "所有项目";
+
+"report.copied" = "已复制";
+
+"report.copy" = "复制到邮件";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "该时间段没有记录";
+
+"report.ongoing" = "进行中";
+
+"report.period.all" = "全部时间";
+
+"report.period.lastMonth" = "上月";
+
+"report.period.month" = "本月";
+
+"report.period.today" = "今天";
+
+"report.period.week" = "本周";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu 个会话";
+
+"report.total" = "合计";
+
 "section.appearance" = "外观";
 
 "section.config" = "配置";
