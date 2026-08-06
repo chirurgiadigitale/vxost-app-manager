@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "سروسز";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "وقت کا حساب";
+
 "section.tools" = "ٹولز";
 
 "service.detail.busy" = "انتظار کریں…";
@@ -211,6 +214,39 @@
 "theme.hint" = "خودکار macOS کی ترتیب کے مطابق";
 
 "theme.light" = "ہلکا";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "نیا اندراج…";
+
+"timer.newProject.add" = "شامل کریں";
+
+"timer.newProject.body" = "ایسے کام کے لیے جو مقامی سائٹ نہیں: کال، تخمینہ، مشاورت۔";
+
+"timer.newProject.placeholder" = "نام";
+
+"timer.newProject.title" = "نیا ٹریکنگ اندراج";
+
+"timer.noEntries" = "آج کوئی سیشن ریکارڈ نہیں ہوا";
+
+"timer.noTask" = "کوئی تفصیل نہیں";
+
+"timer.pause" = "وقفہ";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "وقفے میں";
+
+"timer.resume" = "دوبارہ";
+
+"timer.start" = "شروع";
+
+"timer.stop" = "بند";
+
+"timer.taskPlaceholder" = "آپ کس پر کام کر رہے ہیں؟";
+
+"timer.todayEntries" = "آج کے اندراجات";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "آج %@";
 
 "tool.backup" = "بیک اپ";
 

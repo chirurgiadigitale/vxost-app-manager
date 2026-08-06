@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "Servicii";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "Pontaj";
+
 "section.tools" = "Instrumente";
 
 "service.detail.busy" = "așteptați…";
@@ -211,6 +214,39 @@
 "theme.hint" = "Automat urmează setarea macOS";
 
 "theme.light" = "Luminos";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "Intrare nouă…";
+
+"timer.newProject.add" = "Adaugă";
+
+"timer.newProject.body" = "Pentru munca ce nu e un site local: un apel, o ofertă, consultanță.";
+
+"timer.newProject.placeholder" = "Nume";
+
+"timer.newProject.title" = "Intrare nouă de pontaj";
+
+"timer.noEntries" = "Nicio sesiune înregistrată azi";
+
+"timer.noTask" = "fără descriere";
+
+"timer.pause" = "Pauză";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "în pauză";
+
+"timer.resume" = "Reia";
+
+"timer.start" = "Pornește";
+
+"timer.stop" = "Oprește";
+
+"timer.taskPlaceholder" = "La ce lucrezi?";
+
+"timer.todayEntries" = "Înregistrările de azi";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "azi %@";
 
 "tool.backup" = "Copie de rezervă";
 

@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "服务";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "工时记录";
+
 "section.tools" = "工具";
 
 "service.detail.busy" = "请稍候…";
@@ -211,6 +214,39 @@
 "theme.hint" = "自动跟随 macOS 设置";
 
 "theme.light" = "浅色";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "新建条目…";
+
+"timer.newProject.add" = "添加";
+
+"timer.newProject.body" = "用于非本地站点的工作：通话、报价、咨询。";
+
+"timer.newProject.placeholder" = "名称";
+
+"timer.newProject.title" = "新建记录项";
+
+"timer.noEntries" = "今天还没有记录";
+
+"timer.noTask" = "无描述";
+
+"timer.pause" = "暂停";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "已暂停";
+
+"timer.resume" = "继续";
+
+"timer.start" = "开始";
+
+"timer.stop" = "停止";
+
+"timer.taskPlaceholder" = "正在做什么？";
+
+"timer.todayEntries" = "今日记录";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "今日 %@";
 
 "tool.backup" = "备份";
 

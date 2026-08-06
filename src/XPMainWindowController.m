@@ -14,6 +14,8 @@
 #import "XPVirtualHost.h"
 #import "XPVHostRowView.h"
 #import "XPLayout.h"
+#import "XPTimerSectionView.h"
+#import "XPTracker.h"
 
 static const CGFloat XPWinWidth   = 560.0;
 static const CGFloat XPWinPadding = 22.0;
@@ -45,6 +47,7 @@ static const CGFloat XPRowHeight  = 56.0;
 @property (nonatomic, strong) NSTimer *messageTimer;
 @property (nonatomic, strong) NSArray<XPVirtualHost *> *hosts;
 @property (nonatomic, strong) NSTextField *hostsSummary;
+@property (nonatomic, strong) XPTimerSectionView *timerSection;
 @end
 
 
@@ -61,13 +64,17 @@ static const CGFloat XPRowHeight  = 56.0;
     NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, XPWinWidth, 700)
                                                    styleMask:(NSWindowStyleMaskTitled |
                                                               NSWindowStyleMaskClosable |
-                                                              NSWindowStyleMaskMiniaturizable)
+                                                              NSWindowStyleMaskMiniaturizable |
+                                                              NSWindowStyleMaskResizable)
                                                      backing:NSBackingStoreBuffered
                                                        defer:NO];
     window.title = @"XAMPP";
     window.releasedWhenClosed = NO;
     window.titlebarAppearsTransparent = YES;
     window.backgroundColor = [XPTheme bg];
+    // Il pulsante verde deve portare a tutto schermo, non solo ingrandire.
+    window.collectionBehavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+    window.minSize = NSMakeSize(XPWinWidth, 480);
     [window center];
 
     if ((self = [super initWithWindow:window])) {
@@ -122,6 +129,9 @@ static const CGFloat XPRowHeight  = 56.0;
 - (void)buildInterface {
     XPMainContentView *content = [[XPMainContentView alloc] initWithFrame:
                                   NSMakeRect(0, 0, XPWinWidth, 700)];
+    // Le sezioni a coordinate fisse restano ancorate in alto a sinistra; la
+    // sezione del cronometro, che usa Auto Layout, segue invece la larghezza.
+    content.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     self.window.contentView = content;
 
     CGFloat y = 34.0;   // spazio per la barra del titolo trasparente
@@ -132,6 +142,7 @@ static const CGFloat XPRowHeight  = 56.0;
     y = [self addSectionTitle:NSLocalizedString(@"section.control", nil) to:content atY:y];
     y = [self addControlButtonsTo:content atY:y];
     y = [self addProjectsSectionTo:content atY:y];
+    y = [self addTimerSectionTo:content atY:y];
     y = [self addSectionTitle:NSLocalizedString(@"section.links", nil) to:content atY:y];
     y = [self addShortcutsTo:content atY:y];
     y = [self addSectionTitle:NSLocalizedString(@"section.tools", nil) to:content atY:y];
@@ -291,6 +302,28 @@ static const CGFloat XPRowHeight  = 56.0;
     }
 
     return y + 14;
+}
+
+/// Sezione cronometro. È l'unica costruita con Auto Layout: si aggancia ai
+/// bordi del contenitore e quindi segue la larghezza della finestra, anche a
+/// tutto schermo. Le altre sezioni useranno lo stesso schema man mano che
+/// verranno convertite.
+- (CGFloat)addTimerSectionTo:(NSView *)content atY:(CGFloat)y {
+    y = [self addSectionTitle:NSLocalizedString(@"section.timer", nil) to:content atY:y];
+
+    XPTimerSectionView *timer = [[XPTimerSectionView alloc] init];
+    [content addSubview:timer];
+    self.timerSection = timer;
+
+    CGFloat height = 240.0;
+    [NSLayoutConstraint activateConstraints:@[
+        [timer.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:XPWinPadding],
+        [timer.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-XPWinPadding],
+        [timer.topAnchor constraintEqualToAnchor:content.topAnchor constant:y],
+        [timer.heightAnchor constraintGreaterThanOrEqualToConstant:height],
+    ]];
+
+    return y + height + 16;
 }
 
 - (CGFloat)addShortcutsTo:(NSView *)content atY:(CGFloat)y {

@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "Serviços";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "Registro de tempo";
+
 "section.tools" = "Ferramentas";
 
 "service.detail.busy" = "aguarde…";
@@ -211,6 +214,39 @@
 "theme.hint" = "Automático segue a configuração do macOS";
 
 "theme.light" = "Claro";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "Nova entrada…";
+
+"timer.newProject.add" = "Adicionar";
+
+"timer.newProject.body" = "Para trabalho que não é um site local: uma call, um orçamento, consultoria.";
+
+"timer.newProject.placeholder" = "Nome";
+
+"timer.newProject.title" = "Nova entrada de registro";
+
+"timer.noEntries" = "Nenhuma sessão registrada hoje";
+
+"timer.noTask" = "sem descrição";
+
+"timer.pause" = "Pausar";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "em pausa";
+
+"timer.resume" = "Retomar";
+
+"timer.start" = "Iniciar";
+
+"timer.stop" = "Parar";
+
+"timer.taskPlaceholder" = "No que você está trabalhando?";
+
+"timer.todayEntries" = "Registros de hoje";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "hoje %@";
 
 "tool.backup" = "Backup";
 

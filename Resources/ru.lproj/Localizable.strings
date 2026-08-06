@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "Службы";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "Учёт времени";
+
 "section.tools" = "Инструменты";
 
 "service.detail.busy" = "подождите…";
@@ -211,6 +214,39 @@
 "theme.hint" = "Автоматически — как в настройках macOS";
 
 "theme.light" = "Светлая";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "Новая запись…";
+
+"timer.newProject.add" = "Добавить";
+
+"timer.newProject.body" = "Для работы, не связанной с локальным сайтом: звонок, смета, консультация.";
+
+"timer.newProject.placeholder" = "Название";
+
+"timer.newProject.title" = "Новая запись учёта";
+
+"timer.noEntries" = "Сегодня сессий не записано";
+
+"timer.noTask" = "без описания";
+
+"timer.pause" = "Пауза";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "на паузе";
+
+"timer.resume" = "Продолжить";
+
+"timer.start" = "Старт";
+
+"timer.stop" = "Стоп";
+
+"timer.taskPlaceholder" = "Над чем работаете?";
+
+"timer.todayEntries" = "Записи за сегодня";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "сегодня %@";
 
 "tool.backup" = "Резервная копия";
 
