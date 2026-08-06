@@ -1,176 +1,173 @@
 # XAMPP
 
-Sostituto nativo di `manager-osx.app` per XAMPP su macOS: un'app nella barra di
-stato che avvia, ferma e sorveglia Apache, MySQL e ProFTPD.
+A native replacement for `manager-osx.app` on macOS: a Dock and menu bar app
+that starts, stops and watches over Apache, MySQL and ProFTPD.
 
-Il manager originale è un binario BitRock InstallBuilder del 2018, distribuito
-solo per `i386`, `ppc` e `x86_64`. Su Apple Silicon funziona ancora, ma solo
-perché macOS lo esegue tramite Rosetta 2: il bundle non contiene alcuna slice
-`arm64`. Lanciato invece da una shell nativa termina subito, perché il suo
-launcher sceglie l'eseguibile leggendo `uname -p` e non ha un ramo per il
-valore `arm`.
+The original manager is a BitRock InstallBuilder binary from 2018, shipped only
+for `i386`, `ppc` and `x86_64`. It still works on Apple Silicon, but only
+because macOS runs it through Rosetta 2 — the bundle carries no `arm64` slice.
+Launched from a native shell it exits immediately, because its launcher picks
+the executable by reading `uname -p` and has no branch for `arm`.
 
-Non è ristilizzabile: l'interfaccia è compilata dentro l'eseguibile e le
-uniche risorse sostituibili sono l'icona. Da qui la riscrittura, che elimina
-anche la dipendenza da Rosetta.
+It cannot be restyled either: the interface is compiled into the executable and
+the only replaceable resource is the icon. Hence the rewrite, which also drops
+the Rosetta dependency.
 
-Nessuna dipendenza esterna, nessun framework di terze parti, nessuna richiesta
-di rete. Binario arm64 nativo di circa 100 KB.
+No external dependency, no third-party framework, no network request. Native
+arm64 binary of about 200 KB.
 
-## Cosa fa
+## What it does
 
-L'app sta in due posti contemporaneamente, e da entrambi si arriva alle stesse
-funzioni: l'icona nel Dock apre la finestra completa, quella nella barra di
-stato dà accesso rapido senza lasciare il lavoro in corso.
+The app lives in two places at once, and both lead to the same functions: the
+Dock icon opens the full window, the menu bar icon gives quick access without
+leaving what you were doing.
 
-**Barra di stato** — tre barrette, una per servizio, colorate quando il
-servizio è attivo e in solo contorno quando è fermo. Lo stato dell'intero
-stack si legge senza aprire nulla.
+**Menu bar** — three bars, one per service, filled in the service colour when
+running and outlined when stopped. The state of the whole stack is readable
+without opening anything.
 
-**Finestra** — servizi, progetti, controllo, collegamenti, strumenti e file di
-configurazione, tutti raggiungibili senza passare da un menu. Si apre dal Dock,
-dal menu contestuale dell'icona di stato o con ⌘0.
+**Window** — services, projects, control, links, tools and configuration files,
+all reachable without digging through a menu. Opens from the Dock, from the
+menu bar icon's context menu, or with ⌘0.
 
-**Progetti** — la sezione risponde alla domanda "la porta 4002 di chi è?".
-Legge i `<VirtualHost>` da `httpd-vhosts.conf` e mostra porta, progetto servito
-e stato, con i pulsanti per aprirlo nel browser o nel Finder. Distingue tre
-casi: in ascolto, configurato ma Apache non risponde, e blocco commentato nella
-configurazione — quest'ultimo è il motivo per cui una porta attesa risulta
-chiusa, e senza questa sezione lo si scopre solo aprendo il file.
+**Projects** — answers the question "who owns port 4002?". It reads the
+`<VirtualHost>` blocks from `httpd-vhosts.conf` and shows the port, the project
+being served and its state, with buttons to open it in the browser or in the
+Finder. It tells three cases apart: listening, configured but Apache is not
+answering, and commented out in the configuration — the last one being why an
+expected port turns up closed, something you would otherwise only discover by
+opening the file.
 
-**Pannello** — stato, PID e porte in ascolto di ogni servizio; avvio e arresto
-singolo o complessivo; riavvio; ricarica del singolo servizio dal menu
-contestuale sulla riga.
+**Panel** — state, PID and listening ports for each service; start and stop
+individually or all together; restart; reload a single service from the context
+menu on its row.
 
-**Scorciatoie** — Dashboard, phpMyAdmin, `htdocs` nel Finder, visualizzatore
-log.
+**Logs** — system logs and per-virtual-host logs, with a text filter and
+automatic refresh. It always reads only the tail of the file: MySQL's `.err` can
+grow past 3 GB and loading it whole would freeze the app.
 
-**Log** — log di sistema e log per singolo virtual host, con filtro testuale e
-aggiornamento automatico. Legge sempre e solo la coda del file: il `.err` di
-MySQL può superare i 3 GB e caricarlo interamente bloccherebbe l'app.
+**More** — enable and disable SSL, security check, backup, quick access to the
+configuration files.
 
-**Altro** — abilitazione e disabilitazione SSL, controllo sicurezza, backup,
-accesso rapido ai file di configurazione.
+## How it detects state
 
-## Come rileva lo stato
+It does not use the PID files: `var/mysql/<host>.pid` is owned by `_mysql` with
+`rw-rw----` permissions and a normal user cannot read it, so MySQL would always
+look stopped. Instead:
 
-Non usa i file PID: `var/mysql/<host>.pid` appartiene a `_mysql` con permessi
-`rw-rw----` e un utente normale non può leggerlo, quindi MySQL risulterebbe
-sempre fermo. Al suo posto:
-
-| Informazione | Metodo | Perché |
+| Information | Method | Why |
 | --- | --- | --- |
-| Servizio attivo | `pgrep -f <percorso binario>` | funziona senza privilegi e il percorso pieno distingue l'httpd di XAMPP da un Apache di sistema |
-| Porte configurate | lettura di `httpd.conf`, `httpd-ssl.conf`, `my.cnf`, `proftpd.conf` | riflette la configurazione reale, vhost compresi |
-| Porte in ascolto | `connect()` su `127.0.0.1` | `lsof` da utente normale non vede i processi di `root` e `daemon`, un probe TCP sì |
+| Service running | `pgrep -f <binary path>` | works without privileges, and the full path tells XAMPP's httpd apart from a system Apache |
+| Configured ports | parsing `httpd.conf`, `httpd-ssl.conf`, `my.cnf`, `proftpd.conf` | reflects the real configuration, virtual hosts included |
+| Listening ports | `connect()` on `127.0.0.1` | `lsof` run as a normal user cannot see `root` and `daemon` processes, a TCP probe can |
 
-## Privilegi
+## Privileges
 
-Avviare e fermare i servizi richiede root. L'app usa
-`do shell script … with administrator privileges`, cioè il pannello password
-nativo di macOS — lo stesso meccanismo del manager originale. Non modifica
-`sudoers` e non installa helper privilegiati.
+Starting and stopping the services requires root. The app uses
+`do shell script … with administrator privileges`, that is the native macOS
+password prompt — the same mechanism as the original manager. It does not touch
+`sudoers` and installs no privileged helper.
 
-`security` e `backup` fanno domande interattive, quindi vengono aperti nel
-Terminale invece che eseguiti in silenzio.
+`security` and `backup` ask interactive questions, so they are opened in
+Terminal rather than run silently.
 
-## Icona
+## Languages
 
-L'icona è generata dal logo ufficiale XAMPP, lo stesso SVG usato dalla
-dashboard, così app e web root mostrano lo stesso marchio.
+The app speaks the same 15 languages as the dashboard: English, Italian,
+German, Spanish, French, Brazilian Portuguese, Romanian, Hungarian, Polish,
+Russian, Turkish, Japanese, Simplified Chinese, Traditional Chinese and Urdu.
+It follows the system language, with nothing to configure.
 
-`tools/make-icon.m` lo renderizza in tutte le dimensioni richieste da macOS,
-dalla 16 px alla 1024 px. Le dimensioni non vengono ingrandite da un bitmap:
-macOS carica l'SVG nativamente e ogni misura è disegnata dal vettore. Il
-marchio è ritagliato dalla sagoma delle icone di sistema — una superellisse,
-non un rettangolo con angoli circolari — con l'ombra applicata dai 64 px in su.
+Translations do not live in fifteen files kept in sync by hand but in a single
+catalogue, `tools/i18n/catalog.json`, from which `make strings` generates the
+`.lproj` bundles. The generator refuses to write if a language is missing a key
+or if a format specifier does not match the base language: a `%@` lost in
+translation breaks formatting in that language alone, and that is the kind of
+bug you otherwise find in production.
 
-Si rigenera da sola quando il logo cambia, oppure con `make icon`.
+Messages are whole sentences, never assembled from fragments: "Starting %@…" is
+a single string, because building it as "Starting" + "of" + name produces
+broken grammar in most languages.
 
-## Installazione
+Urdu reads right to left. macOS mirrors interfaces built with Auto Layout on its
+own, but these views place elements at explicit coordinates: the flip is done by
+hand in `src/XPLayout.m`, and covers rows, buttons, indicators and text
+alignment.
 
-Scarica il `.dmg` dalla pagina delle release, aprilo e trascina `XAMPP.app`
-dove preferisci — `/Applications` oppure `/Applications/XAMPP` accanto al resto
-dell'installazione.
+To try a language other than the system one:
 
-### Al primo avvio macOS la blocca
+```sh
+defaults write it.chirurgiadigitale.xampp AppleLanguages -array de
+open -b it.chirurgiadigitale.xampp
+defaults delete it.chirurgiadigitale.xampp AppleLanguages   # restore
+```
 
-L'app è firmata ad-hoc e non notarizzata da Apple, quindi Gatekeeper si oppone
-al primo avvio con un messaggio del tipo *"impossibile aprire perché Apple non
-può verificare che sia priva di malware"*. Non è un difetto dell'app: succede a
-qualsiasi programma distribuito senza un abbonamento Apple Developer da 99 €
-l'anno.
+## Icon
 
-Per autorizzarla una volta sola:
+The icon is generated from the official XAMPP logo, the same SVG the dashboard
+uses, so the app and the web root show the same mark.
 
-1. prova ad aprirla con un doppio clic e chiudi l'avviso;
-2. vai in **Impostazioni di Sistema → Privacy e sicurezza**;
-3. scorri fino in fondo: compare *"XAMPP è stata bloccata"* con il pulsante
-   **Apri comunque**;
-4. conferma con la password.
+`tools/make-icon.m` renders it at every size macOS asks for, from 16 px to
+1024 px. None of them is an upscale: macOS loads the SVG natively and each size
+is drawn from the vector. The mark is clipped to the system icon shape — a
+superellipse, not a rectangle with circular corners — with a shadow applied from
+64 px upwards.
 
-Dalle volte successive parte normalmente.
+It regenerates itself when the logo changes, or with `make icon`.
 
-In alternativa, da Terminale:
+## Installing
+
+Download the `.dmg` from the releases page, open it and drag `XAMPP.app` where
+you prefer — `/Applications`, or `/Applications/XAMPP` next to the rest of the
+installation.
+
+### macOS blocks it on first launch
+
+The app is ad-hoc signed and not notarised by Apple, so Gatekeeper objects on
+first launch with something like *"cannot be opened because Apple cannot check
+it for malicious software"*. This is not a flaw in the app: it happens to any
+program distributed without a 99 €/year Apple Developer subscription.
+
+To authorise it once:
+
+1. try opening it with a double click and dismiss the warning;
+2. go to **System Settings → Privacy & Security**;
+3. scroll to the bottom: *"XAMPP was blocked"* appears, with an **Open Anyway**
+   button;
+4. confirm with your password.
+
+From then on it launches normally.
+
+Alternatively, from Terminal:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/XAMPP.app
 ```
 
-Chi preferisce non fidarsi di un binario può compilare dai sorgenti: il
-risultato è identico e non incontra nessun blocco.
+Anyone who would rather not trust a binary can build from source: the result is
+identical and hits no block at all.
 
-## Requisiti
+## Requirements
 
-macOS 13 o successivo su Apple Silicon o Intel. Per compilare bastano i
-Command Line Tools, Xcode non serve.
+macOS 13 or later, on Apple Silicon or Intel. Building needs only the Command
+Line Tools; Xcode is not required.
 
 ## Build
 
 ```sh
-make          # compila in build/XAMPP.app
-make icon     # rigenera l'icona dal logo
-make run      # compila e avvia
-make install  # copia in /Applications/XAMPP/
-make dist     # crea dist/ con .dmg, .zip e SHA256SUMS.txt
+make          # builds build/XAMPP.app
+make icon     # regenerates the icon from the logo
+make strings  # regenerates the 15 Localizable.strings from the catalogue
+make run      # builds and launches
+make install  # copies to /Applications/XAMPP/
+make dist     # creates dist/ with .dmg, .zip and SHA256SUMS.txt
 make clean
 ```
 
-`make dist` produce i pacchetti pubblicabili. L'archivio zip è creato con
-`ditto`: un `zip` normale perderebbe i metadati del bundle e invaliderebbe la
-firma.
+`make dist` produces the publishable packages. The zip archive is created with
+`ditto`: a plain `zip` would lose the bundle metadata and invalidate the
+signature.
 
-## Lingue
+## Licence
 
-L'app parla le stesse 15 lingue della dashboard: inglese, italiano, tedesco,
-spagnolo, francese, portoghese brasiliano, rumeno, ungherese, polacco, russo,
-turco, giapponese, cinese semplificato, cinese tradizionale e urdu. Segue la
-lingua di sistema, senza impostazioni da toccare.
-
-Le traduzioni non stanno in quindici file da tenere allineati a mano ma in un
-catalogo unico, `tools/i18n/catalog.json`, da cui `make strings` genera le
-`.lproj`. Il generatore si rifiuta di scrivere se una lingua ha una chiave in
-meno o se un segnaposto non corrisponde a quello della lingua base: un `%@`
-perso in traduzione romperebbe la formattazione solo in quella lingua, ed è il
-tipo di errore che altrimenti si scopre in produzione.
-
-I messaggi sono frasi intere, mai composte da pezzi: "Avvio di %@…" è una
-stringa sola, perché costruirla come "Avvio" + "di" + nome darebbe risultati
-sgrammaticati in buona parte delle lingue.
-
-L'urdu si legge da destra a sinistra. macOS specchia da solo le interfacce
-costruite con Auto Layout, ma qui le viste posizionano gli elementi con
-coordinate esplicite: il ribaltamento è fatto a mano, in `src/XPLayout.m`, e
-riguarda righe, pulsanti, indicatori e allineamento del testo.
-
-Per provare una lingua diversa da quella di sistema:
-
-```sh
-defaults write it.chirurgiadigitale.xampp AppleLanguages -array de
-open -b it.chirurgiadigitale.xampp
-defaults delete it.chirurgiadigitale.xampp AppleLanguages   # ripristina
-```
-
-## Licenza
-
-GNU GPL, gli stessi termini di XAMPP.
+GNU GPL, the same terms as XAMPP.
