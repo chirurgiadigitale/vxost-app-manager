@@ -60,6 +60,12 @@
 
 "config.none" = "کوئی کنفیگریشن فائل نہیں ملی";
 
+"history.byProject" = "پروجیکٹ کے لحاظ سے";
+
+"history.empty" = "ابھی کوئی سیشن ریکارڈ نہیں";
+
+"history.title" = "کام کی تاریخ";
+
 "link.dashboard" = "ڈیش بورڈ";
 
 "link.htdocsFolder" = "htdocs فولڈر";
@@ -215,6 +221,8 @@
 
 "theme.light" = "ہلکا";
 
+"timer.history" = "پچھلے سیشنز…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "نیا اندراج…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "وقفے میں";
 
 "timer.resume" = "دوبارہ";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu جاری";
 
 "timer.start" = "شروع";
 

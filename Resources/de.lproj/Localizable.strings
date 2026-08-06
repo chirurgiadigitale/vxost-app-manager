@@ -60,6 +60,12 @@
 
 "config.none" = "Keine Konfigurationsdatei gefunden";
 
+"history.byProject" = "Nach Projekt";
+
+"history.empty" = "Noch nichts erfasst";
+
+"history.title" = "Arbeitsverlauf";
+
 "link.dashboard" = "Dashboard";
 
 "link.htdocsFolder" = "htdocs-Ordner";
@@ -215,6 +221,8 @@
 
 "theme.light" = "Hell";
 
+"timer.history" = "Frühere Sitzungen…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "Neuer Eintrag…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "pausiert";
 
 "timer.resume" = "Fortsetzen";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu laufen";
 
 "timer.start" = "Starten";
 

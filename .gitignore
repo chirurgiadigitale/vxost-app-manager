@@ -10,10 +10,8 @@ dist/
 .Spotlight-V100
 .Trashes
 
-# File di contesto Claude — restano in locale, fuori dal repository
-CLAUDE.md
-CLAUDE.local.md
-.claude/
-.claude*/
-**/CLAUDE.md
-**/*.claude.md
+# Documenti Markdown: restano in locale e fuori dal repository.
+# L'unica eccezione è README.md, che è la documentazione ufficiale del
+# progetto pubblico: escluderlo lascerebbe la pagina del repo senza nulla.
+*.md
+!README.md

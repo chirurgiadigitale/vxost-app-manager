@@ -22,14 +22,14 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
 
 
 @interface XPTracker ()
-@property (nonatomic, strong, readwrite) XPTimeEntry *currentEntry;
+@property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *openEntries;
 @property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *entries;
 @property (nonatomic, strong) NSMutableArray<XPTrackableProject *> *customProjects;
 @property (nonatomic, strong) NSTimer *tickTimer;
 @property (nonatomic, strong) NSTimer *idleTimer;
-/// true quando la pausa è stata decisa dall'app e non dall'utente: solo queste
-/// vengono annullate da sole quando l'utente torna a lavorare.
-@property (nonatomic, assign) BOOL pausedAutomatically;
+/// Identificatori delle sessioni messe in pausa dall'app e non dall'utente:
+/// solo queste vengono riprese da sole quando si torna a lavorare.
+@property (nonatomic, strong) NSMutableSet<NSString *> *automaticallyPaused;
 @end
 
 
@@ -45,7 +45,9 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
 - (instancetype)init {
     if ((self = [super init])) {
         _entries = [NSMutableArray array];
+        _openEntries = [NSMutableArray array];
         _customProjects = [NSMutableArray array];
+        _automaticallyPaused = [NSMutableSet set];
         [self load];
 
         // Il Mac che va in stop non deve gonfiare la sessione: si mette in
@@ -61,7 +63,7 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
                                                        block:^(NSTimer *t) { [self checkIdle]; }];
         [[NSRunLoop mainRunLoop] addTimer:_idleTimer forMode:NSRunLoopCommonModes];
 
-        if (self.currentEntry) [self startTicking];
+        if (self.openEntries.count > 0) [self startTicking];
     }
     return self;
 }
@@ -72,13 +74,23 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
     [self.idleTimer invalidate];
 }
 
-#pragma mark - Sessione
+#pragma mark - Sessioni
+
+- (NSArray<XPTimeEntry *> *)currentEntries {
+    return [self.openEntries copy];
+}
+
+- (XPTimeEntry *)currentEntryForProjectKey:(NSString *)key {
+    for (XPTimeEntry *entry in self.openEntries) {
+        if ([entry.projectKey isEqualToString:key]) return entry;
+    }
+    return nil;
+}
 
 - (void)startProject:(XPTrackableProject *)project task:(NSString *)task {
     if (!project) return;
-    // Una sola sessione per volta: iniziarne un'altra chiude la precedente,
-    // che è ciò che ci si aspetta passando da un progetto all'altro.
-    if (self.currentEntry) [self stop];
+    // Lo stesso progetto due volte in parallelo conterebbe il tempo doppio.
+    if ([self currentEntryForProjectKey:project.key]) return;
 
     XPTimeEntry *entry = [[XPTimeEntry alloc] init];
     entry.projectKey  = project.key;
@@ -86,58 +98,66 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
     entry.task        = task;
     entry.startDate   = [NSDate date];
 
-    self.currentEntry = entry;
-    self.pausedAutomatically = NO;
+    [self.openEntries addObject:entry];
     [self startTicking];
     [self save];
     [self notifyChange];
 }
 
-- (void)pause {
-    if (!self.currentEntry || self.currentEntry.isPaused) return;
-    self.currentEntry.pauseStartedAt = [NSDate date];
-    self.pausedAutomatically = NO;
+- (void)pauseEntry:(XPTimeEntry *)entry {
+    if (!entry || entry.isPaused || ![self.openEntries containsObject:entry]) return;
+    entry.pauseStartedAt = [NSDate date];
+    [self.automaticallyPaused removeObject:entry.identifier];
     [self save];
     [self notifyChange];
 }
 
-- (void)resume {
-    if (!self.currentEntry || !self.currentEntry.isPaused) return;
-    self.currentEntry.pausedSeconds +=
-        [[NSDate date] timeIntervalSinceDate:self.currentEntry.pauseStartedAt];
-    self.currentEntry.pauseStartedAt = nil;
-    self.pausedAutomatically = NO;
+- (void)resumeEntry:(XPTimeEntry *)entry {
+    if (!entry || !entry.isPaused || ![self.openEntries containsObject:entry]) return;
+    entry.pausedSeconds += [[NSDate date] timeIntervalSinceDate:entry.pauseStartedAt];
+    entry.pauseStartedAt = nil;
+    [self.automaticallyPaused removeObject:entry.identifier];
     [self save];
     [self notifyChange];
 }
 
-- (void)stop {
-    if (!self.currentEntry) return;
+- (void)stopEntry:(XPTimeEntry *)entry {
+    if (!entry || ![self.openEntries containsObject:entry]) return;
 
     // Una pausa aperta va chiusa prima, o resterebbe a scorrere per sempre.
-    if (self.currentEntry.isPaused) {
-        self.currentEntry.pausedSeconds +=
-            [[NSDate date] timeIntervalSinceDate:self.currentEntry.pauseStartedAt];
-        self.currentEntry.pauseStartedAt = nil;
+    if (entry.isPaused) {
+        entry.pausedSeconds += [[NSDate date] timeIntervalSinceDate:entry.pauseStartedAt];
+        entry.pauseStartedAt = nil;
     }
-    self.currentEntry.endDate = [NSDate date];
+    entry.endDate = [NSDate date];
 
     // Sessioni di pochi secondi sono quasi sempre un clic per sbaglio.
-    if (self.currentEntry.duration >= 5) {
-        [self.entries addObject:self.currentEntry];
-    }
+    if (entry.duration >= 5) [self.entries addObject:entry];
 
-    self.currentEntry = nil;
-    self.pausedAutomatically = NO;
-    [self.tickTimer invalidate];
-    self.tickTimer = nil;
+    [self.openEntries removeObject:entry];
+    [self.automaticallyPaused removeObject:entry.identifier];
+
+    if (self.openEntries.count == 0) {
+        [self.tickTimer invalidate];
+        self.tickTimer = nil;
+    }
     [self save];
     [self notifyChange];
+}
+
+- (void)stopAll {
+    for (XPTimeEntry *entry in [self.openEntries copy]) [self stopEntry:entry];
+}
+
+- (NSTimeInterval)runningTotal {
+    NSTimeInterval total = 0;
+    for (XPTimeEntry *entry in self.openEntries) total += entry.duration;
+    return total;
 }
 
 - (void)startTicking {
-    [self.tickTimer invalidate];
-    // Un colpo al secondo: serve solo a far avanzare il cronometro a video.
+    if (self.tickTimer) return;
+    // Un colpo al secondo: serve solo a far avanzare i cronometri a video.
     self.tickTimer = [NSTimer scheduledTimerWithTimeInterval:1.0
                                                      repeats:YES
                                                        block:^(NSTimer *t) {
@@ -155,33 +175,43 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 }
 
 - (void)checkIdle {
-    if (!self.currentEntry) return;
+    if (self.openEntries.count == 0) return;
 
     NSTimeInterval idle = SecondsSinceLastInput();
 
-    if (!self.currentEntry.isPaused && idle >= XPIdleThreshold) {
-        // La pausa si fa decorrere da quando l'inattività è iniziata, non da
-        // adesso: i minuti già passati senza toccare nulla non sono lavoro.
-        self.currentEntry.pauseStartedAt = [NSDate dateWithTimeIntervalSinceNow:-idle];
-        self.pausedAutomatically = YES;
-        [self save];
-        [self notifyChange];
-        return;
+    // L'inattività riguarda la persona, non il singolo progetto: mette in
+    // pausa tutte le sessioni aperte insieme.
+    for (XPTimeEntry *entry in self.openEntries) {
+        if (!entry.isPaused && idle >= XPIdleThreshold) {
+            // La pausa decorre da quando l'inattività è iniziata, non da
+            // adesso: i minuti già passati senza toccare nulla non sono lavoro.
+            entry.pauseStartedAt = [NSDate dateWithTimeIntervalSinceNow:-idle];
+            [self.automaticallyPaused addObject:entry.identifier];
+            continue;
+        }
+
+        // Ripresa automatica solo per le pause decise dall'app: una pausa
+        // scelta dall'utente resta finché non la toglie lui.
+        if (entry.isPaused &&
+            [self.automaticallyPaused containsObject:entry.identifier] &&
+            idle < XPIdleCheckInterval) {
+            entry.pausedSeconds += [[NSDate date] timeIntervalSinceDate:entry.pauseStartedAt];
+            entry.pauseStartedAt = nil;
+            [self.automaticallyPaused removeObject:entry.identifier];
+        }
     }
 
-    // Ripresa automatica solo se era stata l'app a mettere in pausa: una pausa
-    // decisa dall'utente resta finché non la toglie lui.
-    if (self.currentEntry.isPaused && self.pausedAutomatically && idle < XPIdleCheckInterval) {
-        [self resume];
-    }
+    [self save];
+    [self notifyChange];
 }
 
 - (void)systemWillSleep:(NSNotification *)note {
-    if (self.currentEntry && !self.currentEntry.isPaused) {
-        self.currentEntry.pauseStartedAt = [NSDate date];
-        self.pausedAutomatically = YES;
-        [self save];
+    for (XPTimeEntry *entry in self.openEntries) {
+        if (entry.isPaused) continue;
+        entry.pauseStartedAt = [NSDate date];
+        [self.automaticallyPaused addObject:entry.identifier];
     }
+    [self save];
 }
 
 - (void)systemDidWake:(NSNotification *)note {
@@ -272,13 +302,13 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     NSTimeInterval total = 0;
     for (XPTimeEntry *entry in [self entriesForDay:day]) total += entry.duration;
 
-    // La sessione aperta va contata: il totale di oggi deve salire mentre si
-    // lavora, non solo dopo lo stop.
-    if (self.currentEntry) {
-        NSCalendar *calendar = [NSCalendar currentCalendar];
-        if ([[calendar startOfDayForDate:self.currentEntry.startDate]
+    // Le sessioni aperte vanno contate: il totale di oggi deve salire mentre
+    // si lavora, non solo dopo lo stop.
+    NSCalendar *calendar = [NSCalendar currentCalendar];
+    for (XPTimeEntry *entry in self.openEntries) {
+        if ([[calendar startOfDayForDate:entry.startDate]
              isEqualToDate:[calendar startOfDayForDate:day]]) {
-            total += self.currentEntry.duration;
+            total += entry.duration;
         }
     }
     return total;
@@ -289,11 +319,12 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     for (XPTimeEntry *entry in [self entriesForDay:day]) {
         if ([entry.projectKey isEqualToString:key]) total += entry.duration;
     }
-    if (self.currentEntry && [self.currentEntry.projectKey isEqualToString:key]) {
-        NSCalendar *calendar = [NSCalendar currentCalendar];
-        if ([[calendar startOfDayForDate:self.currentEntry.startDate]
+    NSCalendar *calendar = [NSCalendar currentCalendar];
+    for (XPTimeEntry *entry in self.openEntries) {
+        if (![entry.projectKey isEqualToString:key]) continue;
+        if ([[calendar startOfDayForDate:entry.startDate]
              isEqualToDate:[calendar startOfDayForDate:day]]) {
-            total += self.currentEntry.duration;
+            total += entry.duration;
         }
     }
     return total;
@@ -312,8 +343,8 @@ static NSTimeInterval SecondsSinceLastInput(void) {
             total += entry.duration;
         }
     }
-    if (self.currentEntry && [self.currentEntry.projectKey isEqualToString:key]) {
-        total += self.currentEntry.duration;
+    for (XPTimeEntry *entry in self.openEntries) {
+        if ([entry.projectKey isEqualToString:key]) total += entry.duration;
     }
     return total;
 }
@@ -359,10 +390,16 @@ static NSTimeInterval SecondsSinceLastInput(void) {
         [self.customProjects addObject:project];
     }
 
-    // Una sessione lasciata aperta da un avvio precedente viene ripresa: se
+    // Le sessioni lasciate aperte da un avvio precedente vengono riprese: se
     // l'app è stata chiusa senza premere stop, il lavoro non va perso.
-    XPTimeEntry *current = [XPTimeEntry entryFromDictionary:root[@"current"]];
-    if (current && current.isRunning) self.currentEntry = current;
+    // "current" al singolare è il formato della prima versione, letto ancora
+    // per non perdere i dati di chi aggiorna.
+    for (NSDictionary *raw in root[@"open"]) {
+        XPTimeEntry *entry = [XPTimeEntry entryFromDictionary:raw];
+        if (entry && entry.isRunning) [self.openEntries addObject:entry];
+    }
+    XPTimeEntry *legacy = [XPTimeEntry entryFromDictionary:root[@"current"]];
+    if (legacy && legacy.isRunning) [self.openEntries addObject:legacy];
 }
 
 - (void)save {
@@ -380,7 +417,11 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     root[@"version"] = @1;
     root[@"entries"] = entries;
     root[@"customProjects"] = customNames;
-    if (self.currentEntry) root[@"current"] = [self.currentEntry dictionaryRepresentation];
+    NSMutableArray *open = [NSMutableArray array];
+    for (XPTimeEntry *entry in self.openEntries) {
+        [open addObject:[entry dictionaryRepresentation]];
+    }
+    root[@"open"] = open;
 
     NSData *data = [NSJSONSerialization dataWithJSONObject:root
                                                    options:NSJSONWritingPrettyPrinted

@@ -60,6 +60,12 @@
 
 "config.none" = "找不到設定檔案";
 
+"history.byProject" = "依專案";
+
+"history.empty" = "尚無記錄";
+
+"history.title" = "工作歷史";
+
 "link.dashboard" = "儀表板";
 
 "link.htdocsFolder" = "htdocs 資料夾";
@@ -215,6 +221,8 @@
 
 "theme.light" = "淺色";
 
+"timer.history" = "歷史記錄…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "新增項目…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "已暫停";
 
 "timer.resume" = "繼續";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu 項進行中";
 
 "timer.start" = "開始";
 
