@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "Hizmetler durduruluyor…";
 
+"report.allProjects" = "Tüm projeler";
+
+"report.copied" = "Kopyalandı";
+
+"report.copy" = "E-posta için kopyala";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "Bu dönemde oturum yok";
+
+"report.ongoing" = "sürüyor";
+
+"report.period.all" = "Tümü";
+
+"report.period.lastMonth" = "Geçen ay";
+
+"report.period.month" = "Bu ay";
+
+"report.period.today" = "Bugün";
+
+"report.period.week" = "Bu hafta";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu oturum";
+
+"report.total" = "Toplam";
+
 "section.appearance" = "Görünüm";
 
 "section.config" = "Yapılandırma";

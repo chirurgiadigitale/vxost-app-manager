@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "سروسز رک رہی ہیں…";
 
+"report.allProjects" = "تمام پروجیکٹس";
+
+"report.copied" = "کاپی ہو گیا";
+
+"report.copy" = "ای میل کے لیے کاپی";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "اس مدت میں کوئی سیشن نہیں";
+
+"report.ongoing" = "جاری";
+
+"report.period.all" = "تمام وقت";
+
+"report.period.lastMonth" = "پچھلا مہینہ";
+
+"report.period.month" = "یہ مہینہ";
+
+"report.period.today" = "آج";
+
+"report.period.week" = "یہ ہفتہ";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu سیشنز";
+
+"report.total" = "کل";
+
 "section.appearance" = "ظاہری شکل";
 
 "section.config" = "کنفیگریشن";

@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "サービスを停止しています…";
 
+"report.allProjects" = "すべてのプロジェクト";
+
+"report.copied" = "コピーしました";
+
+"report.copy" = "メール用にコピー";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "この期間の記録はありません";
+
+"report.ongoing" = "進行中";
+
+"report.period.all" = "全期間";
+
+"report.period.lastMonth" = "先月";
+
+"report.period.month" = "今月";
+
+"report.period.today" = "今日";
+
+"report.period.week" = "今週";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu 件";
+
+"report.total" = "合計";
+
 "section.appearance" = "外観";
 
 "section.config" = "設定";

@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "Arrêt des services…";
 
+"report.allProjects" = "Tous les projets";
+
+"report.copied" = "Copié";
+
+"report.copy" = "Copier pour e-mail";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "Aucune session sur cette période";
+
+"report.ongoing" = "en cours";
+
+"report.period.all" = "Tout";
+
+"report.period.lastMonth" = "Le mois dernier";
+
+"report.period.month" = "Ce mois-ci";
+
+"report.period.today" = "Aujourd'hui";
+
+"report.period.week" = "Cette semaine";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu sessions";
+
+"report.total" = "Total";
+
 "section.appearance" = "Apparence";
 
 "section.config" = "Configuration";

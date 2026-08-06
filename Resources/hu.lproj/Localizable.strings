@@ -171,6 +171,33 @@
 
 "progress.stoppingAll" = "Szolgáltatások leállítása…";
 
+"report.allProjects" = "Minden projekt";
+
+"report.copied" = "Másolva";
+
+"report.copy" = "Másolás e-mailhez";
+
+"report.csv" = "CSV…";
+
+"report.noEntries" = "Nincs munkamenet ebben az időszakban";
+
+"report.ongoing" = "folyamatban";
+
+"report.period.all" = "Teljes időszak";
+
+"report.period.lastMonth" = "Előző hónap";
+
+"report.period.month" = "Ez a hónap";
+
+"report.period.today" = "Ma";
+
+"report.period.week" = "Ez a hét";
+
+/* %1$@ durata, %2$lu numero sessioni */
+"report.summary" = "%1$@ · %2$lu munkamenet";
+
+"report.total" = "Összesen";
+
 "section.appearance" = "Megjelenés";
 
 "section.config" = "Beállítások";
