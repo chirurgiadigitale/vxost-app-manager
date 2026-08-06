@@ -45,9 +45,9 @@ NSString *const XPControlScript = @"/Applications/XAMPP/xamppfiles/xampp";
     NSString *mysqlErr = [self root:[NSString stringWithFormat:@"var/mysql/%@.err", host]];
 
     NSMutableArray *logs = [NSMutableArray array];
-    [logs addObject:@{@"title": @"Apache — error_log",  @"path": [self root:@"logs/error_log"]}];
-    [logs addObject:@{@"title": @"Apache — access_log", @"path": [self root:@"logs/access_log"]}];
-    [logs addObject:@{@"title": @"MySQL — error",       @"path": mysqlErr}];
+    [logs addObject:@{@"title": NSLocalizedString(@"log.system.apacheError", nil),  @"path": [self root:@"logs/error_log"]}];
+    [logs addObject:@{@"title": NSLocalizedString(@"log.system.apacheAccess", nil), @"path": [self root:@"logs/access_log"]}];
+    [logs addObject:@{@"title": NSLocalizedString(@"log.system.mysqlError", nil),   @"path": mysqlErr}];
     [logs addObject:@{@"title": @"ProFTPD",             @"path": [self root:@"var/proftpd.log"]}];
 
     // Tiene solo quelli che esistono davvero.

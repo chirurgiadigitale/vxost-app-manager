@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "Confirmer l'opération ?";
+
+"alert.disableSSL" = "Désactiver la prise en charge SSL d'Apache ? Apache sera redémarré.";
+
+"alert.enableSSL" = "Activer la prise en charge SSL d'Apache ? Apache sera redémarré.";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "Le script de contrôle est absent ou non exécutable :\n%@\n\nL'app reste ouverte mais ne pourra pas démarrer ou arrêter les services.";
+
+"alert.missing.title" = "Installation XAMPP introuvable";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ refonte";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ refonte";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "tout actif";
+
+"badge.busy" = "en cours";
+
+"badge.partial" = "partiel";
+
+"badge.stopped" = "arrêté";
+
+"btn.cancel" = "Annuler";
+
+"btn.folder" = "Dossier";
+
+"btn.more" = "Plus…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "Ouvrir";
+
+"btn.proceed" = "Continuer";
+
+"btn.quit" = "Quitter";
+
+"btn.restart" = "Redémarrer";
+
+/* Avvia un singolo servizio */
+"btn.start" = "Démarrer";
+
+"btn.startAll" = "Tout démarrer";
+
+"btn.stop" = "Arrêter";
+
+"btn.stopAll" = "Tout arrêter";
+
+"btn.understood" = "Compris";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "Fenêtre";
+
+"config.files" = "Fichiers de configuration";
+
+"config.none" = "Aucun fichier de configuration trouvé";
+
+"link.dashboard" = "Tableau de bord";
+
+"link.htdocsFolder" = "Dossier htdocs";
+
+"link.viewLogs" = "Afficher les journaux";
+
+"link.xamppFolder" = "Ouvrir le dossier XAMPP";
+
+"log.autoRefresh" = "Actualiser";
+
+"log.elevate" = "Lire en tant qu'administrateur";
+
+"log.filter" = "Filtrer les lignes…";
+
+"log.matchingLines" = " · %lu lignes correspondantes";
+
+"log.readCancelled" = "Lecture annulée";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · lu en tant qu'administrateur · actualisation automatique désactivée";
+
+"log.readFailed" = "Échec de la lecture";
+
+"log.readingElevated" = "Lecture avec les privilèges d'administrateur…";
+
+"log.reveal" = "Dans le Finder";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · fin du fichier affichée";
+
+"log.title" = "Journaux XAMPP";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ n'est pas lisible par votre utilisateur : le fichier appartient à un autre propriétaire.";
+
+"log.veryLarge" = "  ⚠︎ fichier très volumineux";
+
+"menu.about" = "À propos de XAMPP";
+
+"menu.close" = "Fermer";
+
+"menu.copy" = "Copier";
+
+"menu.edit" = "Édition";
+
+"menu.find" = "Rechercher";
+
+"menu.hide" = "Masquer XAMPP";
+
+"menu.minimize" = "Réduire";
+
+"menu.openDashboard" = "Ouvrir le tableau de bord";
+
+"menu.openPhpMyAdmin" = "Ouvrir phpMyAdmin";
+
+"menu.openWindow" = "Ouvrir la fenêtre XAMPP";
+
+"menu.quit" = "Quitter XAMPP";
+
+"menu.selectAll" = "Tout sélectionner";
+
+"menu.services" = "Services";
+
+"menu.theme" = "Thème";
+
+"menu.viewLogs" = "Afficher les journaux…";
+
+"menu.window" = "Fenêtre";
+
+"msg.apacheStopped" = "Apache est arrêté : démarrez-le pour ouvrir cette page";
+
+"msg.cancelled" = "Opération annulée";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "Opération terminée";
+
+"msg.failed" = "Échec de la commande";
+
+"msg.terminalFailed" = "Impossible d'ouvrir le Terminal";
+
+"msg.terminalOpened" = "Commande ouverte dans le Terminal";
+
+"progress.disablingSSL" = "Désactivation de SSL…";
+
+"progress.enablingSSL" = "Activation de SSL…";
+
+"progress.reloading" = "Rechargement de %@…";
+
+"progress.restartingAll" = "Redémarrage des services…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "Démarrage de %@…";
+
+"progress.startingAll" = "Démarrage des services…";
+
+"progress.stopping" = "Arrêt de %@…";
+
+"progress.stoppingAll" = "Arrêt des services…";
+
+"section.appearance" = "Apparence";
+
+"section.config" = "Configuration";
+
+"section.control" = "Contrôle";
+
+"section.links" = "Liens";
+
+"section.projects" = "Projets";
+
+/* Titolo di sezione */
+"section.services" = "Services";
+
+"section.tools" = "Outils";
+
+"service.detail.busy" = "veuillez patienter…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "port %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "arrêté · port %@";
+
+"service.ports.none" = "aucun port configuré";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — ports : %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "Recharger %@";
+
+"status.allRunning" = "tous les services actifs";
+
+"status.allStopped" = "tous les services arrêtés";
+
+"status.busy" = "opération en cours";
+
+"status.partial" = "partiellement actif";
+
+"theme.auto" = "Automatique";
+
+"theme.dark" = "Sombre";
+
+"theme.hint" = "Automatique suit le réglage de macOS";
+
+"theme.light" = "Clair";
+
+"tool.backup" = "Sauvegarde";
+
+"tool.disableSSL" = "Désactiver SSL";
+
+"tool.enableSSL" = "Activer SSL";
+
+"tool.security" = "Contrôle de sécurité";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "désactivé dans la configuration";
+
+"vhost.err.commented" = "Le port %ld est commenté dans httpd-vhosts.conf";
+
+"vhost.err.noResponse" = "Aucune réponse sur le port %ld : Apache est-il arrêté ?";
+
+"vhost.listening" = "à l'écoute";
+
+"vhost.notResponding" = "configuré, Apache ne répond pas";
+
+"vhost.summary" = "%lu à l'écoute";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu à l'écoute · %2$lu désactivé";

@@ -21,25 +21,29 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 #pragma mark - Esecuzione
 
 /// Esegue un'azione dello script xampp marcando i servizi come "in transizione".
+///
+/// Il messaggio di avanzamento arriva già formato e tradotto: comporlo qui da
+/// pezzi ("Avvio" + "di" + nome) darebbe frasi sgrammaticate in metà delle
+/// lingue supportate.
 - (void)performAction:(NSString *)action
            onServices:(NSArray<XPService *> *)services
-          description:(NSString *)description {
+      progressMessage:(NSString *)progressMessage {
 
     for (XPService *service in services) service.state = XPServiceStateBusy;
     [[NSNotificationCenter defaultCenter] postNotificationName:XPServicesDidChangeNotification
                                                         object:self];
-    [self postMessage:[NSString stringWithFormat:@"%@…", description] isError:NO];
+    [self postMessage:progressMessage isError:NO];
 
     [XPTaskRunner runPrivilegedXamppAction:action completion:^(XPTaskResult *result) {
         // Lo stato torna a essere dedotto dai processi reali.
         for (XPService *service in services) service.state = XPServiceStateStopped;
 
         if (result.cancelled) {
-            [self postMessage:@"Operazione annullata" isError:NO];
+            [self postMessage:NSLocalizedString(@"msg.cancelled", nil) isError:NO];
         } else if (!result.succeeded) {
             [self postMessage:[self firstMeaningfulLine:result.output] isError:YES];
         } else {
-            [self postMessage:[NSString stringWithFormat:@"%@: fatto", description] isError:NO];
+            [self postMessage:NSLocalizedString(@"msg.done", nil) isError:NO];
         }
 
         // I demoni impiegano un istante a comparire o sparire dalla tabella dei
@@ -58,41 +62,43 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
                              [NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if (trimmed.length > 0) return trimmed;
     }
-    return @"Comando fallito";
+    return NSLocalizedString(@"msg.failed", nil);
 }
 
 #pragma mark - Servizi
 
 - (void)toggleService:(XPService *)service {
     BOOL running = (service.state == XPServiceStateRunning);
-    NSString *action = running ? service.stopAction : service.startAction;
-    NSString *description = [NSString stringWithFormat:@"%@ di %@",
-                             running ? @"Arresto" : @"Avvio", service.name];
-    [self performAction:action onServices:@[service] description:description];
+    NSString *format = running ? NSLocalizedString(@"progress.stopping", nil)
+                               : NSLocalizedString(@"progress.starting", nil);
+    [self performAction:(running ? service.stopAction : service.startAction)
+             onServices:@[service]
+        progressMessage:[NSString stringWithFormat:format, service.name]];
 }
 
 - (void)reloadService:(XPService *)service {
     [self performAction:service.reloadAction
              onServices:@[service]
-            description:[NSString stringWithFormat:@"Ricarica di %@", service.name]];
+        progressMessage:[NSString stringWithFormat:
+                         NSLocalizedString(@"progress.reloading", nil), service.name]];
 }
 
 - (void)startAll {
     [self performAction:@"start"
              onServices:[XPServiceMonitor shared].services
-            description:@"Avvio dei servizi"];
+        progressMessage:NSLocalizedString(@"progress.startingAll", nil)];
 }
 
 - (void)stopAll {
     [self performAction:@"stop"
              onServices:[XPServiceMonitor shared].services
-            description:@"Arresto dei servizi"];
+        progressMessage:NSLocalizedString(@"progress.stoppingAll", nil)];
 }
 
 - (void)restartAll {
     [self performAction:@"restart"
              onServices:[XPServiceMonitor shared].services
-            description:@"Riavvio dei servizi"];
+        progressMessage:NSLocalizedString(@"progress.restartingAll", nil)];
 }
 
 #pragma mark - Collegamenti
@@ -110,7 +116,7 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
     // connessione: meglio dirlo prima di aprirlo.
     XPService *apache = [[XPServiceMonitor shared] serviceForKey:@"apache"];
     if (apache.state != XPServiceStateRunning) {
-        [self postMessage:@"Apache è fermo: avvialo per aprire questa pagina" isError:YES];
+        [self postMessage:NSLocalizedString(@"msg.apacheStopped", nil) isError:YES];
         return;
     }
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:urlString]];
@@ -125,12 +131,12 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
     if (host.state == XPVHostStateDisabled) {
         [self postMessage:[NSString stringWithFormat:
-            @"La porta %ld è commentata in httpd-vhosts.conf", (long)host.port] isError:YES];
+            NSLocalizedString(@"vhost.err.commented", nil), (long)host.port] isError:YES];
         return;
     }
     if (host.state != XPVHostStateListening) {
         [self postMessage:[NSString stringWithFormat:
-            @"Nessuna risposta sulla porta %ld: Apache è fermo?", (long)host.port] isError:YES];
+            NSLocalizedString(@"vhost.err.noResponse", nil), (long)host.port] isError:YES];
         return;
     }
     [[NSWorkspace sharedWorkspace] openURL:[host url]];
@@ -158,25 +164,25 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
 - (void)enableSSL {
     [self confirmThenRun:@"enablessl"
-                 message:@"Abilitare il supporto SSL di Apache? Apache verrà riavviato."
-             description:@"Abilitazione SSL"];
+                 message:NSLocalizedString(@"alert.enableSSL", nil)
+         progressMessage:NSLocalizedString(@"progress.enablingSSL", nil)];
 }
 
 - (void)disableSSL {
     [self confirmThenRun:@"disablessl"
-                 message:@"Disabilitare il supporto SSL di Apache? Apache verrà riavviato."
-             description:@"Disabilitazione SSL"];
+                 message:NSLocalizedString(@"alert.disableSSL", nil)
+         progressMessage:NSLocalizedString(@"progress.disablingSSL", nil)];
 }
 
 - (void)confirmThenRun:(NSString *)action
                message:(NSString *)message
-           description:(NSString *)description {
+       progressMessage:(NSString *)progressMessage {
 
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"Confermi l'operazione?";
+    alert.messageText = NSLocalizedString(@"alert.confirm.title", nil);
     alert.informativeText = message;
-    [alert addButtonWithTitle:@"Procedi"];
-    [alert addButtonWithTitle:@"Annulla"];
+    [alert addButtonWithTitle:NSLocalizedString(@"btn.proceed", nil)];
+    [alert addButtonWithTitle:NSLocalizedString(@"btn.cancel", nil)];
     alert.alertStyle = NSAlertStyleWarning;
 
     [NSApp activateIgnoringOtherApps:YES];
@@ -184,7 +190,7 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
     [self performAction:action
              onServices:[XPServiceMonitor shared].services
-            description:description];
+        progressMessage:progressMessage];
 }
 
 - (void)runSecurityCheck { [self runInTerminal:@"security"]; }
@@ -204,9 +210,9 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
     NSDictionary *error = nil;
     [script executeAndReturnError:&error];
     if (error) {
-        [self postMessage:@"Impossibile aprire il Terminale" isError:YES];
+        [self postMessage:NSLocalizedString(@"msg.terminalFailed", nil) isError:YES];
     } else {
-        [self postMessage:@"Comando aperto nel Terminale" isError:NO];
+        [self postMessage:NSLocalizedString(@"msg.terminalOpened", nil) isError:NO];
     }
 }
 

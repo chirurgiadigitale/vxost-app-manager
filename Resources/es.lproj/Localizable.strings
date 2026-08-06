@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "¿Confirmar la operación?";
+
+"alert.disableSSL" = "¿Desactivar la compatibilidad SSL de Apache? Apache se reiniciará.";
+
+"alert.enableSSL" = "¿Activar la compatibilidad SSL de Apache? Apache se reiniciará.";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "El script de control no existe o no es ejecutable:\n%@\n\nLa app permanece abierta pero no podrá iniciar ni detener los servicios.";
+
+"alert.missing.title" = "No se encontró la instalación de XAMPP";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ rediseño";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ rediseño";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "todo activo";
+
+"badge.busy" = "en curso";
+
+"badge.partial" = "parcial";
+
+"badge.stopped" = "detenido";
+
+"btn.cancel" = "Cancelar";
+
+"btn.folder" = "Carpeta";
+
+"btn.more" = "Más…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "Abrir";
+
+"btn.proceed" = "Continuar";
+
+"btn.quit" = "Salir";
+
+"btn.restart" = "Reiniciar";
+
+/* Avvia un singolo servizio */
+"btn.start" = "Iniciar";
+
+"btn.startAll" = "Iniciar todo";
+
+"btn.stop" = "Detener";
+
+"btn.stopAll" = "Detener todo";
+
+"btn.understood" = "Entendido";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "Ventana";
+
+"config.files" = "Archivos de configuración";
+
+"config.none" = "No se encontró ningún archivo de configuración";
+
+"link.dashboard" = "Panel";
+
+"link.htdocsFolder" = "Carpeta htdocs";
+
+"link.viewLogs" = "Ver registros";
+
+"link.xamppFolder" = "Abrir carpeta XAMPP";
+
+"log.autoRefresh" = "Actualizar";
+
+"log.elevate" = "Leer como administrador";
+
+"log.filter" = "Filtrar líneas…";
+
+"log.matchingLines" = " · %lu líneas coincidentes";
+
+"log.readCancelled" = "Lectura cancelada";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · leído como administrador · actualización automática desactivada";
+
+"log.readFailed" = "Error al leer";
+
+"log.readingElevated" = "Leyendo con privilegios de administrador…";
+
+"log.reveal" = "En el Finder";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · se muestra el final del archivo";
+
+"log.title" = "Registros de XAMPP";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ no se puede leer con tu usuario: pertenece a otro propietario.";
+
+"log.veryLarge" = "  ⚠︎ archivo muy grande";
+
+"menu.about" = "Acerca de XAMPP";
+
+"menu.close" = "Cerrar";
+
+"menu.copy" = "Copiar";
+
+"menu.edit" = "Edición";
+
+"menu.find" = "Buscar";
+
+"menu.hide" = "Ocultar XAMPP";
+
+"menu.minimize" = "Minimizar";
+
+"menu.openDashboard" = "Abrir panel";
+
+"menu.openPhpMyAdmin" = "Abrir phpMyAdmin";
+
+"menu.openWindow" = "Abrir ventana de XAMPP";
+
+"menu.quit" = "Salir de XAMPP";
+
+"menu.selectAll" = "Seleccionar todo";
+
+"menu.services" = "Servicios";
+
+"menu.theme" = "Tema";
+
+"menu.viewLogs" = "Ver registros…";
+
+"menu.window" = "Ventana";
+
+"msg.apacheStopped" = "Apache está detenido: inícialo para abrir esta página";
+
+"msg.cancelled" = "Operación cancelada";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "Operación completada";
+
+"msg.failed" = "Comando fallido";
+
+"msg.terminalFailed" = "No se pudo abrir el Terminal";
+
+"msg.terminalOpened" = "Comando abierto en el Terminal";
+
+"progress.disablingSSL" = "Desactivando SSL…";
+
+"progress.enablingSSL" = "Activando SSL…";
+
+"progress.reloading" = "Recargando %@…";
+
+"progress.restartingAll" = "Reiniciando servicios…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "Iniciando %@…";
+
+"progress.startingAll" = "Iniciando servicios…";
+
+"progress.stopping" = "Deteniendo %@…";
+
+"progress.stoppingAll" = "Deteniendo servicios…";
+
+"section.appearance" = "Apariencia";
+
+"section.config" = "Configuración";
+
+"section.control" = "Control";
+
+"section.links" = "Enlaces";
+
+"section.projects" = "Proyectos";
+
+/* Titolo di sezione */
+"section.services" = "Servicios";
+
+"section.tools" = "Herramientas";
+
+"service.detail.busy" = "espere…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "puerto %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "detenido · puerto %@";
+
+"service.ports.none" = "ningún puerto configurado";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — puertos: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "Recargar %@";
+
+"status.allRunning" = "todos los servicios activos";
+
+"status.allStopped" = "todos los servicios detenidos";
+
+"status.busy" = "operación en curso";
+
+"status.partial" = "parcialmente activo";
+
+"theme.auto" = "Automático";
+
+"theme.dark" = "Oscuro";
+
+"theme.hint" = "Automático sigue la configuración de macOS";
+
+"theme.light" = "Claro";
+
+"tool.backup" = "Copia de seguridad";
+
+"tool.disableSSL" = "Desactivar SSL";
+
+"tool.enableSSL" = "Activar SSL";
+
+"tool.security" = "Comprobación de seguridad";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "desactivado en la configuración";
+
+"vhost.err.commented" = "El puerto %ld está comentado en httpd-vhosts.conf";
+
+"vhost.err.noResponse" = "Sin respuesta en el puerto %ld: ¿Apache está detenido?";
+
+"vhost.listening" = "escuchando";
+
+"vhost.notResponding" = "configurado, Apache no responde";
+
+"vhost.summary" = "%lu escuchando";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu escuchando · %2$lu desactivado";

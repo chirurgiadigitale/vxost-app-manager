@@ -6,6 +6,7 @@
 #import "XPTheme.h"
 #import "XPButton.h"
 #import "XPActions.h"
+#import "XPLayout.h"
 
 @interface XPVHostRowView ()
 @property (nonatomic, strong, readwrite) XPVirtualHost *host;
@@ -34,12 +35,12 @@
 
     XPVirtualHost *host = self.host;
 
-    self.openButton = [XPButton buttonWithTitle:@"Apri" style:XPButtonStyleGhost onClick:^(XPButton *b) {
+    self.openButton = [XPButton buttonWithTitle:NSLocalizedString(@"btn.open", nil) style:XPButtonStyleGhost onClick:^(XPButton *b) {
         [[XPActions shared] openVirtualHost:host];
     }];
     [self addSubview:self.openButton];
 
-    self.folderButton = [XPButton buttonWithTitle:@"Cartella" style:XPButtonStyleQuiet onClick:^(XPButton *b) {
+    self.folderButton = [XPButton buttonWithTitle:NSLocalizedString(@"btn.folder", nil) style:XPButtonStyleQuiet onClick:^(XPButton *b) {
         [[XPActions shared] revealFile:host.documentRoot];
     }];
     [self addSubview:self.folderButton];
@@ -50,10 +51,12 @@
     if (!self.openButton) return;   // riga di un host disattivato
 
     CGFloat y = NSMidY(self.bounds) - 12;
-    CGFloat right = NSWidth(self.bounds) - 10;
+    CGFloat width = NSWidth(self.bounds);
+    CGFloat right = width - 10;
 
-    self.folderButton.frame = NSMakeRect(right - 74, y, 74, 24);
-    self.openButton.frame   = NSMakeRect(right - 74 - 4 - 58, y, 58, 24);
+    // In urdu i pulsanti passano sul lato opposto, come il resto della riga.
+    self.folderButton.frame = XPMirror(NSMakeRect(right - 74, y, 74, 24), width);
+    self.openButton.frame   = XPMirror(NSMakeRect(right - 74 - 4 - 58, y, 58, 24), width);
 }
 
 - (void)drawRect:(NSRect)dirtyRect {
@@ -62,7 +65,8 @@
 
     // Indicatore: pieno se risponde, contorno se no. La forma distingue gli
     // stati anche senza percezione del colore.
-    NSRect dot = NSMakeRect(10, NSMidY(self.bounds) - 3.5, 7, 7);
+    CGFloat width = NSWidth(self.bounds);
+    NSRect dot = XPMirror(NSMakeRect(10, NSMidY(self.bounds) - 3.5, 7, 7), width);
     NSBezierPath *dotPath = [NSBezierPath bezierPathWithOvalInRect:dot];
     if (listening) {
         [[XPTheme running] setFill];
@@ -80,35 +84,37 @@
         NSForegroundColorAttributeName: listening ? [XPTheme accent] : [XPTheme textMuted]
     };
     NSString *port = [NSString stringWithFormat:@"%ld", (long)self.host.port];
-    [port drawAtPoint:NSMakePoint(26, NSMidY(self.bounds) - 7) withAttributes:portAttrs];
+    NSMutableDictionary *portDraw = [portAttrs mutableCopy];
+    portDraw[NSParagraphStyleAttributeName] = XPNaturalParagraphStyle(NSLineBreakByClipping);
+    [port drawInRect:XPMirror(NSMakeRect(26, NSMidY(self.bounds) - 7, 40, 14), width)
+      withAttributes:portDraw];
 
     // Nome del progetto, troncato se non ci sta.
     CGFloat nameX = 70;
     CGFloat available = NSWidth(self.bounds) - nameX - (disabled ? 200 : 150);
 
-    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
-    paragraph.lineBreakMode = NSLineBreakByTruncatingMiddle;
-
     NSDictionary *nameAttrs = @{
         NSFontAttributeName: [XPTheme fontBody],
         NSForegroundColorAttributeName: disabled ? [XPTheme textMuted] : [XPTheme text],
-        NSParagraphStyleAttributeName: paragraph
+        NSParagraphStyleAttributeName: XPNaturalParagraphStyle(NSLineBreakByTruncatingMiddle)
     };
-    [self.host.name drawInRect:NSMakeRect(nameX, NSMidY(self.bounds) - 8, available, 16)
+    [self.host.name drawInRect:XPMirror(NSMakeRect(nameX, NSMidY(self.bounds) - 8,
+                                                   available, 16), width)
                 withAttributes:nameAttrs];
 
     if (disabled) {
+        // Allineato al bordo finale, qualunque sia la direzione.
+        NSMutableParagraphStyle *stateStyle =
+            [XPNaturalParagraphStyle(NSLineBreakByTruncatingTail) mutableCopy];
+        stateStyle.alignment = XPIsRTL() ? NSTextAlignmentLeft : NSTextAlignmentRight;
+
         NSDictionary *stateAttrs = @{
             NSFontAttributeName: [XPTheme fontSmall],
             NSForegroundColorAttributeName: [XPTheme textMuted],
-            NSParagraphStyleAttributeName: ({
-                NSMutableParagraphStyle *p = [[NSMutableParagraphStyle alloc] init];
-                p.alignment = NSTextAlignmentRight;
-                p;
-            })
+            NSParagraphStyleAttributeName: stateStyle
         };
-        [@"disattivato nella configurazione"
-            drawInRect:NSMakeRect(NSWidth(self.bounds) - 210, NSMidY(self.bounds) - 7, 200, 14)
+        [NSLocalizedString(@"vhost.disabled", nil)
+            drawInRect:XPMirror(NSMakeRect(width - 210, NSMidY(self.bounds) - 7, 200, 14), width)
         withAttributes:stateAttrs];
     }
 }

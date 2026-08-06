@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "確認執行此操作？";
+
+"alert.disableSSL" = "停用 Apache 的 SSL 支援？Apache 將會重新啟動。";
+
+"alert.enableSSL" = "啟用 Apache 的 SSL 支援？Apache 將會重新啟動。";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "控制指令碼不存在或無法執行：\n%@\n\n應用程式會保持開啟，但無法啟動或停止服務。";
+
+"alert.missing.title" = "找不到 XAMPP 安裝";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ 新介面";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ 新介面";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "全部執行";
+
+"badge.busy" = "進行中";
+
+"badge.partial" = "部分";
+
+"badge.stopped" = "已停止";
+
+"btn.cancel" = "取消";
+
+"btn.folder" = "資料夾";
+
+"btn.more" = "更多…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "開啟";
+
+"btn.proceed" = "繼續";
+
+"btn.quit" = "結束";
+
+"btn.restart" = "重新啟動";
+
+/* Avvia un singolo servizio */
+"btn.start" = "啟動";
+
+"btn.startAll" = "全部啟動";
+
+"btn.stop" = "停止";
+
+"btn.stopAll" = "全部停止";
+
+"btn.understood" = "知道了";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "視窗";
+
+"config.files" = "設定檔案";
+
+"config.none" = "找不到設定檔案";
+
+"link.dashboard" = "儀表板";
+
+"link.htdocsFolder" = "htdocs 資料夾";
+
+"link.viewLogs" = "檢視日誌";
+
+"link.xamppFolder" = "開啟 XAMPP 資料夾";
+
+"log.autoRefresh" = "自動更新";
+
+"log.elevate" = "以管理者身分讀取";
+
+"log.filter" = "篩選行…";
+
+"log.matchingLines" = " · %lu 行符合";
+
+"log.readCancelled" = "讀取已取消";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · 已以管理者身分讀取 · 自動更新已關閉";
+
+"log.readFailed" = "讀取失敗";
+
+"log.readingElevated" = "正在以管理者權限讀取…";
+
+"log.reveal" = "在 Finder 中顯示";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · 顯示檔案結尾";
+
+"log.title" = "XAMPP 日誌";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ 目前使用者無法讀取：檔案屬於其他擁有者。";
+
+"log.veryLarge" = "  ⚠︎ 檔案非常大";
+
+"menu.about" = "關於 XAMPP";
+
+"menu.close" = "關閉";
+
+"menu.copy" = "拷貝";
+
+"menu.edit" = "編輯";
+
+"menu.find" = "尋找";
+
+"menu.hide" = "隱藏 XAMPP";
+
+"menu.minimize" = "縮到最小";
+
+"menu.openDashboard" = "開啟儀表板";
+
+"menu.openPhpMyAdmin" = "開啟 phpMyAdmin";
+
+"menu.openWindow" = "開啟 XAMPP 視窗";
+
+"menu.quit" = "結束 XAMPP";
+
+"menu.selectAll" = "全選";
+
+"menu.services" = "服務";
+
+"menu.theme" = "主題";
+
+"menu.viewLogs" = "檢視日誌…";
+
+"menu.window" = "視窗";
+
+"msg.apacheStopped" = "Apache 已停止：請先啟動以開啟此頁面";
+
+"msg.cancelled" = "操作已取消";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "操作已完成";
+
+"msg.failed" = "指令失敗";
+
+"msg.terminalFailed" = "無法開啟終端機";
+
+"msg.terminalOpened" = "已在終端機中開啟指令";
+
+"progress.disablingSSL" = "正在停用 SSL…";
+
+"progress.enablingSSL" = "正在啟用 SSL…";
+
+"progress.reloading" = "正在重新載入 %@…";
+
+"progress.restartingAll" = "正在重新啟動服務…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "正在啟動 %@…";
+
+"progress.startingAll" = "正在啟動服務…";
+
+"progress.stopping" = "正在停止 %@…";
+
+"progress.stoppingAll" = "正在停止服務…";
+
+"section.appearance" = "外觀";
+
+"section.config" = "設定檔";
+
+"section.control" = "控制";
+
+"section.links" = "連結";
+
+"section.projects" = "專案";
+
+/* Titolo di sezione */
+"section.services" = "服務";
+
+"section.tools" = "工具";
+
+"service.detail.busy" = "請稍候…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "連接埠 %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "已停止 · 連接埠 %@";
+
+"service.ports.none" = "未設定連接埠";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — 連接埠：%2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "重新載入 %@";
+
+"status.allRunning" = "所有服務執行中";
+
+"status.allStopped" = "所有服務已停止";
+
+"status.busy" = "操作進行中";
+
+"status.partial" = "部分執行";
+
+"theme.auto" = "自動";
+
+"theme.dark" = "深色";
+
+"theme.hint" = "自動跟隨 macOS 設定";
+
+"theme.light" = "淺色";
+
+"tool.backup" = "備份";
+
+"tool.disableSSL" = "停用 SSL";
+
+"tool.enableSSL" = "啟用 SSL";
+
+"tool.security" = "安全檢查";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "已在設定中停用";
+
+"vhost.err.commented" = "連接埠 %ld 在 httpd-vhosts.conf 中已被註解";
+
+"vhost.err.noResponse" = "連接埠 %ld 無回應：Apache 是否已停止？";
+
+"vhost.listening" = "監聽中";
+
+"vhost.notResponding" = "已設定，Apache 無回應";
+
+"vhost.summary" = "%lu 監聽中";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu 監聽中 · %2$lu 已停用";

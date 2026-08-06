@@ -142,11 +142,34 @@ firma.
 
 ## Lingue
 
-L'interfaccia è per ora solo in italiano. La localizzazione nelle 15 lingue
-della dashboard — inglese, italiano, tedesco, spagnolo, francese, portoghese
-brasiliano, rumeno, ungherese, polacco, russo, turco, giapponese, cinese
-semplificato, cinese tradizionale e urdu — è in corso, e sarà completata prima
-della prima release pubblica.
+L'app parla le stesse 15 lingue della dashboard: inglese, italiano, tedesco,
+spagnolo, francese, portoghese brasiliano, rumeno, ungherese, polacco, russo,
+turco, giapponese, cinese semplificato, cinese tradizionale e urdu. Segue la
+lingua di sistema, senza impostazioni da toccare.
+
+Le traduzioni non stanno in quindici file da tenere allineati a mano ma in un
+catalogo unico, `tools/i18n/catalog.json`, da cui `make strings` genera le
+`.lproj`. Il generatore si rifiuta di scrivere se una lingua ha una chiave in
+meno o se un segnaposto non corrisponde a quello della lingua base: un `%@`
+perso in traduzione romperebbe la formattazione solo in quella lingua, ed è il
+tipo di errore che altrimenti si scopre in produzione.
+
+I messaggi sono frasi intere, mai composte da pezzi: "Avvio di %@…" è una
+stringa sola, perché costruirla come "Avvio" + "di" + nome darebbe risultati
+sgrammaticati in buona parte delle lingue.
+
+L'urdu si legge da destra a sinistra. macOS specchia da solo le interfacce
+costruite con Auto Layout, ma qui le viste posizionano gli elementi con
+coordinate esplicite: il ribaltamento è fatto a mano, in `src/XPLayout.m`, e
+riguarda righe, pulsanti, indicatori e allineamento del testo.
+
+Per provare una lingua diversa da quella di sistema:
+
+```sh
+defaults write it.chirurgiadigitale.xampp AppleLanguages -array de
+open -b it.chirurgiadigitale.xampp
+defaults delete it.chirurgiadigitale.xampp AppleLanguages   # ripristina
+```
 
 ## Licenza
 

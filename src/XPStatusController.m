@@ -142,12 +142,12 @@
 
 - (void)showContextMenu {
     NSMenu *menu = [[NSMenu alloc] init];
-    [menu addItemWithTitle:@"Apri finestra XAMPP" action:@selector(menuOpenWindow:) keyEquivalent:@""].target = self;
+    [menu addItemWithTitle:NSLocalizedString(@"menu.openWindow", nil) action:@selector(menuOpenWindow:) keyEquivalent:@""].target = self;
     [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItemWithTitle:@"Apri Dashboard" action:@selector(menuOpenDashboard:) keyEquivalent:@""].target = self;
-    [menu addItemWithTitle:@"Log…" action:@selector(menuOpenLogs:) keyEquivalent:@""].target = self;
+    [menu addItemWithTitle:NSLocalizedString(@"menu.openDashboard", nil) action:@selector(menuOpenDashboard:) keyEquivalent:@""].target = self;
+    [menu addItemWithTitle:NSLocalizedString(@"menu.viewLogs", nil) action:@selector(menuOpenLogs:) keyEquivalent:@""].target = self;
     [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItemWithTitle:@"Esci" action:@selector(menuQuit:) keyEquivalent:@"q"].target = self;
+    [menu addItemWithTitle:NSLocalizedString(@"btn.quit", nil) action:@selector(menuQuit:) keyEquivalent:@"q"].target = self;
 
     // Assegnare il menu allo status item lo fa comparire al click successivo,
     // quindi si mostra una volta sola e si stacca subito.
@@ -255,12 +255,11 @@
 
 - (void)showInstallationMissingAlert {
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"Installazione XAMPP non trovata";
+    alert.messageText = NSLocalizedString(@"alert.missing.title", nil);
     alert.informativeText = [NSString stringWithFormat:
-        @"Lo script di controllo non è presente o non è eseguibile:\n%@\n\n"
-         "L'app resta aperta ma non potrà avviare o fermare i servizi.", XPControlScript];
+        NSLocalizedString(@"alert.missing.body", nil), XPControlScript];
     alert.alertStyle = NSAlertStyleWarning;
-    [alert addButtonWithTitle:@"Ho capito"];
+    [alert addButtonWithTitle:NSLocalizedString(@"btn.understood", nil)];
     [alert runModal];
 }
 

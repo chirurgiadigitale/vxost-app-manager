@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "Confermi l'operazione?";
+
+"alert.disableSSL" = "Disabilitare il supporto SSL di Apache? Apache verrà riavviato.";
+
+"alert.enableSSL" = "Abilitare il supporto SSL di Apache? Apache verrà riavviato.";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "Lo script di controllo non è presente o non è eseguibile:\n%@\n\nL'app resta aperta ma non potrà avviare o fermare i servizi.";
+
+"alert.missing.title" = "Installazione XAMPP non trovata";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ restyling";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ restyling";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "tutto attivo";
+
+"badge.busy" = "in corso";
+
+"badge.partial" = "parziale";
+
+"badge.stopped" = "fermo";
+
+"btn.cancel" = "Annulla";
+
+"btn.folder" = "Cartella";
+
+"btn.more" = "Altro…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "Apri";
+
+"btn.proceed" = "Procedi";
+
+"btn.quit" = "Esci";
+
+"btn.restart" = "Riavvia";
+
+/* Avvia un singolo servizio */
+"btn.start" = "Avvia";
+
+"btn.startAll" = "Avvia tutto";
+
+"btn.stop" = "Ferma";
+
+"btn.stopAll" = "Ferma tutto";
+
+"btn.understood" = "Ho capito";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "Finestra";
+
+"config.files" = "File di configurazione";
+
+"config.none" = "Nessun file di configurazione trovato";
+
+"link.dashboard" = "Dashboard";
+
+"link.htdocsFolder" = "Cartella htdocs";
+
+"link.viewLogs" = "Visualizza log";
+
+"link.xamppFolder" = "Apri cartella XAMPP";
+
+"log.autoRefresh" = "Aggiorna";
+
+"log.elevate" = "Leggi come amministratore";
+
+"log.filter" = "Filtra righe…";
+
+"log.matchingLines" = " · %lu righe corrispondenti";
+
+"log.readCancelled" = "Lettura annullata";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · letto come amministratore · aggiornamento automatico disattivato";
+
+"log.readFailed" = "Lettura non riuscita";
+
+"log.readingElevated" = "Lettura con privilegi di amministratore…";
+
+"log.reveal" = "Nel Finder";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · mostrata la coda del file";
+
+"log.title" = "Log XAMPP";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ non è leggibile dal tuo utente: appartiene a un altro proprietario.";
+
+"log.veryLarge" = "  ⚠︎ file molto grande";
+
+"menu.about" = "Informazioni su XAMPP";
+
+"menu.close" = "Chiudi";
+
+"menu.copy" = "Copia";
+
+"menu.edit" = "Modifica";
+
+"menu.find" = "Trova";
+
+"menu.hide" = "Nascondi XAMPP";
+
+"menu.minimize" = "Riduci";
+
+"menu.openDashboard" = "Apri Dashboard";
+
+"menu.openPhpMyAdmin" = "Apri phpMyAdmin";
+
+"menu.openWindow" = "Apri finestra XAMPP";
+
+"menu.quit" = "Esci da XAMPP";
+
+"menu.selectAll" = "Seleziona tutto";
+
+"menu.services" = "Servizi";
+
+"menu.theme" = "Tema";
+
+"menu.viewLogs" = "Visualizza log…";
+
+"menu.window" = "Finestra";
+
+"msg.apacheStopped" = "Apache è fermo: avvialo per aprire questa pagina";
+
+"msg.cancelled" = "Operazione annullata";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "Operazione completata";
+
+"msg.failed" = "Comando fallito";
+
+"msg.terminalFailed" = "Impossibile aprire il Terminale";
+
+"msg.terminalOpened" = "Comando aperto nel Terminale";
+
+"progress.disablingSSL" = "Disabilitazione SSL…";
+
+"progress.enablingSSL" = "Abilitazione SSL…";
+
+"progress.reloading" = "Ricarica di %@…";
+
+"progress.restartingAll" = "Riavvio dei servizi…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "Avvio di %@…";
+
+"progress.startingAll" = "Avvio dei servizi…";
+
+"progress.stopping" = "Arresto di %@…";
+
+"progress.stoppingAll" = "Arresto dei servizi…";
+
+"section.appearance" = "Aspetto";
+
+"section.config" = "Configurazione";
+
+"section.control" = "Controllo";
+
+"section.links" = "Collegamenti";
+
+"section.projects" = "Progetti";
+
+/* Titolo di sezione */
+"section.services" = "Servizi";
+
+"section.tools" = "Strumenti";
+
+"service.detail.busy" = "attendere…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "porta %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "fermo · porta %@";
+
+"service.ports.none" = "nessuna porta configurata";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — porte: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "Ricarica %@";
+
+"status.allRunning" = "tutti i servizi attivi";
+
+"status.allStopped" = "tutti i servizi fermi";
+
+"status.busy" = "operazione in corso";
+
+"status.partial" = "attivo solo in parte";
+
+"theme.auto" = "Automatico";
+
+"theme.dark" = "Scuro";
+
+"theme.hint" = "Automatico segue l'impostazione di macOS";
+
+"theme.light" = "Chiaro";
+
+"tool.backup" = "Backup";
+
+"tool.disableSSL" = "Disabilita SSL";
+
+"tool.enableSSL" = "Abilita SSL";
+
+"tool.security" = "Controllo sicurezza";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "disattivato nella configurazione";
+
+"vhost.err.commented" = "La porta %ld è commentata in httpd-vhosts.conf";
+
+"vhost.err.noResponse" = "Nessuna risposta sulla porta %ld: Apache è fermo?";
+
+"vhost.listening" = "in ascolto";
+
+"vhost.notResponding" = "configurato, Apache non risponde";
+
+"vhost.summary" = "%lu in ascolto";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu in ascolto · %2$lu disattivato";

@@ -1,0 +1,1005 @@
+{
+  "app.subtitle.full": {
+    "comment": "Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling",
+    "en": "XAMPP %1$@ · v%2$@ restyling",
+    "it": "XAMPP %1$@ · v%2$@ restyling",
+    "de": "XAMPP %1$@ · v%2$@ Redesign",
+    "es": "XAMPP %1$@ · v%2$@ rediseño",
+    "fr": "XAMPP %1$@ · v%2$@ refonte",
+    "pt-BR": "XAMPP %1$@ · v%2$@ redesign",
+    "ro": "XAMPP %1$@ · v%2$@ redesign",
+    "hu": "XAMPP %1$@ · v%2$@ arculat",
+    "pl": "XAMPP %1$@ · v%2$@ nowy wygląd",
+    "ru": "XAMPP %1$@ · v%2$@ редизайн",
+    "tr": "XAMPP %1$@ · v%2$@ yeni arayüz",
+    "ja": "XAMPP %1$@ · v%2$@ リニューアル",
+    "zh-Hans": "XAMPP %1$@ · v%2$@ 新界面",
+    "zh-Hant": "XAMPP %1$@ · v%2$@ 新介面",
+    "ur": "XAMPP %1$@ · v%2$@ نئی شکل"
+  },
+  "app.subtitle.short": {
+    "comment": "Sottotitolo quando la versione di XAMPP non è leggibile",
+    "en": "v%@ restyling",
+    "it": "v%@ restyling",
+    "de": "v%@ Redesign",
+    "es": "v%@ rediseño",
+    "fr": "v%@ refonte",
+    "pt-BR": "v%@ redesign",
+    "ro": "v%@ redesign",
+    "hu": "v%@ arculat",
+    "pl": "v%@ nowy wygląd",
+    "ru": "v%@ редизайн",
+    "tr": "v%@ yeni arayüz",
+    "ja": "v%@ リニューアル",
+    "zh-Hans": "v%@ 新界面",
+    "zh-Hant": "v%@ 新介面",
+    "ur": "v%@ نئی شکل"
+  },
+
+  "section.services": {
+    "comment": "Titolo di sezione",
+    "en": "Services", "it": "Servizi", "de": "Dienste", "es": "Servicios",
+    "fr": "Services", "pt-BR": "Serviços", "ro": "Servicii", "hu": "Szolgáltatások",
+    "pl": "Usługi", "ru": "Службы", "tr": "Hizmetler", "ja": "サービス",
+    "zh-Hans": "服务", "zh-Hant": "服務", "ur": "سروسز"
+  },
+  "section.control": {
+    "en": "Control", "it": "Controllo", "de": "Steuerung", "es": "Control",
+    "fr": "Contrôle", "pt-BR": "Controle", "ro": "Control", "hu": "Vezérlés",
+    "pl": "Sterowanie", "ru": "Управление", "tr": "Denetim", "ja": "操作",
+    "zh-Hans": "控制", "zh-Hant": "控制", "ur": "کنٹرول"
+  },
+  "section.projects": {
+    "en": "Projects", "it": "Progetti", "de": "Projekte", "es": "Proyectos",
+    "fr": "Projets", "pt-BR": "Projetos", "ro": "Proiecte", "hu": "Projektek",
+    "pl": "Projekty", "ru": "Проекты", "tr": "Projeler", "ja": "プロジェクト",
+    "zh-Hans": "项目", "zh-Hant": "專案", "ur": "پروجیکٹس"
+  },
+  "section.links": {
+    "en": "Links", "it": "Collegamenti", "de": "Verknüpfungen", "es": "Enlaces",
+    "fr": "Liens", "pt-BR": "Links", "ro": "Linkuri", "hu": "Hivatkozások",
+    "pl": "Odnośniki", "ru": "Ссылки", "tr": "Bağlantılar", "ja": "リンク",
+    "zh-Hans": "链接", "zh-Hant": "連結", "ur": "لنکس"
+  },
+  "section.tools": {
+    "en": "Tools", "it": "Strumenti", "de": "Werkzeuge", "es": "Herramientas",
+    "fr": "Outils", "pt-BR": "Ferramentas", "ro": "Instrumente", "hu": "Eszközök",
+    "pl": "Narzędzia", "ru": "Инструменты", "tr": "Araçlar", "ja": "ツール",
+    "zh-Hans": "工具", "zh-Hant": "工具", "ur": "ٹولز"
+  },
+  "section.config": {
+    "en": "Configuration", "it": "Configurazione", "de": "Konfiguration",
+    "es": "Configuración", "fr": "Configuration", "pt-BR": "Configuração",
+    "ro": "Configurare", "hu": "Beállítások", "pl": "Konfiguracja",
+    "ru": "Конфигурация", "tr": "Yapılandırma", "ja": "設定",
+    "zh-Hans": "配置", "zh-Hant": "設定檔", "ur": "کنفیگریشن"
+  },
+  "section.appearance": {
+    "en": "Appearance", "it": "Aspetto", "de": "Erscheinungsbild",
+    "es": "Apariencia", "fr": "Apparence", "pt-BR": "Aparência",
+    "ro": "Aspect", "hu": "Megjelenés", "pl": "Wygląd", "ru": "Оформление",
+    "tr": "Görünüm", "ja": "外観", "zh-Hans": "外观", "zh-Hant": "外觀",
+    "ur": "ظاہری شکل"
+  },
+
+  "btn.start": {
+    "comment": "Avvia un singolo servizio",
+    "en": "Start", "it": "Avvia", "de": "Starten", "es": "Iniciar",
+    "fr": "Démarrer", "pt-BR": "Iniciar", "ro": "Pornește", "hu": "Indítás",
+    "pl": "Uruchom", "ru": "Запустить", "tr": "Başlat", "ja": "開始",
+    "zh-Hans": "启动", "zh-Hant": "啟動", "ur": "شروع"
+  },
+  "btn.stop": {
+    "en": "Stop", "it": "Ferma", "de": "Stoppen", "es": "Detener",
+    "fr": "Arrêter", "pt-BR": "Parar", "ro": "Oprește", "hu": "Leállítás",
+    "pl": "Zatrzymaj", "ru": "Остановить", "tr": "Durdur", "ja": "停止",
+    "zh-Hans": "停止", "zh-Hant": "停止", "ur": "روکیں"
+  },
+  "btn.startAll": {
+    "en": "Start all", "it": "Avvia tutto", "de": "Alle starten",
+    "es": "Iniciar todo", "fr": "Tout démarrer", "pt-BR": "Iniciar tudo",
+    "ro": "Pornește tot", "hu": "Összes indítása", "pl": "Uruchom wszystko",
+    "ru": "Запустить все", "tr": "Tümünü başlat", "ja": "すべて開始",
+    "zh-Hans": "全部启动", "zh-Hant": "全部啟動", "ur": "سب شروع کریں"
+  },
+  "btn.stopAll": {
+    "en": "Stop all", "it": "Ferma tutto", "de": "Alle stoppen",
+    "es": "Detener todo", "fr": "Tout arrêter", "pt-BR": "Parar tudo",
+    "ro": "Oprește tot", "hu": "Összes leállítása", "pl": "Zatrzymaj wszystko",
+    "ru": "Остановить все", "tr": "Tümünü durdur", "ja": "すべて停止",
+    "zh-Hans": "全部停止", "zh-Hant": "全部停止", "ur": "سب روکیں"
+  },
+  "btn.restart": {
+    "en": "Restart", "it": "Riavvia", "de": "Neu starten", "es": "Reiniciar",
+    "fr": "Redémarrer", "pt-BR": "Reiniciar", "ro": "Repornește",
+    "hu": "Újraindítás", "pl": "Uruchom ponownie", "ru": "Перезапустить",
+    "tr": "Yeniden başlat", "ja": "再起動", "zh-Hans": "重启",
+    "zh-Hant": "重新啟動", "ur": "دوبارہ شروع"
+  },
+  "btn.open": {
+    "comment": "Apre il progetto nel browser",
+    "en": "Open", "it": "Apri", "de": "Öffnen", "es": "Abrir", "fr": "Ouvrir",
+    "pt-BR": "Abrir", "ro": "Deschide", "hu": "Megnyitás", "pl": "Otwórz",
+    "ru": "Открыть", "tr": "Aç", "ja": "開く", "zh-Hans": "打开",
+    "zh-Hant": "開啟", "ur": "کھولیں"
+  },
+  "btn.folder": {
+    "en": "Folder", "it": "Cartella", "de": "Ordner", "es": "Carpeta",
+    "fr": "Dossier", "pt-BR": "Pasta", "ro": "Dosar", "hu": "Mappa",
+    "pl": "Folder", "ru": "Папка", "tr": "Klasör", "ja": "フォルダ",
+    "zh-Hans": "文件夹", "zh-Hant": "資料夾", "ur": "فولڈر"
+  },
+  "btn.window": {
+    "comment": "Dal popover apre la finestra completa",
+    "en": "Window", "it": "Finestra", "de": "Fenster", "es": "Ventana",
+    "fr": "Fenêtre", "pt-BR": "Janela", "ro": "Fereastră", "hu": "Ablak",
+    "pl": "Okno", "ru": "Окно", "tr": "Pencere", "ja": "ウインドウ",
+    "zh-Hans": "窗口", "zh-Hant": "視窗", "ur": "ونڈو"
+  },
+  "btn.more": {
+    "en": "More…", "it": "Altro…", "de": "Mehr…", "es": "Más…", "fr": "Plus…",
+    "pt-BR": "Mais…", "ro": "Mai mult…", "hu": "Továbbiak…", "pl": "Więcej…",
+    "ru": "Ещё…", "tr": "Daha fazla…", "ja": "その他…", "zh-Hans": "更多…",
+    "zh-Hant": "更多…", "ur": "مزید…"
+  },
+  "btn.quit": {
+    "en": "Quit", "it": "Esci", "de": "Beenden", "es": "Salir", "fr": "Quitter",
+    "pt-BR": "Sair", "ro": "Ieșire", "hu": "Kilépés", "pl": "Zakończ",
+    "ru": "Выход", "tr": "Çık", "ja": "終了", "zh-Hans": "退出",
+    "zh-Hant": "結束", "ur": "باہر نکلیں"
+  },
+  "btn.proceed": {
+    "en": "Proceed", "it": "Procedi", "de": "Fortfahren", "es": "Continuar",
+    "fr": "Continuer", "pt-BR": "Continuar", "ro": "Continuă", "hu": "Folytatás",
+    "pl": "Kontynuuj", "ru": "Продолжить", "tr": "Devam et", "ja": "続ける",
+    "zh-Hans": "继续", "zh-Hant": "繼續", "ur": "جاری رکھیں"
+  },
+  "btn.cancel": {
+    "en": "Cancel", "it": "Annulla", "de": "Abbrechen", "es": "Cancelar",
+    "fr": "Annuler", "pt-BR": "Cancelar", "ro": "Anulează", "hu": "Mégse",
+    "pl": "Anuluj", "ru": "Отмена", "tr": "İptal", "ja": "キャンセル",
+    "zh-Hans": "取消", "zh-Hant": "取消", "ur": "منسوخ"
+  },
+  "btn.understood": {
+    "en": "Got it", "it": "Ho capito", "de": "Verstanden", "es": "Entendido",
+    "fr": "Compris", "pt-BR": "Entendi", "ro": "Am înțeles", "hu": "Értem",
+    "pl": "Rozumiem", "ru": "Понятно", "tr": "Anladım", "ja": "了解",
+    "zh-Hans": "知道了", "zh-Hant": "知道了", "ur": "سمجھ گیا"
+  },
+
+  "service.detail.running": {
+    "comment": "Sotto il nome del servizio attivo: %1$@ porte, %2$d pid",
+    "en": "port %1$@ · pid %2$d", "it": "porta %1$@ · pid %2$d",
+    "de": "Port %1$@ · PID %2$d", "es": "puerto %1$@ · pid %2$d",
+    "fr": "port %1$@ · pid %2$d", "pt-BR": "porta %1$@ · pid %2$d",
+    "ro": "port %1$@ · pid %2$d", "hu": "port %1$@ · pid %2$d",
+    "pl": "port %1$@ · pid %2$d", "ru": "порт %1$@ · pid %2$d",
+    "tr": "port %1$@ · pid %2$d", "ja": "ポート %1$@ · pid %2$d",
+    "zh-Hans": "端口 %1$@ · pid %2$d", "zh-Hant": "連接埠 %1$@ · pid %2$d",
+    "ur": "پورٹ %1$@ · pid %2$d"
+  },
+  "service.detail.stopped": {
+    "comment": "Sotto il nome del servizio fermo: %@ porte configurate",
+    "en": "stopped · port %@", "it": "fermo · porta %@",
+    "de": "gestoppt · Port %@", "es": "detenido · puerto %@",
+    "fr": "arrêté · port %@", "pt-BR": "parado · porta %@",
+    "ro": "oprit · port %@", "hu": "leállítva · port %@",
+    "pl": "zatrzymany · port %@", "ru": "остановлено · порт %@",
+    "tr": "durduruldu · port %@", "ja": "停止中 · ポート %@",
+    "zh-Hans": "已停止 · 端口 %@", "zh-Hant": "已停止 · 連接埠 %@",
+    "ur": "رکا ہوا · پورٹ %@"
+  },
+  "service.detail.busy": {
+    "en": "please wait…", "it": "attendere…", "de": "bitte warten…",
+    "es": "espere…", "fr": "veuillez patienter…", "pt-BR": "aguarde…",
+    "ro": "așteptați…", "hu": "várjon…", "pl": "proszę czekać…",
+    "ru": "подождите…", "tr": "lütfen bekleyin…", "ja": "お待ちください…",
+    "zh-Hans": "请稍候…", "zh-Hant": "請稍候…", "ur": "انتظار کریں…"
+  },
+  "service.ports.tooltip": {
+    "comment": "Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte",
+    "en": "%1$@ — ports: %2$@", "it": "%1$@ — porte: %2$@",
+    "de": "%1$@ — Ports: %2$@", "es": "%1$@ — puertos: %2$@",
+    "fr": "%1$@ — ports : %2$@", "pt-BR": "%1$@ — portas: %2$@",
+    "ro": "%1$@ — porturi: %2$@", "hu": "%1$@ — portok: %2$@",
+    "pl": "%1$@ — porty: %2$@", "ru": "%1$@ — порты: %2$@",
+    "tr": "%1$@ — portlar: %2$@", "ja": "%1$@ — ポート: %2$@",
+    "zh-Hans": "%1$@ — 端口：%2$@", "zh-Hant": "%1$@ — 連接埠：%2$@",
+    "ur": "%1$@ — پورٹس: %2$@"
+  },
+  "service.ports.none": {
+    "en": "no port configured", "it": "nessuna porta configurata",
+    "de": "kein Port konfiguriert", "es": "ningún puerto configurado",
+    "fr": "aucun port configuré", "pt-BR": "nenhuma porta configurada",
+    "ro": "niciun port configurat", "hu": "nincs port beállítva",
+    "pl": "nie skonfigurowano portu", "ru": "порт не настроен",
+    "tr": "yapılandırılmış port yok", "ja": "ポート未設定",
+    "zh-Hans": "未配置端口", "zh-Hant": "未設定連接埠", "ur": "کوئی پورٹ سیٹ نہیں"
+  },
+  "service.reload": {
+    "comment": "Menu contestuale sulla riga: %@ nome servizio",
+    "en": "Reload %@", "it": "Ricarica %@", "de": "%@ neu laden",
+    "es": "Recargar %@", "fr": "Recharger %@", "pt-BR": "Recarregar %@",
+    "ro": "Reîncarcă %@", "hu": "%@ újratöltése", "pl": "Przeładuj %@",
+    "ru": "Перезагрузить %@", "tr": "%@ yeniden yükle", "ja": "%@ を再読み込み",
+    "zh-Hans": "重新加载 %@", "zh-Hant": "重新載入 %@", "ur": "%@ دوبارہ لوڈ کریں"
+  },
+
+  "status.allRunning": {
+    "en": "all services running", "it": "tutti i servizi attivi",
+    "de": "alle Dienste laufen", "es": "todos los servicios activos",
+    "fr": "tous les services actifs", "pt-BR": "todos os serviços ativos",
+    "ro": "toate serviciile active", "hu": "minden szolgáltatás fut",
+    "pl": "wszystkie usługi działają", "ru": "все службы запущены",
+    "tr": "tüm hizmetler çalışıyor", "ja": "すべてのサービスが稼働中",
+    "zh-Hans": "所有服务运行中", "zh-Hant": "所有服務執行中",
+    "ur": "تمام سروسز فعال"
+  },
+  "status.partial": {
+    "en": "partially running", "it": "attivo solo in parte",
+    "de": "teilweise aktiv", "es": "parcialmente activo",
+    "fr": "partiellement actif", "pt-BR": "parcialmente ativo",
+    "ro": "parțial activ", "hu": "részben fut", "pl": "częściowo uruchomione",
+    "ru": "запущено частично", "tr": "kısmen çalışıyor", "ja": "一部のみ稼働中",
+    "zh-Hans": "部分运行", "zh-Hant": "部分執行", "ur": "جزوی طور پر فعال"
+  },
+  "status.allStopped": {
+    "en": "all services stopped", "it": "tutti i servizi fermi",
+    "de": "alle Dienste gestoppt", "es": "todos los servicios detenidos",
+    "fr": "tous les services arrêtés", "pt-BR": "todos os serviços parados",
+    "ro": "toate serviciile oprite", "hu": "minden szolgáltatás leállt",
+    "pl": "wszystkie usługi zatrzymane", "ru": "все службы остановлены",
+    "tr": "tüm hizmetler durduruldu", "ja": "すべてのサービスが停止中",
+    "zh-Hans": "所有服务已停止", "zh-Hant": "所有服務已停止",
+    "ur": "تمام سروسز بند"
+  },
+  "status.busy": {
+    "en": "operation in progress", "it": "operazione in corso",
+    "de": "Vorgang läuft", "es": "operación en curso", "fr": "opération en cours",
+    "pt-BR": "operação em andamento", "ro": "operațiune în curs",
+    "hu": "művelet folyamatban", "pl": "operacja w toku",
+    "ru": "выполняется операция", "tr": "işlem sürüyor", "ja": "処理中",
+    "zh-Hans": "操作进行中", "zh-Hant": "操作進行中", "ur": "عمل جاری ہے"
+  },
+  "badge.allRunning": {
+    "comment": "Badge compatto nel popover",
+    "en": "all running", "it": "tutto attivo", "de": "alles aktiv",
+    "es": "todo activo", "fr": "tout actif", "pt-BR": "tudo ativo",
+    "ro": "totul activ", "hu": "minden fut", "pl": "wszystko działa",
+    "ru": "всё работает", "tr": "tümü çalışıyor", "ja": "すべて稼働",
+    "zh-Hans": "全部运行", "zh-Hant": "全部執行", "ur": "سب فعال"
+  },
+  "badge.partial": {
+    "en": "partial", "it": "parziale", "de": "teilweise", "es": "parcial",
+    "fr": "partiel", "pt-BR": "parcial", "ro": "parțial", "hu": "részleges",
+    "pl": "częściowo", "ru": "частично", "tr": "kısmi", "ja": "一部",
+    "zh-Hans": "部分", "zh-Hant": "部分", "ur": "جزوی"
+  },
+  "badge.stopped": {
+    "en": "stopped", "it": "fermo", "de": "gestoppt", "es": "detenido",
+    "fr": "arrêté", "pt-BR": "parado", "ro": "oprit", "hu": "leállítva",
+    "pl": "zatrzymane", "ru": "остановлено", "tr": "durduruldu", "ja": "停止中",
+    "zh-Hans": "已停止", "zh-Hant": "已停止", "ur": "بند"
+  },
+  "badge.busy": {
+    "en": "working", "it": "in corso", "de": "läuft", "es": "en curso",
+    "fr": "en cours", "pt-BR": "em curso", "ro": "în curs", "hu": "folyamatban",
+    "pl": "w toku", "ru": "выполняется", "tr": "sürüyor", "ja": "処理中",
+    "zh-Hans": "进行中", "zh-Hant": "進行中", "ur": "جاری"
+  },
+
+  "vhost.listening": {
+    "en": "listening", "it": "in ascolto", "de": "aktiv", "es": "escuchando",
+    "fr": "à l'écoute", "pt-BR": "escutando", "ro": "ascultă", "hu": "figyel",
+    "pl": "nasłuchuje", "ru": "прослушивается", "tr": "dinliyor", "ja": "待機中",
+    "zh-Hans": "监听中", "zh-Hant": "監聽中", "ur": "فعال"
+  },
+  "vhost.disabled": {
+    "comment": "Il blocco VirtualHost è commentato nella configurazione",
+    "en": "disabled in configuration", "it": "disattivato nella configurazione",
+    "de": "in der Konfiguration deaktiviert", "es": "desactivado en la configuración",
+    "fr": "désactivé dans la configuration", "pt-BR": "desativado na configuração",
+    "ro": "dezactivat în configurare", "hu": "letiltva a beállításokban",
+    "pl": "wyłączony w konfiguracji", "ru": "отключён в конфигурации",
+    "tr": "yapılandırmada devre dışı", "ja": "設定で無効",
+    "zh-Hans": "已在配置中停用", "zh-Hant": "已在設定中停用",
+    "ur": "کنفیگریشن میں غیر فعال"
+  },
+  "vhost.notResponding": {
+    "en": "configured, Apache not responding",
+    "it": "configurato, Apache non risponde",
+    "de": "konfiguriert, Apache antwortet nicht",
+    "es": "configurado, Apache no responde",
+    "fr": "configuré, Apache ne répond pas",
+    "pt-BR": "configurado, Apache não responde",
+    "ro": "configurat, Apache nu răspunde",
+    "hu": "beállítva, az Apache nem válaszol",
+    "pl": "skonfigurowany, Apache nie odpowiada",
+    "ru": "настроен, Apache не отвечает",
+    "tr": "yapılandırıldı, Apache yanıt vermiyor",
+    "ja": "設定済み、Apache が応答しません",
+    "zh-Hans": "已配置，Apache 无响应",
+    "zh-Hant": "已設定，Apache 無回應",
+    "ur": "کنفیگرڈ، Apache جواب نہیں دے رہا"
+  },
+  "vhost.summary.withDisabled": {
+    "comment": "Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati",
+    "en": "%1$lu listening · %2$lu disabled",
+    "it": "%1$lu in ascolto · %2$lu disattivato",
+    "de": "%1$lu aktiv · %2$lu deaktiviert",
+    "es": "%1$lu escuchando · %2$lu desactivado",
+    "fr": "%1$lu à l'écoute · %2$lu désactivé",
+    "pt-BR": "%1$lu escutando · %2$lu desativado",
+    "ro": "%1$lu ascultă · %2$lu dezactivat",
+    "hu": "%1$lu figyel · %2$lu letiltva",
+    "pl": "%1$lu nasłuchuje · %2$lu wyłączony",
+    "ru": "%1$lu активно · %2$lu отключено",
+    "tr": "%1$lu dinliyor · %2$lu devre dışı",
+    "ja": "%1$lu 待機中 · %2$lu 無効",
+    "zh-Hans": "%1$lu 监听中 · %2$lu 已停用",
+    "zh-Hant": "%1$lu 監聽中 · %2$lu 已停用",
+    "ur": "%1$lu فعال · %2$lu غیر فعال"
+  },
+  "vhost.summary": {
+    "en": "%lu listening", "it": "%lu in ascolto", "de": "%lu aktiv",
+    "es": "%lu escuchando", "fr": "%lu à l'écoute", "pt-BR": "%lu escutando",
+    "ro": "%lu ascultă", "hu": "%lu figyel", "pl": "%lu nasłuchuje",
+    "ru": "%lu активно", "tr": "%lu dinliyor", "ja": "%lu 待機中",
+    "zh-Hans": "%lu 监听中", "zh-Hant": "%lu 監聽中", "ur": "%lu فعال"
+  },
+  "vhost.err.commented": {
+    "en": "Port %ld is commented out in httpd-vhosts.conf",
+    "it": "La porta %ld è commentata in httpd-vhosts.conf",
+    "de": "Port %ld ist in httpd-vhosts.conf auskommentiert",
+    "es": "El puerto %ld está comentado en httpd-vhosts.conf",
+    "fr": "Le port %ld est commenté dans httpd-vhosts.conf",
+    "pt-BR": "A porta %ld está comentada em httpd-vhosts.conf",
+    "ro": "Portul %ld este comentat în httpd-vhosts.conf",
+    "hu": "A(z) %ld port ki van kommentelve a httpd-vhosts.conf fájlban",
+    "pl": "Port %ld jest zakomentowany w httpd-vhosts.conf",
+    "ru": "Порт %ld закомментирован в httpd-vhosts.conf",
+    "tr": "%ld portu httpd-vhosts.conf içinde yorum satırında",
+    "ja": "ポート %ld は httpd-vhosts.conf でコメントアウトされています",
+    "zh-Hans": "端口 %ld 在 httpd-vhosts.conf 中已被注释",
+    "zh-Hant": "連接埠 %ld 在 httpd-vhosts.conf 中已被註解",
+    "ur": "پورٹ %ld httpd-vhosts.conf میں کمنٹ شدہ ہے"
+  },
+  "vhost.err.noResponse": {
+    "en": "No response on port %ld: is Apache stopped?",
+    "it": "Nessuna risposta sulla porta %ld: Apache è fermo?",
+    "de": "Keine Antwort auf Port %ld: Ist Apache gestoppt?",
+    "es": "Sin respuesta en el puerto %ld: ¿Apache está detenido?",
+    "fr": "Aucune réponse sur le port %ld : Apache est-il arrêté ?",
+    "pt-BR": "Sem resposta na porta %ld: o Apache está parado?",
+    "ro": "Niciun răspuns pe portul %ld: Apache este oprit?",
+    "hu": "Nincs válasz a(z) %ld porton: leállt az Apache?",
+    "pl": "Brak odpowiedzi na porcie %ld: czy Apache jest zatrzymany?",
+    "ru": "Нет ответа на порту %ld: Apache остановлен?",
+    "tr": "%ld portunda yanıt yok: Apache durdurulmuş mu?",
+    "ja": "ポート %ld から応答がありません。Apache は停止していますか？",
+    "zh-Hans": "端口 %ld 无响应：Apache 是否已停止？",
+    "zh-Hant": "連接埠 %ld 無回應：Apache 是否已停止？",
+    "ur": "پورٹ %ld پر کوئی جواب نہیں: کیا Apache بند ہے؟"
+  },
+
+  "theme.auto": {
+    "en": "Automatic", "it": "Automatico", "de": "Automatisch",
+    "es": "Automático", "fr": "Automatique", "pt-BR": "Automático",
+    "ro": "Automat", "hu": "Automatikus", "pl": "Automatyczny",
+    "ru": "Автоматически", "tr": "Otomatik", "ja": "自動",
+    "zh-Hans": "自动", "zh-Hant": "自動", "ur": "خودکار"
+  },
+  "theme.dark": {
+    "en": "Dark", "it": "Scuro", "de": "Dunkel", "es": "Oscuro", "fr": "Sombre",
+    "pt-BR": "Escuro", "ro": "Întunecat", "hu": "Sötét", "pl": "Ciemny",
+    "ru": "Тёмная", "tr": "Koyu", "ja": "ダーク", "zh-Hans": "深色",
+    "zh-Hant": "深色", "ur": "گہرا"
+  },
+  "theme.light": {
+    "en": "Light", "it": "Chiaro", "de": "Hell", "es": "Claro", "fr": "Clair",
+    "pt-BR": "Claro", "ro": "Luminos", "hu": "Világos", "pl": "Jasny",
+    "ru": "Светлая", "tr": "Açık", "ja": "ライト", "zh-Hans": "浅色",
+    "zh-Hant": "淺色", "ur": "ہلکا"
+  },
+  "theme.hint": {
+    "en": "Automatic follows the macOS setting",
+    "it": "Automatico segue l'impostazione di macOS",
+    "de": "Automatisch folgt der macOS-Einstellung",
+    "es": "Automático sigue la configuración de macOS",
+    "fr": "Automatique suit le réglage de macOS",
+    "pt-BR": "Automático segue a configuração do macOS",
+    "ro": "Automat urmează setarea macOS",
+    "hu": "Az automatikus a macOS beállítását követi",
+    "pl": "Automatyczny podąża za ustawieniem macOS",
+    "ru": "Автоматически — как в настройках macOS",
+    "tr": "Otomatik, macOS ayarını izler",
+    "ja": "自動は macOS の設定に従います",
+    "zh-Hans": "自动跟随 macOS 设置",
+    "zh-Hant": "自動跟隨 macOS 設定",
+    "ur": "خودکار macOS کی ترتیب کے مطابق"
+  },
+
+  "progress.starting": {
+    "comment": "Frase intera, non composta: %@ è il nome del servizio",
+    "en": "Starting %@…", "it": "Avvio di %@…", "de": "%@ wird gestartet…",
+    "es": "Iniciando %@…", "fr": "Démarrage de %@…", "pt-BR": "Iniciando %@…",
+    "ro": "Se pornește %@…", "hu": "%@ indítása…", "pl": "Uruchamianie %@…",
+    "ru": "Запуск %@…", "tr": "%@ başlatılıyor…", "ja": "%@ を開始しています…",
+    "zh-Hans": "正在启动 %@…", "zh-Hant": "正在啟動 %@…", "ur": "%@ شروع ہو رہا ہے…"
+  },
+  "progress.stopping": {
+    "en": "Stopping %@…", "it": "Arresto di %@…", "de": "%@ wird gestoppt…",
+    "es": "Deteniendo %@…", "fr": "Arrêt de %@…", "pt-BR": "Parando %@…",
+    "ro": "Se oprește %@…", "hu": "%@ leállítása…", "pl": "Zatrzymywanie %@…",
+    "ru": "Остановка %@…", "tr": "%@ durduruluyor…", "ja": "%@ を停止しています…",
+    "zh-Hans": "正在停止 %@…", "zh-Hant": "正在停止 %@…", "ur": "%@ رک رہا ہے…"
+  },
+  "progress.reloading": {
+    "en": "Reloading %@…", "it": "Ricarica di %@…", "de": "%@ wird neu geladen…",
+    "es": "Recargando %@…", "fr": "Rechargement de %@…", "pt-BR": "Recarregando %@…",
+    "ro": "Se reîncarcă %@…", "hu": "%@ újratöltése…", "pl": "Przeładowywanie %@…",
+    "ru": "Перезагрузка %@…", "tr": "%@ yeniden yükleniyor…",
+    "ja": "%@ を再読み込みしています…", "zh-Hans": "正在重新加载 %@…",
+    "zh-Hant": "正在重新載入 %@…", "ur": "%@ دوبارہ لوڈ ہو رہا ہے…"
+  },
+  "progress.startingAll": {
+    "en": "Starting services…", "it": "Avvio dei servizi…",
+    "de": "Dienste werden gestartet…", "es": "Iniciando servicios…",
+    "fr": "Démarrage des services…", "pt-BR": "Iniciando serviços…",
+    "ro": "Se pornesc serviciile…", "hu": "Szolgáltatások indítása…",
+    "pl": "Uruchamianie usług…", "ru": "Запуск служб…",
+    "tr": "Hizmetler başlatılıyor…", "ja": "サービスを開始しています…",
+    "zh-Hans": "正在启动服务…", "zh-Hant": "正在啟動服務…", "ur": "سروسز شروع ہو رہی ہیں…"
+  },
+  "progress.stoppingAll": {
+    "en": "Stopping services…", "it": "Arresto dei servizi…",
+    "de": "Dienste werden gestoppt…", "es": "Deteniendo servicios…",
+    "fr": "Arrêt des services…", "pt-BR": "Parando serviços…",
+    "ro": "Se opresc serviciile…", "hu": "Szolgáltatások leállítása…",
+    "pl": "Zatrzymywanie usług…", "ru": "Остановка служб…",
+    "tr": "Hizmetler durduruluyor…", "ja": "サービスを停止しています…",
+    "zh-Hans": "正在停止服务…", "zh-Hant": "正在停止服務…", "ur": "سروسز رک رہی ہیں…"
+  },
+  "progress.restartingAll": {
+    "en": "Restarting services…", "it": "Riavvio dei servizi…",
+    "de": "Dienste werden neu gestartet…", "es": "Reiniciando servicios…",
+    "fr": "Redémarrage des services…", "pt-BR": "Reiniciando serviços…",
+    "ro": "Se repornesc serviciile…", "hu": "Szolgáltatások újraindítása…",
+    "pl": "Ponowne uruchamianie usług…", "ru": "Перезапуск служб…",
+    "tr": "Hizmetler yeniden başlatılıyor…", "ja": "サービスを再起動しています…",
+    "zh-Hans": "正在重启服务…", "zh-Hant": "正在重新啟動服務…",
+    "ur": "سروسز دوبارہ شروع ہو رہی ہیں…"
+  },
+  "progress.enablingSSL": {
+    "en": "Enabling SSL…", "it": "Abilitazione SSL…", "de": "SSL wird aktiviert…",
+    "es": "Activando SSL…", "fr": "Activation de SSL…", "pt-BR": "Ativando SSL…",
+    "ro": "Se activează SSL…", "hu": "SSL engedélyezése…",
+    "pl": "Włączanie SSL…", "ru": "Включение SSL…", "tr": "SSL etkinleştiriliyor…",
+    "ja": "SSL を有効にしています…", "zh-Hans": "正在启用 SSL…",
+    "zh-Hant": "正在啟用 SSL…", "ur": "SSL فعال ہو رہا ہے…"
+  },
+  "progress.disablingSSL": {
+    "en": "Disabling SSL…", "it": "Disabilitazione SSL…",
+    "de": "SSL wird deaktiviert…", "es": "Desactivando SSL…",
+    "fr": "Désactivation de SSL…", "pt-BR": "Desativando SSL…",
+    "ro": "Se dezactivează SSL…", "hu": "SSL letiltása…",
+    "pl": "Wyłączanie SSL…", "ru": "Отключение SSL…",
+    "tr": "SSL devre dışı bırakılıyor…", "ja": "SSL を無効にしています…",
+    "zh-Hans": "正在停用 SSL…", "zh-Hant": "正在停用 SSL…",
+    "ur": "SSL غیر فعال ہو رہا ہے…"
+  },
+  "msg.done": {
+    "comment": "Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue",
+    "en": "Operation completed", "it": "Operazione completata",
+    "de": "Vorgang abgeschlossen", "es": "Operación completada",
+    "fr": "Opération terminée", "pt-BR": "Operação concluída",
+    "ro": "Operațiune finalizată", "hu": "A művelet kész",
+    "pl": "Operacja zakończona", "ru": "Операция выполнена",
+    "tr": "İşlem tamamlandı", "ja": "操作が完了しました",
+    "zh-Hans": "操作已完成", "zh-Hant": "操作已完成", "ur": "عمل مکمل ہو گیا"
+  },
+  "msg.cancelled": {
+    "en": "Operation cancelled", "it": "Operazione annullata",
+    "de": "Vorgang abgebrochen", "es": "Operación cancelada",
+    "fr": "Opération annulée", "pt-BR": "Operação cancelada",
+    "ro": "Operațiune anulată", "hu": "A művelet megszakítva",
+    "pl": "Operacja anulowana", "ru": "Операция отменена",
+    "tr": "İşlem iptal edildi", "ja": "操作をキャンセルしました",
+    "zh-Hans": "操作已取消", "zh-Hant": "操作已取消", "ur": "عمل منسوخ کر دیا گیا"
+  },
+  "msg.failed": {
+    "en": "Command failed", "it": "Comando fallito", "de": "Befehl fehlgeschlagen",
+    "es": "Comando fallido", "fr": "Échec de la commande", "pt-BR": "Comando falhou",
+    "ro": "Comanda a eșuat", "hu": "A parancs sikertelen",
+    "pl": "Polecenie nie powiodło się", "ru": "Команда не выполнена",
+    "tr": "Komut başarısız", "ja": "コマンドが失敗しました",
+    "zh-Hans": "命令失败", "zh-Hant": "指令失敗", "ur": "کمانڈ ناکام"
+  },
+  "msg.apacheStopped": {
+    "en": "Apache is stopped: start it to open this page",
+    "it": "Apache è fermo: avvialo per aprire questa pagina",
+    "de": "Apache ist gestoppt: starten Sie ihn, um diese Seite zu öffnen",
+    "es": "Apache está detenido: inícialo para abrir esta página",
+    "fr": "Apache est arrêté : démarrez-le pour ouvrir cette page",
+    "pt-BR": "O Apache está parado: inicie-o para abrir esta página",
+    "ro": "Apache este oprit: pornește-l pentru a deschide această pagină",
+    "hu": "Az Apache leállt: indítsa el az oldal megnyitásához",
+    "pl": "Apache jest zatrzymany: uruchom go, aby otworzyć tę stronę",
+    "ru": "Apache остановлен: запустите его, чтобы открыть страницу",
+    "tr": "Apache durduruldu: bu sayfayı açmak için başlatın",
+    "ja": "Apache が停止しています。このページを開くには起動してください",
+    "zh-Hans": "Apache 已停止：请先启动以打开此页面",
+    "zh-Hant": "Apache 已停止：請先啟動以開啟此頁面",
+    "ur": "Apache بند ہے: یہ صفحہ کھولنے کے لیے اسے شروع کریں"
+  },
+  "msg.terminalOpened": {
+    "en": "Command opened in Terminal", "it": "Comando aperto nel Terminale",
+    "de": "Befehl im Terminal geöffnet", "es": "Comando abierto en el Terminal",
+    "fr": "Commande ouverte dans le Terminal", "pt-BR": "Comando aberto no Terminal",
+    "ro": "Comandă deschisă în Terminal", "hu": "A parancs megnyílt a Terminálban",
+    "pl": "Polecenie otwarte w Terminalu", "ru": "Команда открыта в Терминале",
+    "tr": "Komut Terminal'de açıldı", "ja": "ターミナルでコマンドを開きました",
+    "zh-Hans": "已在终端中打开命令", "zh-Hant": "已在終端機中開啟指令",
+    "ur": "کمانڈ ٹرمینل میں کھولی گئی"
+  },
+  "msg.terminalFailed": {
+    "en": "Could not open Terminal", "it": "Impossibile aprire il Terminale",
+    "de": "Terminal konnte nicht geöffnet werden",
+    "es": "No se pudo abrir el Terminal", "fr": "Impossible d'ouvrir le Terminal",
+    "pt-BR": "Não foi possível abrir o Terminal",
+    "ro": "Nu s-a putut deschide Terminalul",
+    "hu": "A Terminál nem nyitható meg", "pl": "Nie można otworzyć Terminala",
+    "ru": "Не удалось открыть Терминал", "tr": "Terminal açılamadı",
+    "ja": "ターミナルを開けませんでした", "zh-Hans": "无法打开终端",
+    "zh-Hant": "無法開啟終端機", "ur": "ٹرمینل نہیں کھل سکا"
+  },
+
+  "alert.confirm.title": {
+    "en": "Confirm this operation?", "it": "Confermi l'operazione?",
+    "de": "Vorgang bestätigen?", "es": "¿Confirmar la operación?",
+    "fr": "Confirmer l'opération ?", "pt-BR": "Confirmar a operação?",
+    "ro": "Confirmi operațiunea?", "hu": "Megerősíti a műveletet?",
+    "pl": "Potwierdzić operację?", "ru": "Подтвердить операцию?",
+    "tr": "İşlemi onaylıyor musunuz?", "ja": "この操作を実行しますか？",
+    "zh-Hans": "确认执行此操作？", "zh-Hant": "確認執行此操作？",
+    "ur": "کیا آپ اس عمل کی تصدیق کرتے ہیں؟"
+  },
+  "alert.enableSSL": {
+    "en": "Enable Apache SSL support? Apache will be restarted.",
+    "it": "Abilitare il supporto SSL di Apache? Apache verrà riavviato.",
+    "de": "SSL-Unterstützung von Apache aktivieren? Apache wird neu gestartet.",
+    "es": "¿Activar la compatibilidad SSL de Apache? Apache se reiniciará.",
+    "fr": "Activer la prise en charge SSL d'Apache ? Apache sera redémarré.",
+    "pt-BR": "Ativar o suporte SSL do Apache? O Apache será reiniciado.",
+    "ro": "Activezi suportul SSL pentru Apache? Apache va fi repornit.",
+    "hu": "Engedélyezi az Apache SSL-támogatását? Az Apache újraindul.",
+    "pl": "Włączyć obsługę SSL w Apache? Apache zostanie uruchomiony ponownie.",
+    "ru": "Включить поддержку SSL в Apache? Apache будет перезапущен.",
+    "tr": "Apache SSL desteği etkinleştirilsin mi? Apache yeniden başlatılacak.",
+    "ja": "Apache の SSL サポートを有効にしますか？ Apache が再起動されます。",
+    "zh-Hans": "启用 Apache 的 SSL 支持？Apache 将会重启。",
+    "zh-Hant": "啟用 Apache 的 SSL 支援？Apache 將會重新啟動。",
+    "ur": "Apache کی SSL سپورٹ فعال کریں؟ Apache دوبارہ شروع ہوگا۔"
+  },
+  "alert.disableSSL": {
+    "en": "Disable Apache SSL support? Apache will be restarted.",
+    "it": "Disabilitare il supporto SSL di Apache? Apache verrà riavviato.",
+    "de": "SSL-Unterstützung von Apache deaktivieren? Apache wird neu gestartet.",
+    "es": "¿Desactivar la compatibilidad SSL de Apache? Apache se reiniciará.",
+    "fr": "Désactiver la prise en charge SSL d'Apache ? Apache sera redémarré.",
+    "pt-BR": "Desativar o suporte SSL do Apache? O Apache será reiniciado.",
+    "ro": "Dezactivezi suportul SSL pentru Apache? Apache va fi repornit.",
+    "hu": "Letiltja az Apache SSL-támogatását? Az Apache újraindul.",
+    "pl": "Wyłączyć obsługę SSL w Apache? Apache zostanie uruchomiony ponownie.",
+    "ru": "Отключить поддержку SSL в Apache? Apache будет перезапущен.",
+    "tr": "Apache SSL desteği devre dışı bırakılsın mı? Apache yeniden başlatılacak.",
+    "ja": "Apache の SSL サポートを無効にしますか？ Apache が再起動されます。",
+    "zh-Hans": "停用 Apache 的 SSL 支持？Apache 将会重启。",
+    "zh-Hant": "停用 Apache 的 SSL 支援？Apache 將會重新啟動。",
+    "ur": "Apache کی SSL سپورٹ غیر فعال کریں؟ Apache دوبارہ شروع ہوگا۔"
+  },
+  "alert.missing.title": {
+    "en": "XAMPP installation not found",
+    "it": "Installazione XAMPP non trovata",
+    "de": "XAMPP-Installation nicht gefunden",
+    "es": "No se encontró la instalación de XAMPP",
+    "fr": "Installation XAMPP introuvable",
+    "pt-BR": "Instalação do XAMPP não encontrada",
+    "ro": "Instalarea XAMPP nu a fost găsită",
+    "hu": "A XAMPP telepítés nem található",
+    "pl": "Nie znaleziono instalacji XAMPP",
+    "ru": "Установка XAMPP не найдена",
+    "tr": "XAMPP kurulumu bulunamadı",
+    "ja": "XAMPP のインストールが見つかりません",
+    "zh-Hans": "未找到 XAMPP 安装",
+    "zh-Hant": "找不到 XAMPP 安裝",
+    "ur": "XAMPP انسٹالیشن نہیں ملی"
+  },
+  "alert.missing.body": {
+    "comment": "%@ è il percorso dello script di controllo",
+    "en": "The control script is missing or not executable:\n%@\n\nThe app stays open but cannot start or stop the services.",
+    "it": "Lo script di controllo non è presente o non è eseguibile:\n%@\n\nL'app resta aperta ma non potrà avviare o fermare i servizi.",
+    "de": "Das Steuerungsskript fehlt oder ist nicht ausführbar:\n%@\n\nDie App bleibt geöffnet, kann die Dienste aber nicht starten oder stoppen.",
+    "es": "El script de control no existe o no es ejecutable:\n%@\n\nLa app permanece abierta pero no podrá iniciar ni detener los servicios.",
+    "fr": "Le script de contrôle est absent ou non exécutable :\n%@\n\nL'app reste ouverte mais ne pourra pas démarrer ou arrêter les services.",
+    "pt-BR": "O script de controle não existe ou não é executável:\n%@\n\nO app continua aberto, mas não poderá iniciar ou parar os serviços.",
+    "ro": "Scriptul de control lipsește sau nu este executabil:\n%@\n\nAplicația rămâne deschisă, dar nu va putea porni sau opri serviciile.",
+    "hu": "A vezérlőszkript hiányzik vagy nem futtatható:\n%@\n\nAz alkalmazás nyitva marad, de nem tudja indítani vagy leállítani a szolgáltatásokat.",
+    "pl": "Brak skryptu sterującego lub nie jest wykonywalny:\n%@\n\nAplikacja pozostaje otwarta, ale nie uruchomi ani nie zatrzyma usług.",
+    "ru": "Управляющий скрипт отсутствует или не является исполняемым:\n%@\n\nПриложение остаётся открытым, но не сможет запускать и останавливать службы.",
+    "tr": "Denetim betiği yok ya da çalıştırılabilir değil:\n%@\n\nUygulama açık kalır ancak hizmetleri başlatıp durduramaz.",
+    "ja": "制御スクリプトが存在しないか実行できません:\n%@\n\nアプリは起動したままですが、サービスの開始・停止はできません。",
+    "zh-Hans": "控制脚本不存在或不可执行：\n%@\n\n应用会保持打开，但无法启动或停止服务。",
+    "zh-Hant": "控制指令碼不存在或無法執行：\n%@\n\n應用程式會保持開啟，但無法啟動或停止服務。",
+    "ur": "کنٹرول اسکرپٹ موجود نہیں یا قابلِ عمل نہیں:\n%@\n\nایپ کھلی رہے گی لیکن سروسز شروع یا بند نہیں کر سکے گی۔"
+  },
+
+  "link.dashboard": {
+    "en": "Dashboard", "it": "Dashboard", "de": "Dashboard", "es": "Panel",
+    "fr": "Tableau de bord", "pt-BR": "Painel", "ro": "Panou", "hu": "Vezérlőpult",
+    "pl": "Panel", "ru": "Панель", "tr": "Panel", "ja": "ダッシュボード",
+    "zh-Hans": "仪表板", "zh-Hant": "儀表板", "ur": "ڈیش بورڈ"
+  },
+  "link.htdocsFolder": {
+    "en": "htdocs folder", "it": "Cartella htdocs", "de": "htdocs-Ordner",
+    "es": "Carpeta htdocs", "fr": "Dossier htdocs", "pt-BR": "Pasta htdocs",
+    "ro": "Dosar htdocs", "hu": "htdocs mappa", "pl": "Folder htdocs",
+    "ru": "Папка htdocs", "tr": "htdocs klasörü", "ja": "htdocs フォルダ",
+    "zh-Hans": "htdocs 文件夹", "zh-Hant": "htdocs 資料夾", "ur": "htdocs فولڈر"
+  },
+  "link.viewLogs": {
+    "en": "View logs", "it": "Visualizza log", "de": "Protokolle anzeigen",
+    "es": "Ver registros", "fr": "Afficher les journaux", "pt-BR": "Ver registros",
+    "ro": "Vezi jurnalele", "hu": "Naplók megtekintése", "pl": "Pokaż dzienniki",
+    "ru": "Показать журналы", "tr": "Günlükleri görüntüle", "ja": "ログを表示",
+    "zh-Hans": "查看日志", "zh-Hant": "檢視日誌", "ur": "لاگز دیکھیں"
+  },
+  "link.xamppFolder": {
+    "en": "Open XAMPP folder", "it": "Apri cartella XAMPP",
+    "de": "XAMPP-Ordner öffnen", "es": "Abrir carpeta XAMPP",
+    "fr": "Ouvrir le dossier XAMPP", "pt-BR": "Abrir pasta XAMPP",
+    "ro": "Deschide dosarul XAMPP", "hu": "XAMPP mappa megnyitása",
+    "pl": "Otwórz folder XAMPP", "ru": "Открыть папку XAMPP",
+    "tr": "XAMPP klasörünü aç", "ja": "XAMPP フォルダを開く",
+    "zh-Hans": "打开 XAMPP 文件夹", "zh-Hant": "開啟 XAMPP 資料夾",
+    "ur": "XAMPP فولڈر کھولیں"
+  },
+  "tool.enableSSL": {
+    "en": "Enable SSL", "it": "Abilita SSL", "de": "SSL aktivieren",
+    "es": "Activar SSL", "fr": "Activer SSL", "pt-BR": "Ativar SSL",
+    "ro": "Activează SSL", "hu": "SSL engedélyezése", "pl": "Włącz SSL",
+    "ru": "Включить SSL", "tr": "SSL'i etkinleştir", "ja": "SSL を有効化",
+    "zh-Hans": "启用 SSL", "zh-Hant": "啟用 SSL", "ur": "SSL فعال کریں"
+  },
+  "tool.disableSSL": {
+    "en": "Disable SSL", "it": "Disabilita SSL", "de": "SSL deaktivieren",
+    "es": "Desactivar SSL", "fr": "Désactiver SSL", "pt-BR": "Desativar SSL",
+    "ro": "Dezactivează SSL", "hu": "SSL letiltása", "pl": "Wyłącz SSL",
+    "ru": "Отключить SSL", "tr": "SSL'i devre dışı bırak", "ja": "SSL を無効化",
+    "zh-Hans": "停用 SSL", "zh-Hant": "停用 SSL", "ur": "SSL غیر فعال کریں"
+  },
+  "tool.security": {
+    "en": "Security check", "it": "Controllo sicurezza",
+    "de": "Sicherheitsprüfung", "es": "Comprobación de seguridad",
+    "fr": "Contrôle de sécurité", "pt-BR": "Verificação de segurança",
+    "ro": "Verificare de securitate", "hu": "Biztonsági ellenőrzés",
+    "pl": "Kontrola bezpieczeństwa", "ru": "Проверка безопасности",
+    "tr": "Güvenlik denetimi", "ja": "セキュリティ確認",
+    "zh-Hans": "安全检查", "zh-Hant": "安全檢查", "ur": "سیکیورٹی جانچ"
+  },
+  "tool.backup": {
+    "en": "Backup", "it": "Backup", "de": "Sicherung", "es": "Copia de seguridad",
+    "fr": "Sauvegarde", "pt-BR": "Backup", "ro": "Copie de rezervă",
+    "hu": "Biztonsági mentés", "pl": "Kopia zapasowa", "ru": "Резервная копия",
+    "tr": "Yedekleme", "ja": "バックアップ", "zh-Hans": "备份",
+    "zh-Hant": "備份", "ur": "بیک اپ"
+  },
+  "config.files": {
+    "en": "Configuration files", "it": "File di configurazione",
+    "de": "Konfigurationsdateien", "es": "Archivos de configuración",
+    "fr": "Fichiers de configuration", "pt-BR": "Arquivos de configuração",
+    "ro": "Fișiere de configurare", "hu": "Konfigurációs fájlok",
+    "pl": "Pliki konfiguracyjne", "ru": "Файлы конфигурации",
+    "tr": "Yapılandırma dosyaları", "ja": "設定ファイル",
+    "zh-Hans": "配置文件", "zh-Hant": "設定檔案", "ur": "کنفیگریشن فائلیں"
+  },
+  "config.none": {
+    "en": "No configuration file found",
+    "it": "Nessun file di configurazione trovato",
+    "de": "Keine Konfigurationsdatei gefunden",
+    "es": "No se encontró ningún archivo de configuración",
+    "fr": "Aucun fichier de configuration trouvé",
+    "pt-BR": "Nenhum arquivo de configuração encontrado",
+    "ro": "Nu s-a găsit niciun fișier de configurare",
+    "hu": "Nem található konfigurációs fájl",
+    "pl": "Nie znaleziono pliku konfiguracyjnego",
+    "ru": "Файл конфигурации не найден",
+    "tr": "Yapılandırma dosyası bulunamadı",
+    "ja": "設定ファイルが見つかりません",
+    "zh-Hans": "未找到配置文件", "zh-Hant": "找不到設定檔案",
+    "ur": "کوئی کنفیگریشن فائل نہیں ملی"
+  },
+
+  "menu.about": {
+    "en": "About XAMPP", "it": "Informazioni su XAMPP", "de": "Über XAMPP",
+    "es": "Acerca de XAMPP", "fr": "À propos de XAMPP", "pt-BR": "Sobre o XAMPP",
+    "ro": "Despre XAMPP", "hu": "A XAMPP névjegye", "pl": "XAMPP — informacje",
+    "ru": "О программе XAMPP", "tr": "XAMPP hakkında", "ja": "XAMPP について",
+    "zh-Hans": "关于 XAMPP", "zh-Hant": "關於 XAMPP", "ur": "XAMPP کے بارے میں"
+  },
+  "menu.openDashboard": {
+    "en": "Open Dashboard", "it": "Apri Dashboard", "de": "Dashboard öffnen",
+    "es": "Abrir panel", "fr": "Ouvrir le tableau de bord", "pt-BR": "Abrir painel",
+    "ro": "Deschide panoul", "hu": "Vezérlőpult megnyitása", "pl": "Otwórz panel",
+    "ru": "Открыть панель", "tr": "Paneli aç", "ja": "ダッシュボードを開く",
+    "zh-Hans": "打开仪表板", "zh-Hant": "開啟儀表板", "ur": "ڈیش بورڈ کھولیں"
+  },
+  "menu.openPhpMyAdmin": {
+    "en": "Open phpMyAdmin", "it": "Apri phpMyAdmin", "de": "phpMyAdmin öffnen",
+    "es": "Abrir phpMyAdmin", "fr": "Ouvrir phpMyAdmin", "pt-BR": "Abrir phpMyAdmin",
+    "ro": "Deschide phpMyAdmin", "hu": "phpMyAdmin megnyitása",
+    "pl": "Otwórz phpMyAdmin", "ru": "Открыть phpMyAdmin", "tr": "phpMyAdmin'i aç",
+    "ja": "phpMyAdmin を開く", "zh-Hans": "打开 phpMyAdmin",
+    "zh-Hant": "開啟 phpMyAdmin", "ur": "phpMyAdmin کھولیں"
+  },
+  "menu.viewLogs": {
+    "en": "View logs…", "it": "Visualizza log…", "de": "Protokolle anzeigen…",
+    "es": "Ver registros…", "fr": "Afficher les journaux…", "pt-BR": "Ver registros…",
+    "ro": "Vezi jurnalele…", "hu": "Naplók megtekintése…", "pl": "Pokaż dzienniki…",
+    "ru": "Показать журналы…", "tr": "Günlükleri görüntüle…", "ja": "ログを表示…",
+    "zh-Hans": "查看日志…", "zh-Hant": "檢視日誌…", "ur": "لاگز دیکھیں…"
+  },
+  "menu.openWindow": {
+    "en": "Open XAMPP window", "it": "Apri finestra XAMPP",
+    "de": "XAMPP-Fenster öffnen", "es": "Abrir ventana de XAMPP",
+    "fr": "Ouvrir la fenêtre XAMPP", "pt-BR": "Abrir janela do XAMPP",
+    "ro": "Deschide fereastra XAMPP", "hu": "XAMPP ablak megnyitása",
+    "pl": "Otwórz okno XAMPP", "ru": "Открыть окно XAMPP",
+    "tr": "XAMPP penceresini aç", "ja": "XAMPP ウインドウを開く",
+    "zh-Hans": "打开 XAMPP 窗口", "zh-Hant": "開啟 XAMPP 視窗",
+    "ur": "XAMPP ونڈو کھولیں"
+  },
+  "menu.theme": {
+    "en": "Theme", "it": "Tema", "de": "Design", "es": "Tema", "fr": "Thème",
+    "pt-BR": "Tema", "ro": "Temă", "hu": "Téma", "pl": "Motyw", "ru": "Тема",
+    "tr": "Tema", "ja": "テーマ", "zh-Hans": "主题", "zh-Hant": "主題",
+    "ur": "تھیم"
+  },
+  "menu.hide": {
+    "en": "Hide XAMPP", "it": "Nascondi XAMPP", "de": "XAMPP ausblenden",
+    "es": "Ocultar XAMPP", "fr": "Masquer XAMPP", "pt-BR": "Ocultar XAMPP",
+    "ro": "Ascunde XAMPP", "hu": "XAMPP elrejtése", "pl": "Ukryj XAMPP",
+    "ru": "Скрыть XAMPP", "tr": "XAMPP'ı gizle", "ja": "XAMPP を隠す",
+    "zh-Hans": "隐藏 XAMPP", "zh-Hant": "隱藏 XAMPP", "ur": "XAMPP چھپائیں"
+  },
+  "menu.quit": {
+    "en": "Quit XAMPP", "it": "Esci da XAMPP", "de": "XAMPP beenden",
+    "es": "Salir de XAMPP", "fr": "Quitter XAMPP", "pt-BR": "Sair do XAMPP",
+    "ro": "Ieși din XAMPP", "hu": "Kilépés a XAMPP-ból", "pl": "Zakończ XAMPP",
+    "ru": "Завершить XAMPP", "tr": "XAMPP'tan çık", "ja": "XAMPP を終了",
+    "zh-Hans": "退出 XAMPP", "zh-Hant": "結束 XAMPP", "ur": "XAMPP بند کریں"
+  },
+  "menu.services": {
+    "en": "Services", "it": "Servizi", "de": "Dienste", "es": "Servicios",
+    "fr": "Services", "pt-BR": "Serviços", "ro": "Servicii", "hu": "Szolgáltatások",
+    "pl": "Usługi", "ru": "Службы", "tr": "Hizmetler", "ja": "サービス",
+    "zh-Hans": "服务", "zh-Hant": "服務", "ur": "سروسز"
+  },
+  "menu.edit": {
+    "en": "Edit", "it": "Modifica", "de": "Bearbeiten", "es": "Edición",
+    "fr": "Édition", "pt-BR": "Editar", "ro": "Editare", "hu": "Szerkesztés",
+    "pl": "Edycja", "ru": "Правка", "tr": "Düzen", "ja": "編集",
+    "zh-Hans": "编辑", "zh-Hant": "編輯", "ur": "ترمیم"
+  },
+  "menu.copy": {
+    "en": "Copy", "it": "Copia", "de": "Kopieren", "es": "Copiar", "fr": "Copier",
+    "pt-BR": "Copiar", "ro": "Copiază", "hu": "Másolás", "pl": "Kopiuj",
+    "ru": "Копировать", "tr": "Kopyala", "ja": "コピー", "zh-Hans": "拷贝",
+    "zh-Hant": "拷貝", "ur": "کاپی"
+  },
+  "menu.selectAll": {
+    "en": "Select All", "it": "Seleziona tutto", "de": "Alles auswählen",
+    "es": "Seleccionar todo", "fr": "Tout sélectionner", "pt-BR": "Selecionar tudo",
+    "ro": "Selectează tot", "hu": "Összes kijelölése", "pl": "Zaznacz wszystko",
+    "ru": "Выбрать все", "tr": "Tümünü seç", "ja": "すべてを選択",
+    "zh-Hans": "全选", "zh-Hant": "全選", "ur": "سب منتخب کریں"
+  },
+  "menu.find": {
+    "en": "Find", "it": "Trova", "de": "Suchen", "es": "Buscar", "fr": "Rechercher",
+    "pt-BR": "Buscar", "ro": "Caută", "hu": "Keresés", "pl": "Znajdź",
+    "ru": "Найти", "tr": "Bul", "ja": "検索", "zh-Hans": "查找",
+    "zh-Hant": "尋找", "ur": "تلاش"
+  },
+  "menu.window": {
+    "en": "Window", "it": "Finestra", "de": "Fenster", "es": "Ventana",
+    "fr": "Fenêtre", "pt-BR": "Janela", "ro": "Fereastră", "hu": "Ablak",
+    "pl": "Okno", "ru": "Окно", "tr": "Pencere", "ja": "ウインドウ",
+    "zh-Hans": "窗口", "zh-Hant": "視窗", "ur": "ونڈو"
+  },
+  "menu.minimize": {
+    "en": "Minimize", "it": "Riduci", "de": "Im Dock ablegen", "es": "Minimizar",
+    "fr": "Réduire", "pt-BR": "Minimizar", "ro": "Minimizează", "hu": "Kis méret",
+    "pl": "Zminimalizuj", "ru": "Убрать в Dock", "tr": "Küçült", "ja": "しまう",
+    "zh-Hans": "最小化", "zh-Hant": "縮到最小", "ur": "چھوٹا کریں"
+  },
+  "menu.close": {
+    "en": "Close", "it": "Chiudi", "de": "Schließen", "es": "Cerrar",
+    "fr": "Fermer", "pt-BR": "Fechar", "ro": "Închide", "hu": "Bezárás",
+    "pl": "Zamknij", "ru": "Закрыть", "tr": "Kapat", "ja": "閉じる",
+    "zh-Hans": "关闭", "zh-Hant": "關閉", "ur": "بند کریں"
+  },
+
+  "log.title": {
+    "en": "XAMPP logs", "it": "Log XAMPP", "de": "XAMPP-Protokolle",
+    "es": "Registros de XAMPP", "fr": "Journaux XAMPP", "pt-BR": "Registros do XAMPP",
+    "ro": "Jurnale XAMPP", "hu": "XAMPP naplók", "pl": "Dzienniki XAMPP",
+    "ru": "Журналы XAMPP", "tr": "XAMPP günlükleri", "ja": "XAMPP ログ",
+    "zh-Hans": "XAMPP 日志", "zh-Hant": "XAMPP 日誌", "ur": "XAMPP لاگز"
+  },
+  "log.filter": {
+    "en": "Filter lines…", "it": "Filtra righe…", "de": "Zeilen filtern…",
+    "es": "Filtrar líneas…", "fr": "Filtrer les lignes…", "pt-BR": "Filtrar linhas…",
+    "ro": "Filtrează liniile…", "hu": "Sorok szűrése…", "pl": "Filtruj wiersze…",
+    "ru": "Фильтр строк…", "tr": "Satırları filtrele…", "ja": "行を絞り込み…",
+    "zh-Hans": "筛选行…", "zh-Hant": "篩選行…", "ur": "لائنیں فلٹر کریں…"
+  },
+  "log.autoRefresh": {
+    "en": "Refresh", "it": "Aggiorna", "de": "Aktualisieren", "es": "Actualizar",
+    "fr": "Actualiser", "pt-BR": "Atualizar", "ro": "Actualizează", "hu": "Frissítés",
+    "pl": "Odświeżaj", "ru": "Обновлять", "tr": "Yenile", "ja": "自動更新",
+    "zh-Hans": "自动刷新", "zh-Hant": "自動更新", "ur": "تازہ کریں"
+  },
+  "log.reveal": {
+    "en": "In Finder", "it": "Nel Finder", "de": "Im Finder",
+    "es": "En el Finder", "fr": "Dans le Finder", "pt-BR": "No Finder",
+    "ro": "În Finder", "hu": "A Finderben", "pl": "W Finderze",
+    "ru": "В Finder", "tr": "Finder'da", "ja": "Finder に表示",
+    "zh-Hans": "在访达中显示", "zh-Hant": "在 Finder 中顯示", "ur": "فائنڈر میں"
+  },
+  "log.elevate": {
+    "en": "Read as administrator", "it": "Leggi come amministratore",
+    "de": "Als Administrator lesen", "es": "Leer como administrador",
+    "fr": "Lire en tant qu'administrateur", "pt-BR": "Ler como administrador",
+    "ro": "Citește ca administrator", "hu": "Olvasás rendszergazdaként",
+    "pl": "Odczytaj jako administrator", "ru": "Прочитать с правами администратора",
+    "tr": "Yönetici olarak oku", "ja": "管理者として読み込む",
+    "zh-Hans": "以管理员身份读取", "zh-Hant": "以管理者身分讀取",
+    "ur": "بطور ایڈمن پڑھیں"
+  },
+  "log.unreadable": {
+    "comment": "%@ è il nome del file",
+    "en": "%@ is not readable by your user: it belongs to another owner.",
+    "it": "%@ non è leggibile dal tuo utente: appartiene a un altro proprietario.",
+    "de": "%@ kann von Ihrem Benutzer nicht gelesen werden: Die Datei gehört einem anderen Eigentümer.",
+    "es": "%@ no se puede leer con tu usuario: pertenece a otro propietario.",
+    "fr": "%@ n'est pas lisible par votre utilisateur : le fichier appartient à un autre propriétaire.",
+    "pt-BR": "%@ não pode ser lido pelo seu usuário: pertence a outro proprietário.",
+    "ro": "%@ nu poate fi citit de utilizatorul tău: aparține altui proprietar.",
+    "hu": "A(z) %@ nem olvasható a felhasználójával: más a tulajdonosa.",
+    "pl": "Pliku %@ nie może odczytać twój użytkownik: należy do innego właściciela.",
+    "ru": "%@ недоступен для чтения вашему пользователю: у файла другой владелец.",
+    "tr": "%@ kullanıcınız tarafından okunamıyor: dosya başka bir sahibe ait.",
+    "ja": "%@ は現在のユーザーでは読み取れません。所有者が異なります。",
+    "zh-Hans": "%@ 当前用户无法读取：文件属于其他所有者。",
+    "zh-Hant": "%@ 目前使用者無法讀取：檔案屬於其他擁有者。",
+    "ur": "%@ آپ کے صارف سے پڑھی نہیں جا سکتی: یہ کسی اور کی ملکیت ہے۔"
+  },
+  "log.tailNote": {
+    "comment": "%1$@ percorso, %2$@ dimensione leggibile",
+    "en": "%1$@ · %2$@ · showing the end of the file",
+    "it": "%1$@ · %2$@ · mostrata la coda del file",
+    "de": "%1$@ · %2$@ · Ende der Datei wird angezeigt",
+    "es": "%1$@ · %2$@ · se muestra el final del archivo",
+    "fr": "%1$@ · %2$@ · fin du fichier affichée",
+    "pt-BR": "%1$@ · %2$@ · exibindo o final do arquivo",
+    "ro": "%1$@ · %2$@ · se afișează sfârșitul fișierului",
+    "hu": "%1$@ · %2$@ · a fájl vége látható",
+    "pl": "%1$@ · %2$@ · pokazano koniec pliku",
+    "ru": "%1$@ · %2$@ · показан конец файла",
+    "tr": "%1$@ · %2$@ · dosyanın sonu gösteriliyor",
+    "ja": "%1$@ · %2$@ · ファイル末尾を表示中",
+    "zh-Hans": "%1$@ · %2$@ · 显示文件末尾",
+    "zh-Hant": "%1$@ · %2$@ · 顯示檔案結尾",
+    "ur": "%1$@ · %2$@ · فائل کا آخری حصہ دکھایا جا رہا ہے"
+  },
+  "log.matchingLines": {
+    "en": " · %lu matching lines", "it": " · %lu righe corrispondenti",
+    "de": " · %lu passende Zeilen", "es": " · %lu líneas coincidentes",
+    "fr": " · %lu lignes correspondantes", "pt-BR": " · %lu linhas correspondentes",
+    "ro": " · %lu linii potrivite", "hu": " · %lu találat",
+    "pl": " · %lu pasujących wierszy", "ru": " · %lu совпадений",
+    "tr": " · %lu eşleşen satır", "ja": " · 一致 %lu 行",
+    "zh-Hans": " · %lu 行匹配", "zh-Hant": " · %lu 行符合",
+    "ur": " · %lu مماثل لائنیں"
+  },
+  "log.veryLarge": {
+    "en": "  ⚠︎ very large file", "it": "  ⚠︎ file molto grande",
+    "de": "  ⚠︎ sehr große Datei", "es": "  ⚠︎ archivo muy grande",
+    "fr": "  ⚠︎ fichier très volumineux", "pt-BR": "  ⚠︎ arquivo muito grande",
+    "ro": "  ⚠︎ fișier foarte mare", "hu": "  ⚠︎ nagyon nagy fájl",
+    "pl": "  ⚠︎ bardzo duży plik", "ru": "  ⚠︎ очень большой файл",
+    "tr": "  ⚠︎ çok büyük dosya", "ja": "  ⚠︎ 非常に大きなファイル",
+    "zh-Hans": "  ⚠︎ 文件非常大", "zh-Hant": "  ⚠︎ 檔案非常大",
+    "ur": "  ⚠︎ بہت بڑی فائل"
+  },
+  "log.readingElevated": {
+    "en": "Reading with administrator privileges…",
+    "it": "Lettura con privilegi di amministratore…",
+    "de": "Wird mit Administratorrechten gelesen…",
+    "es": "Leyendo con privilegios de administrador…",
+    "fr": "Lecture avec les privilèges d'administrateur…",
+    "pt-BR": "Lendo com privilégios de administrador…",
+    "ro": "Se citește cu privilegii de administrator…",
+    "hu": "Olvasás rendszergazdai jogokkal…",
+    "pl": "Odczyt z uprawnieniami administratora…",
+    "ru": "Чтение с правами администратора…",
+    "tr": "Yönetici ayrıcalıklarıyla okunuyor…",
+    "ja": "管理者権限で読み込んでいます…",
+    "zh-Hans": "正在以管理员权限读取…",
+    "zh-Hant": "正在以管理者權限讀取…",
+    "ur": "ایڈمن اختیارات کے ساتھ پڑھا جا رہا ہے…"
+  },
+  "log.readCancelled": {
+    "en": "Reading cancelled", "it": "Lettura annullata",
+    "de": "Lesen abgebrochen", "es": "Lectura cancelada",
+    "fr": "Lecture annulée", "pt-BR": "Leitura cancelada",
+    "ro": "Citire anulată", "hu": "Az olvasás megszakítva",
+    "pl": "Odczyt anulowany", "ru": "Чтение отменено",
+    "tr": "Okuma iptal edildi", "ja": "読み込みをキャンセルしました",
+    "zh-Hans": "读取已取消", "zh-Hant": "讀取已取消", "ur": "پڑھنا منسوخ"
+  },
+  "log.readFailed": {
+    "en": "Reading failed", "it": "Lettura non riuscita",
+    "de": "Lesen fehlgeschlagen", "es": "Error al leer",
+    "fr": "Échec de la lecture", "pt-BR": "Falha na leitura",
+    "ro": "Citirea a eșuat", "hu": "Az olvasás sikertelen",
+    "pl": "Odczyt nie powiódł się", "ru": "Не удалось прочитать",
+    "tr": "Okuma başarısız", "ja": "読み込みに失敗しました",
+    "zh-Hans": "读取失败", "zh-Hant": "讀取失敗", "ur": "پڑھنا ناکام"
+  },
+  "log.readElevatedDone": {
+    "comment": "%@ è il percorso del file",
+    "en": "%@ · read as administrator · automatic refresh disabled",
+    "it": "%@ · letto come amministratore · aggiornamento automatico disattivato",
+    "de": "%@ · als Administrator gelesen · automatische Aktualisierung deaktiviert",
+    "es": "%@ · leído como administrador · actualización automática desactivada",
+    "fr": "%@ · lu en tant qu'administrateur · actualisation automatique désactivée",
+    "pt-BR": "%@ · lido como administrador · atualização automática desativada",
+    "ro": "%@ · citit ca administrator · actualizarea automată dezactivată",
+    "hu": "%@ · rendszergazdaként olvasva · automatikus frissítés kikapcsolva",
+    "pl": "%@ · odczytano jako administrator · automatyczne odświeżanie wyłączone",
+    "ru": "%@ · прочитано с правами администратора · автообновление отключено",
+    "tr": "%@ · yönetici olarak okundu · otomatik yenileme kapalı",
+    "ja": "%@ · 管理者として読み込み · 自動更新は無効",
+    "zh-Hans": "%@ · 已以管理员身份读取 · 自动刷新已关闭",
+    "zh-Hant": "%@ · 已以管理者身分讀取 · 自動更新已關閉",
+    "ur": "%@ · بطور ایڈمن پڑھا گیا · خودکار تازہ کاری بند"
+  },
+  "log.system.apacheError": {
+    "en": "Apache — error_log", "it": "Apache — error_log",
+    "de": "Apache — error_log", "es": "Apache — error_log",
+    "fr": "Apache — error_log", "pt-BR": "Apache — error_log",
+    "ro": "Apache — error_log", "hu": "Apache — error_log",
+    "pl": "Apache — error_log", "ru": "Apache — error_log",
+    "tr": "Apache — error_log", "ja": "Apache — error_log",
+    "zh-Hans": "Apache — error_log", "zh-Hant": "Apache — error_log",
+    "ur": "Apache — error_log"
+  },
+  "log.system.apacheAccess": {
+    "en": "Apache — access_log", "it": "Apache — access_log",
+    "de": "Apache — access_log", "es": "Apache — access_log",
+    "fr": "Apache — access_log", "pt-BR": "Apache — access_log",
+    "ro": "Apache — access_log", "hu": "Apache — access_log",
+    "pl": "Apache — access_log", "ru": "Apache — access_log",
+    "tr": "Apache — access_log", "ja": "Apache — access_log",
+    "zh-Hans": "Apache — access_log", "zh-Hant": "Apache — access_log",
+    "ur": "Apache — access_log"
+  },
+  "log.system.mysqlError": {
+    "en": "MySQL — error", "it": "MySQL — error", "de": "MySQL — error",
+    "es": "MySQL — error", "fr": "MySQL — error", "pt-BR": "MySQL — error",
+    "ro": "MySQL — error", "hu": "MySQL — error", "pl": "MySQL — error",
+    "ru": "MySQL — error", "tr": "MySQL — error", "ja": "MySQL — error",
+    "zh-Hans": "MySQL — error", "zh-Hant": "MySQL — error", "ur": "MySQL — error"
+  }
+}

@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "この操作を実行しますか？";
+
+"alert.disableSSL" = "Apache の SSL サポートを無効にしますか？ Apache が再起動されます。";
+
+"alert.enableSSL" = "Apache の SSL サポートを有効にしますか？ Apache が再起動されます。";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "制御スクリプトが存在しないか実行できません:\n%@\n\nアプリは起動したままですが、サービスの開始・停止はできません。";
+
+"alert.missing.title" = "XAMPP のインストールが見つかりません";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ リニューアル";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ リニューアル";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "すべて稼働";
+
+"badge.busy" = "処理中";
+
+"badge.partial" = "一部";
+
+"badge.stopped" = "停止中";
+
+"btn.cancel" = "キャンセル";
+
+"btn.folder" = "フォルダ";
+
+"btn.more" = "その他…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "開く";
+
+"btn.proceed" = "続ける";
+
+"btn.quit" = "終了";
+
+"btn.restart" = "再起動";
+
+/* Avvia un singolo servizio */
+"btn.start" = "開始";
+
+"btn.startAll" = "すべて開始";
+
+"btn.stop" = "停止";
+
+"btn.stopAll" = "すべて停止";
+
+"btn.understood" = "了解";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "ウインドウ";
+
+"config.files" = "設定ファイル";
+
+"config.none" = "設定ファイルが見つかりません";
+
+"link.dashboard" = "ダッシュボード";
+
+"link.htdocsFolder" = "htdocs フォルダ";
+
+"link.viewLogs" = "ログを表示";
+
+"link.xamppFolder" = "XAMPP フォルダを開く";
+
+"log.autoRefresh" = "自動更新";
+
+"log.elevate" = "管理者として読み込む";
+
+"log.filter" = "行を絞り込み…";
+
+"log.matchingLines" = " · 一致 %lu 行";
+
+"log.readCancelled" = "読み込みをキャンセルしました";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · 管理者として読み込み · 自動更新は無効";
+
+"log.readFailed" = "読み込みに失敗しました";
+
+"log.readingElevated" = "管理者権限で読み込んでいます…";
+
+"log.reveal" = "Finder に表示";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · ファイル末尾を表示中";
+
+"log.title" = "XAMPP ログ";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ は現在のユーザーでは読み取れません。所有者が異なります。";
+
+"log.veryLarge" = "  ⚠︎ 非常に大きなファイル";
+
+"menu.about" = "XAMPP について";
+
+"menu.close" = "閉じる";
+
+"menu.copy" = "コピー";
+
+"menu.edit" = "編集";
+
+"menu.find" = "検索";
+
+"menu.hide" = "XAMPP を隠す";
+
+"menu.minimize" = "しまう";
+
+"menu.openDashboard" = "ダッシュボードを開く";
+
+"menu.openPhpMyAdmin" = "phpMyAdmin を開く";
+
+"menu.openWindow" = "XAMPP ウインドウを開く";
+
+"menu.quit" = "XAMPP を終了";
+
+"menu.selectAll" = "すべてを選択";
+
+"menu.services" = "サービス";
+
+"menu.theme" = "テーマ";
+
+"menu.viewLogs" = "ログを表示…";
+
+"menu.window" = "ウインドウ";
+
+"msg.apacheStopped" = "Apache が停止しています。このページを開くには起動してください";
+
+"msg.cancelled" = "操作をキャンセルしました";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "操作が完了しました";
+
+"msg.failed" = "コマンドが失敗しました";
+
+"msg.terminalFailed" = "ターミナルを開けませんでした";
+
+"msg.terminalOpened" = "ターミナルでコマンドを開きました";
+
+"progress.disablingSSL" = "SSL を無効にしています…";
+
+"progress.enablingSSL" = "SSL を有効にしています…";
+
+"progress.reloading" = "%@ を再読み込みしています…";
+
+"progress.restartingAll" = "サービスを再起動しています…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "%@ を開始しています…";
+
+"progress.startingAll" = "サービスを開始しています…";
+
+"progress.stopping" = "%@ を停止しています…";
+
+"progress.stoppingAll" = "サービスを停止しています…";
+
+"section.appearance" = "外観";
+
+"section.config" = "設定";
+
+"section.control" = "操作";
+
+"section.links" = "リンク";
+
+"section.projects" = "プロジェクト";
+
+/* Titolo di sezione */
+"section.services" = "サービス";
+
+"section.tools" = "ツール";
+
+"service.detail.busy" = "お待ちください…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "ポート %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "停止中 · ポート %@";
+
+"service.ports.none" = "ポート未設定";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — ポート: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "%@ を再読み込み";
+
+"status.allRunning" = "すべてのサービスが稼働中";
+
+"status.allStopped" = "すべてのサービスが停止中";
+
+"status.busy" = "処理中";
+
+"status.partial" = "一部のみ稼働中";
+
+"theme.auto" = "自動";
+
+"theme.dark" = "ダーク";
+
+"theme.hint" = "自動は macOS の設定に従います";
+
+"theme.light" = "ライト";
+
+"tool.backup" = "バックアップ";
+
+"tool.disableSSL" = "SSL を無効化";
+
+"tool.enableSSL" = "SSL を有効化";
+
+"tool.security" = "セキュリティ確認";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "設定で無効";
+
+"vhost.err.commented" = "ポート %ld は httpd-vhosts.conf でコメントアウトされています";
+
+"vhost.err.noResponse" = "ポート %ld から応答がありません。Apache は停止していますか？";
+
+"vhost.listening" = "待機中";
+
+"vhost.notResponding" = "設定済み、Apache が応答しません";
+
+"vhost.summary" = "%lu 待機中";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu 待機中 · %2$lu 無効";
