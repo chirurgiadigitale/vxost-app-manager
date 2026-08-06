@@ -5,6 +5,7 @@
 #import "XPServiceRowView.h"
 #import "XPTheme.h"
 #import "XPButton.h"
+#import "XPLayout.h"
 
 static const CGFloat XPRowHeight = 52.0;
 
@@ -22,7 +23,7 @@ static const CGFloat XPRowHeight = 52.0;
         _service = service;
         self.wantsLayer = YES;
 
-        _toggleButton = [XPButton buttonWithTitle:@"Avvia" style:XPButtonStyleGhost onClick:^(XPButton *b) {
+        _toggleButton = [XPButton buttonWithTitle:NSLocalizedString(@"btn.start", nil) style:XPButtonStyleGhost onClick:^(XPButton *b) {
             if (self.onToggle) self.onToggle(self.service);
         }];
         [self addSubview:_toggleButton];
@@ -42,12 +43,15 @@ static const CGFloat XPRowHeight = 52.0;
 
 - (void)layout {
     [super layout];
+    CGFloat width = NSWidth(self.bounds);
     CGFloat buttonWidth = 66.0;
-    self.toggleButton.frame = NSMakeRect(NSWidth(self.bounds) - buttonWidth - 14,
-                                         NSMidY(self.bounds) - 13,
-                                         buttonWidth, 26);
-    self.spinner.frame = NSMakeRect(NSWidth(self.bounds) - 14 - buttonWidth / 2 - 8,
-                                    NSMidY(self.bounds) - 8, 16, 16);
+
+    // In urdu il pulsante va a sinistra e il resto della riga a destra.
+    self.toggleButton.frame = XPMirror(NSMakeRect(width - buttonWidth - 14,
+                                                  NSMidY(self.bounds) - 13,
+                                                  buttonWidth, 26), width);
+    self.spinner.frame = XPMirror(NSMakeRect(width - 14 - buttonWidth / 2 - 8,
+                                             NSMidY(self.bounds) - 8, 16, 16), width);
 }
 
 #pragma mark - Aggiornamento
@@ -55,14 +59,14 @@ static const CGFloat XPRowHeight = 52.0;
 - (void)refresh {
     switch (self.service.state) {
         case XPServiceStateRunning:
-            self.toggleButton.title = @"Ferma";
+            self.toggleButton.title = NSLocalizedString(@"btn.stop", nil);
             self.toggleButton.style = XPButtonStyleDanger;
             self.toggleButton.hidden = NO;
             self.toggleButton.enabled = YES;
             [self.spinner stopAnimation:nil];
             break;
         case XPServiceStateStopped:
-            self.toggleButton.title = @"Avvia";
+            self.toggleButton.title = NSLocalizedString(@"btn.start", nil);
             self.toggleButton.style = XPButtonStyleGhost;
             self.toggleButton.hidden = NO;
             self.toggleButton.enabled = YES;
@@ -83,7 +87,8 @@ static const CGFloat XPRowHeight = 52.0;
 - (NSMenu *)menuForEvent:(NSEvent *)event {
     NSMenu *menu = [[NSMenu alloc] init];
     NSMenuItem *reload = [[NSMenuItem alloc] initWithTitle:
-                          [NSString stringWithFormat:@"Ricarica %@", self.service.name]
+                          [NSString stringWithFormat:
+                           NSLocalizedString(@"service.reload", nil), self.service.name]
                                                     action:@selector(reloadFromMenu:)
                                              keyEquivalent:@""];
     reload.target = self;
@@ -115,7 +120,8 @@ static const CGFloat XPRowHeight = 52.0;
     // Indicatore di stato: cerchio pieno se attivo, anello vuoto se fermo.
     // La differenza di forma, non solo di colore, lo rende leggibile anche
     // a chi non distingue verde e grigio.
-    NSRect dot = NSMakeRect(NSMinX(card) + 14, NSMidY(card) - 4, 8, 8);
+    NSRect dot = XPMirror(NSMakeRect(NSMinX(card) + 14, NSMidY(card) - 4, 8, 8),
+                          NSWidth(self.bounds));
     NSBezierPath *dotPath = [NSBezierPath bezierPathWithOvalInRect:dot];
     if (running) {
         [[XPTheme running] setFill];
@@ -131,34 +137,45 @@ static const CGFloat XPRowHeight = 52.0;
         [dotPath stroke];
     }
 
-    // Nome del servizio
+    // Nome del servizio. Si disegna in un rettangolo invece che in un punto:
+    // l'allineamento naturale porta il testo a destra quando l'interfaccia è
+    // in urdu, senza calcoli aggiuntivi.
+    CGFloat textX = 32 + NSMinX(card);
+    CGFloat textWidth = NSWidth(card) - 32 - 90;
+    NSRect nameRect = XPMirror(NSMakeRect(textX, NSMidY(card) + 1, textWidth, 17),
+                               NSWidth(self.bounds));
+
     NSDictionary *nameAttrs = @{
         NSFontAttributeName: [XPTheme fontTitle],
-        NSForegroundColorAttributeName: running ? [XPTheme text] : [XPTheme textSoft]
+        NSForegroundColorAttributeName: running ? [XPTheme text] : [XPTheme textSoft],
+        NSParagraphStyleAttributeName: XPNaturalParagraphStyle(NSLineBreakByTruncatingTail)
     };
-    [self.service.name drawAtPoint:NSMakePoint(NSMinX(card) + 32, NSMidY(card) + 1)
-                    withAttributes:nameAttrs];
+    [self.service.name drawInRect:nameRect withAttributes:nameAttrs];
 
     // Sottotitolo: porte e PID
     NSString *detail;
     if (self.service.state == XPServiceStateBusy) {
-        detail = @"attendere…";
+        detail = NSLocalizedString(@"service.detail.busy", nil);
     } else if (running) {
-        detail = [NSString stringWithFormat:@"porta %@ · pid %d",
+        detail = [NSString stringWithFormat:NSLocalizedString(@"service.detail.running", nil),
                   [self.service portsDescription], self.service.pid];
     } else {
-        detail = [NSString stringWithFormat:@"fermo · porta %@", [self.service portsDescription]];
+        detail = [NSString stringWithFormat:NSLocalizedString(@"service.detail.stopped", nil),
+                  [self.service portsDescription]];
     }
 
     NSDictionary *detailAttrs = @{
         NSFontAttributeName: [XPTheme fontSmall],
-        NSForegroundColorAttributeName: [XPTheme textMuted]
+        NSForegroundColorAttributeName: [XPTheme textMuted],
+        NSParagraphStyleAttributeName: XPNaturalParagraphStyle(NSLineBreakByTruncatingTail)
     };
-    [detail drawAtPoint:NSMakePoint(NSMinX(card) + 32, NSMidY(card) - 14)
-         withAttributes:detailAttrs];
+    [detail drawInRect:XPMirror(NSMakeRect(textX, NSMidY(card) - 14, textWidth, 14),
+                                NSWidth(self.bounds))
+        withAttributes:detailAttrs];
 
-    // Barretta colorata a sinistra, nel colore semantico del servizio.
-    NSRect accent = NSMakeRect(NSMinX(card) + 1, NSMidY(card) - 10, 3, 20);
+    // Barretta colorata sul bordo iniziale, nel colore semantico del servizio.
+    NSRect accent = XPMirror(NSMakeRect(NSMinX(card) + 1, NSMidY(card) - 10, 3, 20),
+                             NSWidth(self.bounds));
     NSBezierPath *accentPath = [NSBezierPath bezierPathWithRoundedRect:accent xRadius:1.5 yRadius:1.5];
     [[self.service.tint colorWithAlphaComponent:running ? 1.0 : 0.35] setFill];
     [accentPath fill];

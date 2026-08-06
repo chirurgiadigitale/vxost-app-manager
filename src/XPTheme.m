@@ -57,9 +57,9 @@ static NSColor *Dyn(NSColor *dark, NSColor *light) {
 
 + (NSString *)nameForPreference:(XPThemePreference)preference {
     switch (preference) {
-        case XPThemePreferenceDark:  return @"Scuro";
-        case XPThemePreferenceLight: return @"Chiaro";
-        default:                     return @"Automatico";
+        case XPThemePreferenceDark:  return NSLocalizedString(@"theme.dark", nil);
+        case XPThemePreferenceLight: return NSLocalizedString(@"theme.light", nil);
+        default:                     return NSLocalizedString(@"theme.auto", nil);
     }
 }
 

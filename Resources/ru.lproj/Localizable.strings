@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "Подтвердить операцию?";
+
+"alert.disableSSL" = "Отключить поддержку SSL в Apache? Apache будет перезапущен.";
+
+"alert.enableSSL" = "Включить поддержку SSL в Apache? Apache будет перезапущен.";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "Управляющий скрипт отсутствует или не является исполняемым:\n%@\n\nПриложение остаётся открытым, но не сможет запускать и останавливать службы.";
+
+"alert.missing.title" = "Установка XAMPP не найдена";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ редизайн";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ редизайн";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "всё работает";
+
+"badge.busy" = "выполняется";
+
+"badge.partial" = "частично";
+
+"badge.stopped" = "остановлено";
+
+"btn.cancel" = "Отмена";
+
+"btn.folder" = "Папка";
+
+"btn.more" = "Ещё…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "Открыть";
+
+"btn.proceed" = "Продолжить";
+
+"btn.quit" = "Выход";
+
+"btn.restart" = "Перезапустить";
+
+/* Avvia un singolo servizio */
+"btn.start" = "Запустить";
+
+"btn.startAll" = "Запустить все";
+
+"btn.stop" = "Остановить";
+
+"btn.stopAll" = "Остановить все";
+
+"btn.understood" = "Понятно";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "Окно";
+
+"config.files" = "Файлы конфигурации";
+
+"config.none" = "Файл конфигурации не найден";
+
+"link.dashboard" = "Панель";
+
+"link.htdocsFolder" = "Папка htdocs";
+
+"link.viewLogs" = "Показать журналы";
+
+"link.xamppFolder" = "Открыть папку XAMPP";
+
+"log.autoRefresh" = "Обновлять";
+
+"log.elevate" = "Прочитать с правами администратора";
+
+"log.filter" = "Фильтр строк…";
+
+"log.matchingLines" = " · %lu совпадений";
+
+"log.readCancelled" = "Чтение отменено";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · прочитано с правами администратора · автообновление отключено";
+
+"log.readFailed" = "Не удалось прочитать";
+
+"log.readingElevated" = "Чтение с правами администратора…";
+
+"log.reveal" = "В Finder";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · показан конец файла";
+
+"log.title" = "Журналы XAMPP";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ недоступен для чтения вашему пользователю: у файла другой владелец.";
+
+"log.veryLarge" = "  ⚠︎ очень большой файл";
+
+"menu.about" = "О программе XAMPP";
+
+"menu.close" = "Закрыть";
+
+"menu.copy" = "Копировать";
+
+"menu.edit" = "Правка";
+
+"menu.find" = "Найти";
+
+"menu.hide" = "Скрыть XAMPP";
+
+"menu.minimize" = "Убрать в Dock";
+
+"menu.openDashboard" = "Открыть панель";
+
+"menu.openPhpMyAdmin" = "Открыть phpMyAdmin";
+
+"menu.openWindow" = "Открыть окно XAMPP";
+
+"menu.quit" = "Завершить XAMPP";
+
+"menu.selectAll" = "Выбрать все";
+
+"menu.services" = "Службы";
+
+"menu.theme" = "Тема";
+
+"menu.viewLogs" = "Показать журналы…";
+
+"menu.window" = "Окно";
+
+"msg.apacheStopped" = "Apache остановлен: запустите его, чтобы открыть страницу";
+
+"msg.cancelled" = "Операция отменена";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "Операция выполнена";
+
+"msg.failed" = "Команда не выполнена";
+
+"msg.terminalFailed" = "Не удалось открыть Терминал";
+
+"msg.terminalOpened" = "Команда открыта в Терминале";
+
+"progress.disablingSSL" = "Отключение SSL…";
+
+"progress.enablingSSL" = "Включение SSL…";
+
+"progress.reloading" = "Перезагрузка %@…";
+
+"progress.restartingAll" = "Перезапуск служб…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "Запуск %@…";
+
+"progress.startingAll" = "Запуск служб…";
+
+"progress.stopping" = "Остановка %@…";
+
+"progress.stoppingAll" = "Остановка служб…";
+
+"section.appearance" = "Оформление";
+
+"section.config" = "Конфигурация";
+
+"section.control" = "Управление";
+
+"section.links" = "Ссылки";
+
+"section.projects" = "Проекты";
+
+/* Titolo di sezione */
+"section.services" = "Службы";
+
+"section.tools" = "Инструменты";
+
+"service.detail.busy" = "подождите…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "порт %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "остановлено · порт %@";
+
+"service.ports.none" = "порт не настроен";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — порты: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "Перезагрузить %@";
+
+"status.allRunning" = "все службы запущены";
+
+"status.allStopped" = "все службы остановлены";
+
+"status.busy" = "выполняется операция";
+
+"status.partial" = "запущено частично";
+
+"theme.auto" = "Автоматически";
+
+"theme.dark" = "Тёмная";
+
+"theme.hint" = "Автоматически — как в настройках macOS";
+
+"theme.light" = "Светлая";
+
+"tool.backup" = "Резервная копия";
+
+"tool.disableSSL" = "Отключить SSL";
+
+"tool.enableSSL" = "Включить SSL";
+
+"tool.security" = "Проверка безопасности";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "отключён в конфигурации";
+
+"vhost.err.commented" = "Порт %ld закомментирован в httpd-vhosts.conf";
+
+"vhost.err.noResponse" = "Нет ответа на порту %ld: Apache остановлен?";
+
+"vhost.listening" = "прослушивается";
+
+"vhost.notResponding" = "настроен, Apache не отвечает";
+
+"vhost.summary" = "%lu активно";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu активно · %2$lu отключено";

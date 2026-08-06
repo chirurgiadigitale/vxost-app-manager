@@ -4,6 +4,7 @@
 
 #import "XPButton.h"
 #import "XPTheme.h"
+#import "XPLayout.h"
 
 @interface XPButton ()
 @property (nonatomic, assign) BOOL hovered;
@@ -148,16 +149,46 @@
                 [size configurationByApplyingConfiguration:color]];
     }
 
-    NSDictionary *attrs = @{
-        NSFontAttributeName: [XPTheme fontBody],
-        NSForegroundColorAttributeName: [label colorWithAlphaComponent:alpha]
-    };
-    NSSize textSize = [self.title ?: @"" sizeWithAttributes:attrs];
+    NSString *title = self.title ?: @"";
     CGFloat iconWidth = icon ? 15.0 : 0.0;
+
+    // Le lingue non hanno tutte la stessa lunghezza: "Start all" sta ovunque,
+    // "Uruchom wszystko" no. Il corpo scende fino a 10 punti pur di far
+    // entrare l'etichetta, e solo se non basta il testo viene troncato.
+    CGFloat available = NSWidth(self.bounds) - 10.0 - iconWidth;
+    NSFont *font = [XPTheme fontBody];
+    NSDictionary *attrs = @{NSFontAttributeName: font,
+                            NSForegroundColorAttributeName: [label colorWithAlphaComponent:alpha]};
+    NSSize textSize = [title sizeWithAttributes:attrs];
+
+    for (CGFloat size = 11.0; textSize.width > available && size >= 9.0; size -= 1.0) {
+        font = [NSFont systemFontOfSize:size weight:NSFontWeightMedium];
+        attrs = @{NSFontAttributeName: font,
+                  NSForegroundColorAttributeName: [label colorWithAlphaComponent:alpha]};
+        textSize = [title sizeWithAttributes:attrs];
+    }
+
+    if (textSize.width > available) {
+        NSMutableDictionary *truncating = [attrs mutableCopy];
+        truncating[NSParagraphStyleAttributeName] =
+            XPNaturalParagraphStyle(NSLineBreakByTruncatingTail);
+        attrs = truncating;
+        textSize.width = available;
+    }
     CGFloat totalWidth = textSize.width + iconWidth;
     CGFloat x = NSMidX(self.bounds) - totalWidth / 2.0;
 
-    if (icon) {
+    // In RTL il simbolo va dopo il testo, non prima.
+    if (icon && XPIsRTL()) {
+        NSRect iconRect = NSMakeRect(x + textSize.width + 3, NSMidY(self.bounds) - 6, 12, 12);
+        [icon drawInRect:iconRect
+                fromRect:NSZeroRect
+               operation:NSCompositingOperationSourceOver
+                fraction:alpha
+          respectFlipped:YES
+                   hints:nil];
+        icon = nil;
+    } else if (icon) {
         NSRect iconRect = NSMakeRect(x, NSMidY(self.bounds) - 6, 12, 12);
         [icon drawInRect:iconRect
                 fromRect:NSZeroRect
@@ -168,8 +199,11 @@
         x += iconWidth;
     }
 
-    [self.title ?: @"" drawAtPoint:NSMakePoint(x, NSMidY(self.bounds) - textSize.height / 2.0)
-                    withAttributes:attrs];
+    // Si disegna in un rettangolo, non in un punto: è ciò che permette al
+    // troncamento di entrare in funzione quando l'etichetta non ci sta.
+    [title drawInRect:NSMakeRect(x, NSMidY(self.bounds) - textSize.height / 2.0,
+                                 textSize.width, textSize.height)
+       withAttributes:attrs];
 }
 
 @end

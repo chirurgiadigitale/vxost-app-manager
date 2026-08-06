@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "کیا آپ اس عمل کی تصدیق کرتے ہیں؟";
+
+"alert.disableSSL" = "Apache کی SSL سپورٹ غیر فعال کریں؟ Apache دوبارہ شروع ہوگا۔";
+
+"alert.enableSSL" = "Apache کی SSL سپورٹ فعال کریں؟ Apache دوبارہ شروع ہوگا۔";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "کنٹرول اسکرپٹ موجود نہیں یا قابلِ عمل نہیں:\n%@\n\nایپ کھلی رہے گی لیکن سروسز شروع یا بند نہیں کر سکے گی۔";
+
+"alert.missing.title" = "XAMPP انسٹالیشن نہیں ملی";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ نئی شکل";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ نئی شکل";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "سب فعال";
+
+"badge.busy" = "جاری";
+
+"badge.partial" = "جزوی";
+
+"badge.stopped" = "بند";
+
+"btn.cancel" = "منسوخ";
+
+"btn.folder" = "فولڈر";
+
+"btn.more" = "مزید…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "کھولیں";
+
+"btn.proceed" = "جاری رکھیں";
+
+"btn.quit" = "باہر نکلیں";
+
+"btn.restart" = "دوبارہ شروع";
+
+/* Avvia un singolo servizio */
+"btn.start" = "شروع";
+
+"btn.startAll" = "سب شروع کریں";
+
+"btn.stop" = "روکیں";
+
+"btn.stopAll" = "سب روکیں";
+
+"btn.understood" = "سمجھ گیا";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "ونڈو";
+
+"config.files" = "کنفیگریشن فائلیں";
+
+"config.none" = "کوئی کنفیگریشن فائل نہیں ملی";
+
+"link.dashboard" = "ڈیش بورڈ";
+
+"link.htdocsFolder" = "htdocs فولڈر";
+
+"link.viewLogs" = "لاگز دیکھیں";
+
+"link.xamppFolder" = "XAMPP فولڈر کھولیں";
+
+"log.autoRefresh" = "تازہ کریں";
+
+"log.elevate" = "بطور ایڈمن پڑھیں";
+
+"log.filter" = "لائنیں فلٹر کریں…";
+
+"log.matchingLines" = " · %lu مماثل لائنیں";
+
+"log.readCancelled" = "پڑھنا منسوخ";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · بطور ایڈمن پڑھا گیا · خودکار تازہ کاری بند";
+
+"log.readFailed" = "پڑھنا ناکام";
+
+"log.readingElevated" = "ایڈمن اختیارات کے ساتھ پڑھا جا رہا ہے…";
+
+"log.reveal" = "فائنڈر میں";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · فائل کا آخری حصہ دکھایا جا رہا ہے";
+
+"log.title" = "XAMPP لاگز";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ آپ کے صارف سے پڑھی نہیں جا سکتی: یہ کسی اور کی ملکیت ہے۔";
+
+"log.veryLarge" = "  ⚠︎ بہت بڑی فائل";
+
+"menu.about" = "XAMPP کے بارے میں";
+
+"menu.close" = "بند کریں";
+
+"menu.copy" = "کاپی";
+
+"menu.edit" = "ترمیم";
+
+"menu.find" = "تلاش";
+
+"menu.hide" = "XAMPP چھپائیں";
+
+"menu.minimize" = "چھوٹا کریں";
+
+"menu.openDashboard" = "ڈیش بورڈ کھولیں";
+
+"menu.openPhpMyAdmin" = "phpMyAdmin کھولیں";
+
+"menu.openWindow" = "XAMPP ونڈو کھولیں";
+
+"menu.quit" = "XAMPP بند کریں";
+
+"menu.selectAll" = "سب منتخب کریں";
+
+"menu.services" = "سروسز";
+
+"menu.theme" = "تھیم";
+
+"menu.viewLogs" = "لاگز دیکھیں…";
+
+"menu.window" = "ونڈو";
+
+"msg.apacheStopped" = "Apache بند ہے: یہ صفحہ کھولنے کے لیے اسے شروع کریں";
+
+"msg.cancelled" = "عمل منسوخ کر دیا گیا";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "عمل مکمل ہو گیا";
+
+"msg.failed" = "کمانڈ ناکام";
+
+"msg.terminalFailed" = "ٹرمینل نہیں کھل سکا";
+
+"msg.terminalOpened" = "کمانڈ ٹرمینل میں کھولی گئی";
+
+"progress.disablingSSL" = "SSL غیر فعال ہو رہا ہے…";
+
+"progress.enablingSSL" = "SSL فعال ہو رہا ہے…";
+
+"progress.reloading" = "%@ دوبارہ لوڈ ہو رہا ہے…";
+
+"progress.restartingAll" = "سروسز دوبارہ شروع ہو رہی ہیں…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "%@ شروع ہو رہا ہے…";
+
+"progress.startingAll" = "سروسز شروع ہو رہی ہیں…";
+
+"progress.stopping" = "%@ رک رہا ہے…";
+
+"progress.stoppingAll" = "سروسز رک رہی ہیں…";
+
+"section.appearance" = "ظاہری شکل";
+
+"section.config" = "کنفیگریشن";
+
+"section.control" = "کنٹرول";
+
+"section.links" = "لنکس";
+
+"section.projects" = "پروجیکٹس";
+
+/* Titolo di sezione */
+"section.services" = "سروسز";
+
+"section.tools" = "ٹولز";
+
+"service.detail.busy" = "انتظار کریں…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "پورٹ %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "رکا ہوا · پورٹ %@";
+
+"service.ports.none" = "کوئی پورٹ سیٹ نہیں";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — پورٹس: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "%@ دوبارہ لوڈ کریں";
+
+"status.allRunning" = "تمام سروسز فعال";
+
+"status.allStopped" = "تمام سروسز بند";
+
+"status.busy" = "عمل جاری ہے";
+
+"status.partial" = "جزوی طور پر فعال";
+
+"theme.auto" = "خودکار";
+
+"theme.dark" = "گہرا";
+
+"theme.hint" = "خودکار macOS کی ترتیب کے مطابق";
+
+"theme.light" = "ہلکا";
+
+"tool.backup" = "بیک اپ";
+
+"tool.disableSSL" = "SSL غیر فعال کریں";
+
+"tool.enableSSL" = "SSL فعال کریں";
+
+"tool.security" = "سیکیورٹی جانچ";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "کنفیگریشن میں غیر فعال";
+
+"vhost.err.commented" = "پورٹ %ld httpd-vhosts.conf میں کمنٹ شدہ ہے";
+
+"vhost.err.noResponse" = "پورٹ %ld پر کوئی جواب نہیں: کیا Apache بند ہے؟";
+
+"vhost.listening" = "فعال";
+
+"vhost.notResponding" = "کنفیگرڈ، Apache جواب نہیں دے رہا";
+
+"vhost.summary" = "%lu فعال";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu فعال · %2$lu غیر فعال";

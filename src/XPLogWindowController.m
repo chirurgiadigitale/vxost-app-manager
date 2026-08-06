@@ -45,7 +45,7 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
                                                               NSWindowStyleMaskMiniaturizable)
                                                      backing:NSBackingStoreBuffered
                                                        defer:NO];
-    window.title = @"Log XAMPP";
+    window.title = NSLocalizedString(@"log.title", nil);
     window.titlebarAppearsTransparent = NO;
     window.releasedWhenClosed = NO;
     [window center];
@@ -93,13 +93,13 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
     [toolbar addSubview:self.logSelector];
 
     self.filterField = [[NSSearchField alloc] initWithFrame:NSMakeRect(302, 9, 200, 25)];
-    self.filterField.placeholderString = @"Filtra righe…";
+    self.filterField.placeholderString = NSLocalizedString(@"log.filter", nil);
     self.filterField.target = self;
     self.filterField.action = @selector(filterChanged:);
     self.filterField.autoresizingMask = NSViewWidthSizable;
     [toolbar addSubview:self.filterField];
 
-    self.autoRefreshCheckbox = [NSButton checkboxWithTitle:@"Aggiorna"
+    self.autoRefreshCheckbox = [NSButton checkboxWithTitle:NSLocalizedString(@"log.autoRefresh", nil)
                                                      target:self
                                                      action:@selector(autoRefreshChanged:)];
     self.autoRefreshCheckbox.frame = NSMakeRect(NSWidth(content.bounds) - 210, 11, 90, 20);
@@ -107,7 +107,7 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
     self.autoRefreshCheckbox.autoresizingMask = NSViewMinXMargin;
     [toolbar addSubview:self.autoRefreshCheckbox];
 
-    NSButton *revealButton = [NSButton buttonWithTitle:@"Nel Finder"
+    NSButton *revealButton = [NSButton buttonWithTitle:NSLocalizedString(@"log.reveal", nil)
                                                  target:self
                                                  action:@selector(revealInFinder:)];
     revealButton.frame = NSMakeRect(NSWidth(content.bounds) - 112, 9, 100, 25);
@@ -156,7 +156,7 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
 
     // Compare solo sui log che l'utente non può leggere (il .err di MySQL
     // appartiene a _mysql ed è vietato in lettura agli altri utenti).
-    self.elevateButton = [NSButton buttonWithTitle:@"Leggi come amministratore"
+    self.elevateButton = [NSButton buttonWithTitle:NSLocalizedString(@"log.elevate", nil)
                                              target:self
                                              action:@selector(readWithPrivileges:)];
     self.elevateButton.frame = NSMakeRect(NSWidth(content.bounds) - 220, 1, 210, 22);
@@ -179,18 +179,18 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
     NSString *command = [NSString stringWithFormat:@"/usr/bin/tail -c %llu '%@'",
                          XPLogTailBytes, path];
 
-    self.statusLabel.stringValue = @"Lettura con privilegi di amministratore…";
+    self.statusLabel.stringValue = NSLocalizedString(@"log.readingElevated", nil);
     self.elevateButton.enabled = NO;
 
     [XPTaskRunner runPrivilegedShell:command completion:^(XPTaskResult *result) {
         self.elevateButton.enabled = YES;
 
         if (result.cancelled) {
-            self.statusLabel.stringValue = @"Lettura annullata";
+            self.statusLabel.stringValue = NSLocalizedString(@"log.readCancelled", nil);
             return;
         }
         if (!result.succeeded) {
-            self.statusLabel.stringValue = @"Lettura non riuscita";
+            self.statusLabel.stringValue = NSLocalizedString(@"log.readFailed", nil);
             return;
         }
 
@@ -201,7 +201,7 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
         self.textView.string = result.output ?: @"";
         self.elevateButton.hidden = YES;
         self.statusLabel.stringValue = [NSString stringWithFormat:
-            @"%@ · letto come amministratore · aggiornamento automatico disattivato", path];
+            NSLocalizedString(@"log.readElevatedDone", nil), path];
         [self scrollToBottom];
     }];
 }
@@ -326,19 +326,19 @@ static const unsigned long long XPLogTailBytes = 256 * 1024;
         BOOL unreadable = (tail == nil);
         if (unreadable) {
             status = [NSString stringWithFormat:
-                      @"%@ non è leggibile dal tuo utente: appartiene a un altro proprietario.",
+                      NSLocalizedString(@"log.unreadable", nil),
                       path.lastPathComponent];
         } else {
             NSString *sizeText = [NSByteCountFormatter stringFromByteCount:(long long)fileSize
                                                                 countStyle:NSByteCountFormatterCountStyleFile];
-            status = [NSString stringWithFormat:@"%@ · %@ · mostrata la coda del file",
+            status = [NSString stringWithFormat:NSLocalizedString(@"log.tailNote", nil),
                       path, sizeText];
             if (filter.length > 0) {
-                status = [status stringByAppendingFormat:@" · %lu righe corrispondenti",
+                status = [status stringByAppendingFormat:NSLocalizedString(@"log.matchingLines", nil),
                           (unsigned long)matched];
             }
             if (fileSize > 500 * 1024 * 1024) {
-                status = [status stringByAppendingString:@"  ⚠︎ file molto grande"];
+                status = [status stringByAppendingString:NSLocalizedString(@"log.veryLarge", nil)];
             }
         }
 

@@ -13,6 +13,7 @@
 #import "XPLogWindowController.h"
 #import "XPVirtualHost.h"
 #import "XPVHostRowView.h"
+#import "XPLayout.h"
 
 static const CGFloat XPWinWidth   = 560.0;
 static const CGFloat XPWinPadding = 22.0;
@@ -126,18 +127,18 @@ static const CGFloat XPRowHeight  = 56.0;
     CGFloat y = 34.0;   // spazio per la barra del titolo trasparente
 
     y = [self addHeaderTo:content atY:y];
-    y = [self addSectionTitle:@"Servizi" to:content atY:y];
+    y = [self addSectionTitle:NSLocalizedString(@"section.services", nil) to:content atY:y];
     y = [self addServiceRowsTo:content atY:y];
-    y = [self addSectionTitle:@"Controllo" to:content atY:y];
+    y = [self addSectionTitle:NSLocalizedString(@"section.control", nil) to:content atY:y];
     y = [self addControlButtonsTo:content atY:y];
     y = [self addProjectsSectionTo:content atY:y];
-    y = [self addSectionTitle:@"Collegamenti" to:content atY:y];
+    y = [self addSectionTitle:NSLocalizedString(@"section.links", nil) to:content atY:y];
     y = [self addShortcutsTo:content atY:y];
-    y = [self addSectionTitle:@"Strumenti" to:content atY:y];
+    y = [self addSectionTitle:NSLocalizedString(@"section.tools", nil) to:content atY:y];
     y = [self addToolsTo:content atY:y];
-    y = [self addSectionTitle:@"Configurazione" to:content atY:y];
+    y = [self addSectionTitle:NSLocalizedString(@"section.config", nil) to:content atY:y];
     y = [self addConfigButtonsTo:content atY:y];
-    y = [self addSectionTitle:@"Aspetto" to:content atY:y];
+    y = [self addSectionTitle:NSLocalizedString(@"section.appearance", nil) to:content atY:y];
     y = [self addThemePickerTo:content atY:y];
     y = [self addMessageBarTo:content atY:y];
 
@@ -153,7 +154,7 @@ static const CGFloat XPRowHeight  = 56.0;
 - (CGFloat)addHeaderTo:(NSView *)content atY:(CGFloat)y {
     // Icona dell'app accanto al titolo: la stessa che compare nel Dock.
     NSImageView *iconView = [[NSImageView alloc] initWithFrame:
-                             NSMakeRect(XPWinPadding, y, 44, 44)];
+                             XPMirror(NSMakeRect(XPWinPadding, y, 44, 44), XPWinWidth)];
     NSString *iconPath = [[NSBundle mainBundle] pathForResource:@"AppIcon" ofType:@"icns"];
     if (iconPath) iconView.image = [[NSImage alloc] initWithContentsOfFile:iconPath];
     iconView.imageScaling = NSImageScaleProportionallyUpOrDown;
@@ -162,7 +163,7 @@ static const CGFloat XPRowHeight  = 56.0;
     NSTextField *title = [self labelWithText:@"XAMPP"
                                         font:[NSFont systemFontOfSize:22 weight:NSFontWeightBold]
                                        color:[XPTheme text]
-                                       frame:NSMakeRect(XPWinPadding + 56, y + 2, 300, 28)];
+                                       frame:XPMirror(NSMakeRect(XPWinPadding + 56, y + 2, 300, 28), XPWinWidth)];
     [content addSubview:title];
 
     // Stessa dicitura del footer della dashboard: la versione di XAMPP letta
@@ -170,20 +171,20 @@ static const CGFloat XPRowHeight  = 56.0;
     NSString *appVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
     NSString *xamppVersion = [XPPaths xamppVersion];
     NSString *subtitleText = xamppVersion
-        ? [NSString stringWithFormat:@"XAMPP %@ · v%@ restyling", xamppVersion, appVersion]
-        : [NSString stringWithFormat:@"v%@ restyling", appVersion];
+        ? [NSString stringWithFormat:NSLocalizedString(@"app.subtitle.full", nil), xamppVersion, appVersion]
+        : [NSString stringWithFormat:NSLocalizedString(@"app.subtitle.short", nil), appVersion];
 
     NSTextField *subtitle = [self labelWithText:subtitleText
                                            font:[XPTheme fontSmall]
                                           color:[XPTheme textMuted]
-                                          frame:NSMakeRect(XPWinPadding + 56, y + 28, 340, 16)];
+                                          frame:XPMirror(NSMakeRect(XPWinPadding + 56, y + 28, 340, 16), XPWinWidth)];
     [content addSubview:subtitle];
 
     self.statusBadge = [self labelWithText:@""
                                       font:[XPTheme fontBody]
                                      color:[XPTheme textMuted]
-                                     frame:NSMakeRect(XPWinWidth - XPWinPadding - 160, y + 12, 160, 20)];
-    self.statusBadge.alignment = NSTextAlignmentRight;
+                                     frame:XPMirror(NSMakeRect(XPWinWidth - XPWinPadding - 160, y + 12, 160, 20), XPWinWidth)];
+    self.statusBadge.alignment = XPIsRTL() ? NSTextAlignmentLeft : NSTextAlignmentRight;
     [content addSubview:self.statusBadge];
 
     return y + 44 + 18;
@@ -193,7 +194,7 @@ static const CGFloat XPRowHeight  = 56.0;
     NSTextField *label = [self labelWithText:[text uppercaseString]
                                         font:[NSFont systemFontOfSize:10 weight:NSFontWeightSemibold]
                                        color:[XPTheme textMuted]
-                                       frame:NSMakeRect(XPWinPadding, y, 300, 14)];
+                                       frame:XPMirror(NSMakeRect(XPWinPadding, y, 300, 14), XPWinWidth)];
     // Un filo di spaziatura fra le lettere rende i titoli di sezione leggibili
     // anche a corpo piccolo.
     label.attributedStringValue = [[NSAttributedString alloc]
@@ -208,7 +209,7 @@ static const CGFloat XPRowHeight  = 56.0;
 - (CGFloat)addServiceRowsTo:(NSView *)content atY:(CGFloat)y {
     for (XPService *service in [XPServiceMonitor shared].services) {
         XPServiceRowView *row = [[XPServiceRowView alloc] initWithService:service];
-        row.frame = NSMakeRect(XPWinPadding - 8, y, XPWinWidth - (XPWinPadding - 8) * 2, XPRowHeight);
+        row.frame = NSMakeRect(XPWinPadding - 8, y, XPWinWidth - (XPWinPadding - 8) * 2, XPRowHeight);   // simmetrico: il contenuto si specchia da sé
         row.onToggle = ^(XPService *s) { [[XPActions shared] toggleService:s]; };
         row.onReload = ^(XPService *s) { [[XPActions shared] reloadService:s]; };
         [content addSubview:row];
@@ -220,9 +221,9 @@ static const CGFloat XPRowHeight  = 56.0;
 
 - (CGFloat)addControlButtonsTo:(NSView *)content atY:(CGFloat)y {
     NSArray *buttons = @[
-        @[@"Avvia tutto", @(XPButtonStylePrimary), @"play.fill"],
-        @[@"Ferma tutto", @(XPButtonStyleGhost),   @"stop.fill"],
-        @[@"Riavvia",     @(XPButtonStyleGhost),   @"arrow.clockwise"],
+        @[NSLocalizedString(@"btn.startAll", nil), @(XPButtonStylePrimary), @"play.fill"],
+        @[NSLocalizedString(@"btn.stopAll", nil),  @(XPButtonStyleGhost),   @"stop.fill"],
+        @[NSLocalizedString(@"btn.restart", nil),  @(XPButtonStyleGhost),   @"arrow.clockwise"],
     ];
 
     CGFloat gap = 10.0;
@@ -239,7 +240,7 @@ static const CGFloat XPRowHeight  = 56.0;
             else             [[XPActions shared] restartAll];
         }];
         button.symbolName = spec[2];
-        button.frame = NSMakeRect(x, y, width, 34);
+        button.frame = XPMirror(NSMakeRect(x, y, width, 34), XPWinWidth);
         [content addSubview:button];
 
         if (i == 0) self.startAllButton = button;
@@ -266,20 +267,20 @@ static const CGFloat XPRowHeight  = 56.0;
         else if (host.state == XPVHostStateDisabled) disabled++;
     }
 
-    y = [self addSectionTitle:@"Progetti" to:content atY:y];
+    y = [self addSectionTitle:NSLocalizedString(@"section.projects", nil) to:content atY:y];
 
     // Riepilogo allineato a destra, sulla stessa riga del titolo di sezione.
     NSString *summaryText = (disabled > 0)
-        ? [NSString stringWithFormat:@"%lu in ascolto · %lu disattivato",
+        ? [NSString stringWithFormat:NSLocalizedString(@"vhost.summary.withDisabled", nil),
            (unsigned long)listening, (unsigned long)disabled]
-        : [NSString stringWithFormat:@"%lu in ascolto", (unsigned long)listening];
+        : [NSString stringWithFormat:NSLocalizedString(@"vhost.summary", nil), (unsigned long)listening];
 
     self.hostsSummary = [self labelWithText:summaryText
                                        font:[XPTheme fontSmall]
                                       color:[XPTheme textMuted]
-                                      frame:NSMakeRect(XPWinWidth - XPWinPadding - 240,
-                                                       y - 19, 240, 14)];
-    self.hostsSummary.alignment = NSTextAlignmentRight;
+                                      frame:XPMirror(NSMakeRect(XPWinWidth - XPWinPadding - 240,
+                                                                y - 19, 240, 14), XPWinWidth)];
+    self.hostsSummary.alignment = XPIsRTL() ? NSTextAlignmentLeft : NSTextAlignmentRight;
     [content addSubview:self.hostsSummary];
 
     for (XPVirtualHost *host in self.hosts) {
@@ -294,10 +295,10 @@ static const CGFloat XPRowHeight  = 56.0;
 
 - (CGFloat)addShortcutsTo:(NSView *)content atY:(CGFloat)y {
     NSArray *shortcuts = @[
-        @[@"Dashboard",  @"safari"],
-        @[@"phpMyAdmin", @"cylinder.split.1x2"],
-        @[@"Cartella htdocs", @"folder"],
-        @[@"Visualizza log",  @"doc.text.magnifyingglass"],
+        @[NSLocalizedString(@"link.dashboard", nil),    @"safari"],
+        @[@"phpMyAdmin",                               @"cylinder.split.1x2"],
+        @[NSLocalizedString(@"link.htdocsFolder", nil), @"folder"],
+        @[NSLocalizedString(@"link.viewLogs", nil),     @"doc.text.magnifyingglass"],
     ];
     return [self addGrid:shortcuts to:content atY:y handler:^(NSUInteger index) {
         switch (index) {
@@ -311,10 +312,10 @@ static const CGFloat XPRowHeight  = 56.0;
 
 - (CGFloat)addToolsTo:(NSView *)content atY:(CGFloat)y {
     NSArray *tools = @[
-        @[@"Abilita SSL",    @"lock.fill"],
-        @[@"Disabilita SSL", @"lock.open"],
-        @[@"Controllo sicurezza", @"checkmark.shield"],
-        @[@"Backup",         @"externaldrive.fill"],
+        @[NSLocalizedString(@"tool.enableSSL", nil),  @"lock.fill"],
+        @[NSLocalizedString(@"tool.disableSSL", nil), @"lock.open"],
+        @[NSLocalizedString(@"tool.security", nil),   @"checkmark.shield"],
+        @[NSLocalizedString(@"tool.backup", nil),     @"externaldrive.fill"],
     ];
     return [self addGrid:tools to:content atY:y handler:^(NSUInteger index) {
         switch (index) {
@@ -342,9 +343,9 @@ static const CGFloat XPRowHeight  = 56.0;
                                                style:XPButtonStyleGhost
                                              onClick:^(XPButton *b) { handler(i); }];
         button.symbolName = spec[1];
-        button.frame = NSMakeRect(XPWinPadding + (i % 2) * (width + gap),
-                                  y + (i / 2) * (height + gap),
-                                  width, height);
+        button.frame = XPMirror(NSMakeRect(XPWinPadding + (i % 2) * (width + gap),
+                                           y + (i / 2) * (height + gap),
+                                           width, height), XPWinWidth);
         [content addSubview:button];
     }
 
@@ -355,7 +356,7 @@ static const CGFloat XPRowHeight  = 56.0;
 - (CGFloat)addConfigButtonsTo:(NSView *)content atY:(CGFloat)y {
     NSArray<NSDictionary *> *files = [XPPaths configFiles];
     if (files.count == 0) {
-        NSTextField *empty = [self labelWithText:@"Nessun file di configurazione trovato"
+        NSTextField *empty = [self labelWithText:NSLocalizedString(@"config.none", nil)
                                             font:[XPTheme fontSmall]
                                            color:[XPTheme textMuted]
                                            frame:NSMakeRect(XPWinPadding, y, 400, 16)];
@@ -375,22 +376,22 @@ static const CGFloat XPRowHeight  = 56.0;
             [[XPActions shared] revealFile:path];
         }];
         button.toolTip = path;
-        button.frame = NSMakeRect(XPWinPadding + (i % 3) * (width + gap),
-                                  y + (i / 3) * (height + gap),
-                                  width, height);
+        button.frame = XPMirror(NSMakeRect(XPWinPadding + (i % 3) * (width + gap),
+                                           y + (i / 3) * (height + gap),
+                                           width, height), XPWinWidth);
         [content addSubview:button];
     }
 
     NSUInteger rows = (files.count + 2) / 3;
     y += rows * (height + gap) + 4;
 
-    XPButton *folderButton = [XPButton buttonWithTitle:@"Apri cartella XAMPP"
+    XPButton *folderButton = [XPButton buttonWithTitle:NSLocalizedString(@"link.xamppFolder", nil)
                                                  style:XPButtonStyleQuiet
                                                onClick:^(XPButton *b) {
         [[XPActions shared] openXamppFolder];
     }];
     folderButton.symbolName = @"folder.badge.gearshape";
-    folderButton.frame = NSMakeRect(XPWinPadding, y, 200, 26);
+    folderButton.frame = XPMirror(NSMakeRect(XPWinPadding, y, 200, 26), XPWinWidth);
     [content addSubview:folderButton];
 
     return y + 26 + 14;
@@ -399,20 +400,22 @@ static const CGFloat XPRowHeight  = 56.0;
 /// Selettore del tema, gli stessi tre stati del sito.
 - (CGFloat)addThemePickerTo:(NSView *)content atY:(CGFloat)y {
     NSSegmentedControl *picker = [NSSegmentedControl
-        segmentedControlWithLabels:@[@"Automatico", @"Scuro", @"Chiaro"]
+        segmentedControlWithLabels:@[NSLocalizedString(@"theme.auto", nil),
+                                    NSLocalizedString(@"theme.dark", nil),
+                                    NSLocalizedString(@"theme.light", nil)]
                       trackingMode:NSSegmentSwitchTrackingSelectOne
                             target:self
                             action:@selector(themeChanged:)];
-    picker.frame = NSMakeRect(XPWinPadding, y, 260, 26);
+    picker.frame = XPMirror(NSMakeRect(XPWinPadding, y, 260, 26), XPWinWidth);
 
     // L'ordine dei segmenti segue quello di XPThemePreference.
     picker.selectedSegment = [XPTheme preference];
     [content addSubview:picker];
 
-    NSTextField *hint = [self labelWithText:@"Automatico segue l'impostazione di macOS"
+    NSTextField *hint = [self labelWithText:NSLocalizedString(@"theme.hint", nil)
                                        font:[XPTheme fontSmall]
                                       color:[XPTheme textMuted]
-                                      frame:NSMakeRect(XPWinPadding + 272, y + 5, 260, 16)];
+                                      frame:XPMirror(NSMakeRect(XPWinPadding + 272, y + 5, 260, 16), XPWinWidth)];
     [content addSubview:hint];
 
     return y + 26 + 16;
@@ -435,6 +438,7 @@ static const CGFloat XPRowHeight  = 56.0;
                                        font:[XPTheme fontSmall]
                                       color:[XPTheme textMuted]
                                       frame:NSMakeRect(XPWinPadding, y, XPWinWidth - XPWinPadding * 2, 16)];
+    self.messageLabel.alignment = NSTextAlignmentNatural;
     self.messageLabel.lineBreakMode = NSLineBreakByTruncatingTail;
     [content addSubview:self.messageLabel];
 
@@ -487,10 +491,10 @@ static const CGFloat XPRowHeight  = 56.0;
 
     NSString *text;
     NSColor *color;
-    if (busy)                    { text = @"operazione in corso"; color = [XPTheme amber]; }
-    else if (monitor.allRunning) { text = @"tutti i servizi attivi"; color = [XPTheme running]; }
-    else if (monitor.anyRunning) { text = @"attivo solo in parte"; color = [XPTheme amber]; }
-    else                         { text = @"tutti i servizi fermi"; color = [XPTheme textMuted]; }
+    if (busy)                    { text = NSLocalizedString(@"status.busy", nil); color = [XPTheme amber]; }
+    else if (monitor.allRunning) { text = NSLocalizedString(@"status.allRunning", nil); color = [XPTheme running]; }
+    else if (monitor.anyRunning) { text = NSLocalizedString(@"status.partial", nil); color = [XPTheme amber]; }
+    else                         { text = NSLocalizedString(@"status.allStopped", nil); color = [XPTheme textMuted]; }
 
     self.statusBadge.stringValue = text;
     self.statusBadge.textColor = color;

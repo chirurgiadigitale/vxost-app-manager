@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "Megerősíti a műveletet?";
+
+"alert.disableSSL" = "Letiltja az Apache SSL-támogatását? Az Apache újraindul.";
+
+"alert.enableSSL" = "Engedélyezi az Apache SSL-támogatását? Az Apache újraindul.";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "A vezérlőszkript hiányzik vagy nem futtatható:\n%@\n\nAz alkalmazás nyitva marad, de nem tudja indítani vagy leállítani a szolgáltatásokat.";
+
+"alert.missing.title" = "A XAMPP telepítés nem található";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ arculat";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ arculat";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "minden fut";
+
+"badge.busy" = "folyamatban";
+
+"badge.partial" = "részleges";
+
+"badge.stopped" = "leállítva";
+
+"btn.cancel" = "Mégse";
+
+"btn.folder" = "Mappa";
+
+"btn.more" = "Továbbiak…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "Megnyitás";
+
+"btn.proceed" = "Folytatás";
+
+"btn.quit" = "Kilépés";
+
+"btn.restart" = "Újraindítás";
+
+/* Avvia un singolo servizio */
+"btn.start" = "Indítás";
+
+"btn.startAll" = "Összes indítása";
+
+"btn.stop" = "Leállítás";
+
+"btn.stopAll" = "Összes leállítása";
+
+"btn.understood" = "Értem";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "Ablak";
+
+"config.files" = "Konfigurációs fájlok";
+
+"config.none" = "Nem található konfigurációs fájl";
+
+"link.dashboard" = "Vezérlőpult";
+
+"link.htdocsFolder" = "htdocs mappa";
+
+"link.viewLogs" = "Naplók megtekintése";
+
+"link.xamppFolder" = "XAMPP mappa megnyitása";
+
+"log.autoRefresh" = "Frissítés";
+
+"log.elevate" = "Olvasás rendszergazdaként";
+
+"log.filter" = "Sorok szűrése…";
+
+"log.matchingLines" = " · %lu találat";
+
+"log.readCancelled" = "Az olvasás megszakítva";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · rendszergazdaként olvasva · automatikus frissítés kikapcsolva";
+
+"log.readFailed" = "Az olvasás sikertelen";
+
+"log.readingElevated" = "Olvasás rendszergazdai jogokkal…";
+
+"log.reveal" = "A Finderben";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · a fájl vége látható";
+
+"log.title" = "XAMPP naplók";
+
+/* %@ è il nome del file */
+"log.unreadable" = "A(z) %@ nem olvasható a felhasználójával: más a tulajdonosa.";
+
+"log.veryLarge" = "  ⚠︎ nagyon nagy fájl";
+
+"menu.about" = "A XAMPP névjegye";
+
+"menu.close" = "Bezárás";
+
+"menu.copy" = "Másolás";
+
+"menu.edit" = "Szerkesztés";
+
+"menu.find" = "Keresés";
+
+"menu.hide" = "XAMPP elrejtése";
+
+"menu.minimize" = "Kis méret";
+
+"menu.openDashboard" = "Vezérlőpult megnyitása";
+
+"menu.openPhpMyAdmin" = "phpMyAdmin megnyitása";
+
+"menu.openWindow" = "XAMPP ablak megnyitása";
+
+"menu.quit" = "Kilépés a XAMPP-ból";
+
+"menu.selectAll" = "Összes kijelölése";
+
+"menu.services" = "Szolgáltatások";
+
+"menu.theme" = "Téma";
+
+"menu.viewLogs" = "Naplók megtekintése…";
+
+"menu.window" = "Ablak";
+
+"msg.apacheStopped" = "Az Apache leállt: indítsa el az oldal megnyitásához";
+
+"msg.cancelled" = "A művelet megszakítva";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "A művelet kész";
+
+"msg.failed" = "A parancs sikertelen";
+
+"msg.terminalFailed" = "A Terminál nem nyitható meg";
+
+"msg.terminalOpened" = "A parancs megnyílt a Terminálban";
+
+"progress.disablingSSL" = "SSL letiltása…";
+
+"progress.enablingSSL" = "SSL engedélyezése…";
+
+"progress.reloading" = "%@ újratöltése…";
+
+"progress.restartingAll" = "Szolgáltatások újraindítása…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "%@ indítása…";
+
+"progress.startingAll" = "Szolgáltatások indítása…";
+
+"progress.stopping" = "%@ leállítása…";
+
+"progress.stoppingAll" = "Szolgáltatások leállítása…";
+
+"section.appearance" = "Megjelenés";
+
+"section.config" = "Beállítások";
+
+"section.control" = "Vezérlés";
+
+"section.links" = "Hivatkozások";
+
+"section.projects" = "Projektek";
+
+/* Titolo di sezione */
+"section.services" = "Szolgáltatások";
+
+"section.tools" = "Eszközök";
+
+"service.detail.busy" = "várjon…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "port %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "leállítva · port %@";
+
+"service.ports.none" = "nincs port beállítva";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — portok: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "%@ újratöltése";
+
+"status.allRunning" = "minden szolgáltatás fut";
+
+"status.allStopped" = "minden szolgáltatás leállt";
+
+"status.busy" = "művelet folyamatban";
+
+"status.partial" = "részben fut";
+
+"theme.auto" = "Automatikus";
+
+"theme.dark" = "Sötét";
+
+"theme.hint" = "Az automatikus a macOS beállítását követi";
+
+"theme.light" = "Világos";
+
+"tool.backup" = "Biztonsági mentés";
+
+"tool.disableSSL" = "SSL letiltása";
+
+"tool.enableSSL" = "SSL engedélyezése";
+
+"tool.security" = "Biztonsági ellenőrzés";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "letiltva a beállításokban";
+
+"vhost.err.commented" = "A(z) %ld port ki van kommentelve a httpd-vhosts.conf fájlban";
+
+"vhost.err.noResponse" = "Nincs válasz a(z) %ld porton: leállt az Apache?";
+
+"vhost.listening" = "figyel";
+
+"vhost.notResponding" = "beállítva, az Apache nem válaszol";
+
+"vhost.summary" = "%lu figyel";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu figyel · %2$lu letiltva";

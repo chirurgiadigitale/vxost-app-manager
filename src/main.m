@@ -73,29 +73,29 @@
     [mainMenu addItem:appItem];
     NSMenu *appMenu = [[NSMenu alloc] init];
 
-    [appMenu addItemWithTitle:@"Informazioni su XAMPP"
+    [appMenu addItemWithTitle:NSLocalizedString(@"menu.about", nil)
                        action:@selector(orderFrontStandardAboutPanel:)
                 keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
 
-    NSMenuItem *dashboard = [appMenu addItemWithTitle:@"Apri Dashboard"
+    NSMenuItem *dashboard = [appMenu addItemWithTitle:NSLocalizedString(@"menu.openDashboard", nil)
                                                action:@selector(openDashboard:)
                                         keyEquivalent:@"d"];
     dashboard.target = self;
 
-    NSMenuItem *phpmyadmin = [appMenu addItemWithTitle:@"Apri phpMyAdmin"
+    NSMenuItem *phpmyadmin = [appMenu addItemWithTitle:NSLocalizedString(@"menu.openPhpMyAdmin", nil)
                                                 action:@selector(openPhpMyAdmin:)
                                          keyEquivalent:@"m"];
     phpmyadmin.target = self;
 
-    NSMenuItem *logs = [appMenu addItemWithTitle:@"Visualizza log…"
+    NSMenuItem *logs = [appMenu addItemWithTitle:NSLocalizedString(@"menu.viewLogs", nil)
                                           action:@selector(openLogs:)
                                    keyEquivalent:@"l"];
     logs.target = self;
 
     // Sottomenu del tema, con il segno di spunta sulla scelta corrente.
-    NSMenuItem *themeItem = [[NSMenuItem alloc] initWithTitle:@"Tema" action:nil keyEquivalent:@""];
-    NSMenu *themeMenu = [[NSMenu alloc] initWithTitle:@"Tema"];
+    NSMenuItem *themeItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"menu.theme", nil) action:nil keyEquivalent:@""];
+    NSMenu *themeMenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"menu.theme", nil)];
     for (XPThemePreference pref = XPThemePreferenceAuto; pref <= XPThemePreferenceLight; pref++) {
         NSMenuItem *item = [themeMenu addItemWithTitle:[XPTheme nameForPreference:pref]
                                                  action:@selector(changeTheme:)
@@ -109,26 +109,26 @@
     [appMenu addItem:themeItem];
 
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Nascondi XAMPP" action:@selector(hide:) keyEquivalent:@"h"];
-    [appMenu addItemWithTitle:@"Esci da XAMPP" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:NSLocalizedString(@"menu.hide", nil) action:@selector(hide:) keyEquivalent:@"h"];
+    [appMenu addItemWithTitle:NSLocalizedString(@"menu.quit", nil) action:@selector(terminate:) keyEquivalent:@"q"];
     appItem.submenu = appMenu;
 
     // --- Menu Servizi ---
     NSMenuItem *servicesItem = [[NSMenuItem alloc] init];
     [mainMenu addItem:servicesItem];
-    NSMenu *servicesMenu = [[NSMenu alloc] initWithTitle:@"Servizi"];
+    NSMenu *servicesMenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"menu.services", nil)];
 
-    NSMenuItem *startAll = [servicesMenu addItemWithTitle:@"Avvia tutto"
+    NSMenuItem *startAll = [servicesMenu addItemWithTitle:NSLocalizedString(@"btn.startAll", nil)
                                                    action:@selector(startAll:)
                                             keyEquivalent:@"r"];
     startAll.target = self;
 
-    NSMenuItem *stopAll = [servicesMenu addItemWithTitle:@"Ferma tutto"
+    NSMenuItem *stopAll = [servicesMenu addItemWithTitle:NSLocalizedString(@"btn.stopAll", nil)
                                                   action:@selector(stopAll:)
                                            keyEquivalent:@"."];
     stopAll.target = self;
 
-    NSMenuItem *restart = [servicesMenu addItemWithTitle:@"Riavvia tutto"
+    NSMenuItem *restart = [servicesMenu addItemWithTitle:NSLocalizedString(@"btn.restart", nil)
                                                   action:@selector(restartAll:)
                                            keyEquivalent:@"R"];
     restart.target = self;
@@ -137,25 +137,25 @@
     // --- Menu Modifica: senza, copia e incolla non funzionano nel log ---
     NSMenuItem *editItem = [[NSMenuItem alloc] init];
     [mainMenu addItem:editItem];
-    NSMenu *editMenu = [[NSMenu alloc] initWithTitle:@"Modifica"];
-    [editMenu addItemWithTitle:@"Copia" action:@selector(copy:) keyEquivalent:@"c"];
-    [editMenu addItemWithTitle:@"Seleziona tutto" action:@selector(selectAll:) keyEquivalent:@"a"];
+    NSMenu *editMenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"menu.edit", nil)];
+    [editMenu addItemWithTitle:NSLocalizedString(@"menu.copy", nil) action:@selector(copy:) keyEquivalent:@"c"];
+    [editMenu addItemWithTitle:NSLocalizedString(@"menu.selectAll", nil) action:@selector(selectAll:) keyEquivalent:@"a"];
     [editMenu addItem:[NSMenuItem separatorItem]];
-    [editMenu addItemWithTitle:@"Trova" action:@selector(performFindPanelAction:) keyEquivalent:@"f"];
+    [editMenu addItemWithTitle:NSLocalizedString(@"menu.find", nil) action:@selector(performFindPanelAction:) keyEquivalent:@"f"];
     editItem.submenu = editMenu;
 
     // --- Menu Finestra ---
     NSMenuItem *windowItem = [[NSMenuItem alloc] init];
     [mainMenu addItem:windowItem];
-    NSMenu *windowMenu = [[NSMenu alloc] initWithTitle:@"Finestra"];
+    NSMenu *windowMenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"menu.window", nil)];
 
-    NSMenuItem *mainWindow = [windowMenu addItemWithTitle:@"XAMPP"
+    NSMenuItem *mainWindow = [windowMenu addItemWithTitle:NSLocalizedString(@"menu.openWindow", nil)
                                                    action:@selector(openMainWindow:)
                                             keyEquivalent:@"0"];
     mainWindow.target = self;
 
-    [windowMenu addItemWithTitle:@"Riduci" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
-    [windowMenu addItemWithTitle:@"Chiudi" action:@selector(performClose:) keyEquivalent:@"w"];
+    [windowMenu addItemWithTitle:NSLocalizedString(@"menu.minimize", nil) action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+    [windowMenu addItemWithTitle:NSLocalizedString(@"menu.close", nil) action:@selector(performClose:) keyEquivalent:@"w"];
     windowItem.submenu = windowMenu;
     NSApp.windowsMenu = windowMenu;
 

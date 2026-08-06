@@ -24,15 +24,17 @@ ICON    := Resources/AppIcon.icns
 CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2
 LDFLAGS := -framework Cocoa
 
-.PHONY: all icon run install clean uninstall dist
+.PHONY: all icon strings run install clean uninstall dist
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
-all: $(ICON)
+all: $(ICON) strings
 	@mkdir -p "$(MACOS_DIR)" "$(RES_DIR)"
 	@clang $(CFLAGS) $(LDFLAGS) -o "$(MACOS_DIR)/$(APP_NAME)" $(SOURCES)
 	@cp Resources/Info.plist "$(CONTENTS)/Info.plist"
 	@cp $(ICON) "$(RES_DIR)/AppIcon.icns"
+	@# Le traduzioni: senza le .lproj nel bundle l'app mostrerebbe le chiavi.
+	@cp -R Resources/*.lproj "$(RES_DIR)/"
 	@printf 'APPL????' > "$(CONTENTS)/PkgInfo"
 	@# Firma ad-hoc: non serve un account sviluppatore, ma evita che macOS
 	@# consideri il bundle danneggiato dopo una modifica.
@@ -53,6 +55,14 @@ $(ICON): $(LOGO) tools/make-icon.m
 icon:
 	@rm -f $(ICON)
 	@$(MAKE) --no-print-directory $(ICON)
+
+# Rigenera i Localizable.strings delle 15 lingue dal catalogo unico.
+# Fallisce se una lingua è incompleta o se un segnaposto non coincide.
+#
+# Va definito dopo `all`: in make il primo target del file è quello di
+# default, e metterlo prima farebbe eseguire solo questo a `make` nudo.
+strings:
+	@python3 tools/i18n/build-strings.py
 
 run: all
 	@pkill -x "$(APP_NAME)" 2>/dev/null || true

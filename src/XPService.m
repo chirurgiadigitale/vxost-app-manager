@@ -239,12 +239,12 @@ static NSArray<NSNumber *> *PortsFromConfig(NSString *path, NSString *directive)
     NSArray<NSNumber *> *ports = (self.state == XPServiceStateRunning && self.listeningPorts.count > 0)
                                  ? self.listeningPorts
                                  : self.configuredPorts;
-    if (ports.count == 0) return @"nessuna porta configurata";
+    if (ports.count == 0) return NSLocalizedString(@"service.ports.none", nil);
 
     NSMutableArray<NSString *> *parts = [NSMutableArray array];
     for (NSNumber *p in ports) [parts addObject:p.stringValue];
-    return [NSString stringWithFormat:@"%@ — porte: %@", self.name,
-            [parts componentsJoinedByString:@", "]];
+    return [NSString stringWithFormat:NSLocalizedString(@"service.ports.tooltip", nil),
+            self.name, [parts componentsJoinedByString:@", "]];
 }
 
 @end

@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "Confirmi operațiunea?";
+
+"alert.disableSSL" = "Dezactivezi suportul SSL pentru Apache? Apache va fi repornit.";
+
+"alert.enableSSL" = "Activezi suportul SSL pentru Apache? Apache va fi repornit.";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "Scriptul de control lipsește sau nu este executabil:\n%@\n\nAplicația rămâne deschisă, dar nu va putea porni sau opri serviciile.";
+
+"alert.missing.title" = "Instalarea XAMPP nu a fost găsită";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ redesign";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ redesign";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "totul activ";
+
+"badge.busy" = "în curs";
+
+"badge.partial" = "parțial";
+
+"badge.stopped" = "oprit";
+
+"btn.cancel" = "Anulează";
+
+"btn.folder" = "Dosar";
+
+"btn.more" = "Mai mult…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "Deschide";
+
+"btn.proceed" = "Continuă";
+
+"btn.quit" = "Ieșire";
+
+"btn.restart" = "Repornește";
+
+/* Avvia un singolo servizio */
+"btn.start" = "Pornește";
+
+"btn.startAll" = "Pornește tot";
+
+"btn.stop" = "Oprește";
+
+"btn.stopAll" = "Oprește tot";
+
+"btn.understood" = "Am înțeles";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "Fereastră";
+
+"config.files" = "Fișiere de configurare";
+
+"config.none" = "Nu s-a găsit niciun fișier de configurare";
+
+"link.dashboard" = "Panou";
+
+"link.htdocsFolder" = "Dosar htdocs";
+
+"link.viewLogs" = "Vezi jurnalele";
+
+"link.xamppFolder" = "Deschide dosarul XAMPP";
+
+"log.autoRefresh" = "Actualizează";
+
+"log.elevate" = "Citește ca administrator";
+
+"log.filter" = "Filtrează liniile…";
+
+"log.matchingLines" = " · %lu linii potrivite";
+
+"log.readCancelled" = "Citire anulată";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · citit ca administrator · actualizarea automată dezactivată";
+
+"log.readFailed" = "Citirea a eșuat";
+
+"log.readingElevated" = "Se citește cu privilegii de administrator…";
+
+"log.reveal" = "În Finder";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · se afișează sfârșitul fișierului";
+
+"log.title" = "Jurnale XAMPP";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ nu poate fi citit de utilizatorul tău: aparține altui proprietar.";
+
+"log.veryLarge" = "  ⚠︎ fișier foarte mare";
+
+"menu.about" = "Despre XAMPP";
+
+"menu.close" = "Închide";
+
+"menu.copy" = "Copiază";
+
+"menu.edit" = "Editare";
+
+"menu.find" = "Caută";
+
+"menu.hide" = "Ascunde XAMPP";
+
+"menu.minimize" = "Minimizează";
+
+"menu.openDashboard" = "Deschide panoul";
+
+"menu.openPhpMyAdmin" = "Deschide phpMyAdmin";
+
+"menu.openWindow" = "Deschide fereastra XAMPP";
+
+"menu.quit" = "Ieși din XAMPP";
+
+"menu.selectAll" = "Selectează tot";
+
+"menu.services" = "Servicii";
+
+"menu.theme" = "Temă";
+
+"menu.viewLogs" = "Vezi jurnalele…";
+
+"menu.window" = "Fereastră";
+
+"msg.apacheStopped" = "Apache este oprit: pornește-l pentru a deschide această pagină";
+
+"msg.cancelled" = "Operațiune anulată";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "Operațiune finalizată";
+
+"msg.failed" = "Comanda a eșuat";
+
+"msg.terminalFailed" = "Nu s-a putut deschide Terminalul";
+
+"msg.terminalOpened" = "Comandă deschisă în Terminal";
+
+"progress.disablingSSL" = "Se dezactivează SSL…";
+
+"progress.enablingSSL" = "Se activează SSL…";
+
+"progress.reloading" = "Se reîncarcă %@…";
+
+"progress.restartingAll" = "Se repornesc serviciile…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "Se pornește %@…";
+
+"progress.startingAll" = "Se pornesc serviciile…";
+
+"progress.stopping" = "Se oprește %@…";
+
+"progress.stoppingAll" = "Se opresc serviciile…";
+
+"section.appearance" = "Aspect";
+
+"section.config" = "Configurare";
+
+"section.control" = "Control";
+
+"section.links" = "Linkuri";
+
+"section.projects" = "Proiecte";
+
+/* Titolo di sezione */
+"section.services" = "Servicii";
+
+"section.tools" = "Instrumente";
+
+"service.detail.busy" = "așteptați…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "port %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "oprit · port %@";
+
+"service.ports.none" = "niciun port configurat";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — porturi: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "Reîncarcă %@";
+
+"status.allRunning" = "toate serviciile active";
+
+"status.allStopped" = "toate serviciile oprite";
+
+"status.busy" = "operațiune în curs";
+
+"status.partial" = "parțial activ";
+
+"theme.auto" = "Automat";
+
+"theme.dark" = "Întunecat";
+
+"theme.hint" = "Automat urmează setarea macOS";
+
+"theme.light" = "Luminos";
+
+"tool.backup" = "Copie de rezervă";
+
+"tool.disableSSL" = "Dezactivează SSL";
+
+"tool.enableSSL" = "Activează SSL";
+
+"tool.security" = "Verificare de securitate";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "dezactivat în configurare";
+
+"vhost.err.commented" = "Portul %ld este comentat în httpd-vhosts.conf";
+
+"vhost.err.noResponse" = "Niciun răspuns pe portul %ld: Apache este oprit?";
+
+"vhost.listening" = "ascultă";
+
+"vhost.notResponding" = "configurat, Apache nu răspunde";
+
+"vhost.summary" = "%lu ascultă";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu ascultă · %2$lu dezactivat";

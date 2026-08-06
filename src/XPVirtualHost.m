@@ -198,9 +198,9 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
 
 - (NSString *)stateDescription {
     switch (self.state) {
-        case XPVHostStateListening: return @"in ascolto";
-        case XPVHostStateDisabled:  return @"disattivato nella configurazione";
-        default:                    return @"configurato, Apache non risponde";
+        case XPVHostStateListening: return NSLocalizedString(@"vhost.listening", nil);
+        case XPVHostStateDisabled:  return NSLocalizedString(@"vhost.disabled", nil);
+        default:                    return NSLocalizedString(@"vhost.notResponding", nil);
     }
 }
 

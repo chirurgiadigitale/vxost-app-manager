@@ -1,0 +1,237 @@
+/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+   Le traduzioni vivono in tools/i18n/catalog.json. */
+
+"alert.confirm.title" = "İşlemi onaylıyor musunuz?";
+
+"alert.disableSSL" = "Apache SSL desteği devre dışı bırakılsın mı? Apache yeniden başlatılacak.";
+
+"alert.enableSSL" = "Apache SSL desteği etkinleştirilsin mi? Apache yeniden başlatılacak.";
+
+/* %@ è il percorso dello script di controllo */
+"alert.missing.body" = "Denetim betiği yok ya da çalıştırılabilir değil:\n%@\n\nUygulama açık kalır ancak hizmetleri başlatıp durduramaz.";
+
+"alert.missing.title" = "XAMPP kurulumu bulunamadı";
+
+/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
+"app.subtitle.full" = "XAMPP %1$@ · v%2$@ yeni arayüz";
+
+/* Sottotitolo quando la versione di XAMPP non è leggibile */
+"app.subtitle.short" = "v%@ yeni arayüz";
+
+/* Badge compatto nel popover */
+"badge.allRunning" = "tümü çalışıyor";
+
+"badge.busy" = "sürüyor";
+
+"badge.partial" = "kısmi";
+
+"badge.stopped" = "durduruldu";
+
+"btn.cancel" = "İptal";
+
+"btn.folder" = "Klasör";
+
+"btn.more" = "Daha fazla…";
+
+/* Apre il progetto nel browser */
+"btn.open" = "Aç";
+
+"btn.proceed" = "Devam et";
+
+"btn.quit" = "Çık";
+
+"btn.restart" = "Yeniden başlat";
+
+/* Avvia un singolo servizio */
+"btn.start" = "Başlat";
+
+"btn.startAll" = "Tümünü başlat";
+
+"btn.stop" = "Durdur";
+
+"btn.stopAll" = "Tümünü durdur";
+
+"btn.understood" = "Anladım";
+
+/* Dal popover apre la finestra completa */
+"btn.window" = "Pencere";
+
+"config.files" = "Yapılandırma dosyaları";
+
+"config.none" = "Yapılandırma dosyası bulunamadı";
+
+"link.dashboard" = "Panel";
+
+"link.htdocsFolder" = "htdocs klasörü";
+
+"link.viewLogs" = "Günlükleri görüntüle";
+
+"link.xamppFolder" = "XAMPP klasörünü aç";
+
+"log.autoRefresh" = "Yenile";
+
+"log.elevate" = "Yönetici olarak oku";
+
+"log.filter" = "Satırları filtrele…";
+
+"log.matchingLines" = " · %lu eşleşen satır";
+
+"log.readCancelled" = "Okuma iptal edildi";
+
+/* %@ è il percorso del file */
+"log.readElevatedDone" = "%@ · yönetici olarak okundu · otomatik yenileme kapalı";
+
+"log.readFailed" = "Okuma başarısız";
+
+"log.readingElevated" = "Yönetici ayrıcalıklarıyla okunuyor…";
+
+"log.reveal" = "Finder'da";
+
+"log.system.apacheAccess" = "Apache — access_log";
+
+"log.system.apacheError" = "Apache — error_log";
+
+"log.system.mysqlError" = "MySQL — error";
+
+/* %1$@ percorso, %2$@ dimensione leggibile */
+"log.tailNote" = "%1$@ · %2$@ · dosyanın sonu gösteriliyor";
+
+"log.title" = "XAMPP günlükleri";
+
+/* %@ è il nome del file */
+"log.unreadable" = "%@ kullanıcınız tarafından okunamıyor: dosya başka bir sahibe ait.";
+
+"log.veryLarge" = "  ⚠︎ çok büyük dosya";
+
+"menu.about" = "XAMPP hakkında";
+
+"menu.close" = "Kapat";
+
+"menu.copy" = "Kopyala";
+
+"menu.edit" = "Düzen";
+
+"menu.find" = "Bul";
+
+"menu.hide" = "XAMPP'ı gizle";
+
+"menu.minimize" = "Küçült";
+
+"menu.openDashboard" = "Paneli aç";
+
+"menu.openPhpMyAdmin" = "phpMyAdmin'i aç";
+
+"menu.openWindow" = "XAMPP penceresini aç";
+
+"menu.quit" = "XAMPP'tan çık";
+
+"menu.selectAll" = "Tümünü seç";
+
+"menu.services" = "Hizmetler";
+
+"menu.theme" = "Tema";
+
+"menu.viewLogs" = "Günlükleri görüntüle…";
+
+"menu.window" = "Pencere";
+
+"msg.apacheStopped" = "Apache durduruldu: bu sayfayı açmak için başlatın";
+
+"msg.cancelled" = "İşlem iptal edildi";
+
+/* Esito positivo. Senza segnaposto di proposito: comporre 'X: fatto' richiede una struttura grammaticale che non regge in tutte le lingue */
+"msg.done" = "İşlem tamamlandı";
+
+"msg.failed" = "Komut başarısız";
+
+"msg.terminalFailed" = "Terminal açılamadı";
+
+"msg.terminalOpened" = "Komut Terminal'de açıldı";
+
+"progress.disablingSSL" = "SSL devre dışı bırakılıyor…";
+
+"progress.enablingSSL" = "SSL etkinleştiriliyor…";
+
+"progress.reloading" = "%@ yeniden yükleniyor…";
+
+"progress.restartingAll" = "Hizmetler yeniden başlatılıyor…";
+
+/* Frase intera, non composta: %@ è il nome del servizio */
+"progress.starting" = "%@ başlatılıyor…";
+
+"progress.startingAll" = "Hizmetler başlatılıyor…";
+
+"progress.stopping" = "%@ durduruluyor…";
+
+"progress.stoppingAll" = "Hizmetler durduruluyor…";
+
+"section.appearance" = "Görünüm";
+
+"section.config" = "Yapılandırma";
+
+"section.control" = "Denetim";
+
+"section.links" = "Bağlantılar";
+
+"section.projects" = "Projeler";
+
+/* Titolo di sezione */
+"section.services" = "Hizmetler";
+
+"section.tools" = "Araçlar";
+
+"service.detail.busy" = "lütfen bekleyin…";
+
+/* Sotto il nome del servizio attivo: %1$@ porte, %2$d pid */
+"service.detail.running" = "port %1$@ · pid %2$d";
+
+/* Sotto il nome del servizio fermo: %@ porte configurate */
+"service.detail.stopped" = "durduruldu · port %@";
+
+"service.ports.none" = "yapılandırılmış port yok";
+
+/* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
+"service.ports.tooltip" = "%1$@ — portlar: %2$@";
+
+/* Menu contestuale sulla riga: %@ nome servizio */
+"service.reload" = "%@ yeniden yükle";
+
+"status.allRunning" = "tüm hizmetler çalışıyor";
+
+"status.allStopped" = "tüm hizmetler durduruldu";
+
+"status.busy" = "işlem sürüyor";
+
+"status.partial" = "kısmen çalışıyor";
+
+"theme.auto" = "Otomatik";
+
+"theme.dark" = "Koyu";
+
+"theme.hint" = "Otomatik, macOS ayarını izler";
+
+"theme.light" = "Açık";
+
+"tool.backup" = "Yedekleme";
+
+"tool.disableSSL" = "SSL'i devre dışı bırak";
+
+"tool.enableSSL" = "SSL'i etkinleştir";
+
+"tool.security" = "Güvenlik denetimi";
+
+/* Il blocco VirtualHost è commentato nella configurazione */
+"vhost.disabled" = "yapılandırmada devre dışı";
+
+"vhost.err.commented" = "%ld portu httpd-vhosts.conf içinde yorum satırında";
+
+"vhost.err.noResponse" = "%ld portunda yanıt yok: Apache durdurulmuş mu?";
+
+"vhost.listening" = "dinliyor";
+
+"vhost.notResponding" = "yapılandırıldı, Apache yanıt vermiyor";
+
+"vhost.summary" = "%lu dinliyor";
+
+/* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
+"vhost.summary.withDisabled" = "%1$lu dinliyor · %2$lu devre dışı";
