@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "Szolgáltatások";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "Időmérés";
+
 "section.tools" = "Eszközök";
 
 "service.detail.busy" = "várjon…";
@@ -211,6 +214,39 @@
 "theme.hint" = "Az automatikus a macOS beállítását követi";
 
 "theme.light" = "Világos";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "Új bejegyzés…";
+
+"timer.newProject.add" = "Hozzáadás";
+
+"timer.newProject.body" = "Olyan munkához, ami nem helyi webhely: hívás, árajánlat, tanácsadás.";
+
+"timer.newProject.placeholder" = "Név";
+
+"timer.newProject.title" = "Új időmérési bejegyzés";
+
+"timer.noEntries" = "Ma még nincs rögzített munkamenet";
+
+"timer.noTask" = "nincs leírás";
+
+"timer.pause" = "Szünet";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "szüneteltetve";
+
+"timer.resume" = "Folytatás";
+
+"timer.start" = "Indítás";
+
+"timer.stop" = "Leállítás";
+
+"timer.taskPlaceholder" = "Min dolgozol?";
+
+"timer.todayEntries" = "Mai bejegyzések";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "ma %@";
 
 "tool.backup" = "Biztonsági mentés";
 

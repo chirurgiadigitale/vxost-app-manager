@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "サービス";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "作業時間";
+
 "section.tools" = "ツール";
 
 "service.detail.busy" = "お待ちください…";
@@ -211,6 +214,39 @@
 "theme.hint" = "自動は macOS の設定に従います";
 
 "theme.light" = "ライト";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "新規項目…";
+
+"timer.newProject.add" = "追加";
+
+"timer.newProject.body" = "ローカルサイト以外の作業に。通話、見積もり、コンサルティングなど。";
+
+"timer.newProject.placeholder" = "名前";
+
+"timer.newProject.title" = "新しい記録項目";
+
+"timer.noEntries" = "本日の記録はまだありません";
+
+"timer.noTask" = "説明なし";
+
+"timer.pause" = "一時停止";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "一時停止中";
+
+"timer.resume" = "再開";
+
+"timer.start" = "開始";
+
+"timer.stop" = "停止";
+
+"timer.taskPlaceholder" = "何に取り組んでいますか？";
+
+"timer.todayEntries" = "今日の記録";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "本日 %@";
 
 "tool.backup" = "バックアップ";
 

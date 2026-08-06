@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "Hizmetler";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "Zaman takibi";
+
 "section.tools" = "Araçlar";
 
 "service.detail.busy" = "lütfen bekleyin…";
@@ -211,6 +214,39 @@
 "theme.hint" = "Otomatik, macOS ayarını izler";
 
 "theme.light" = "Açık";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "Yeni kayıt…";
+
+"timer.newProject.add" = "Ekle";
+
+"timer.newProject.body" = "Yerel bir site olmayan işler için: görüşme, teklif, danışmanlık.";
+
+"timer.newProject.placeholder" = "Ad";
+
+"timer.newProject.title" = "Yeni takip kaydı";
+
+"timer.noEntries" = "Bugün kayıtlı oturum yok";
+
+"timer.noTask" = "açıklama yok";
+
+"timer.pause" = "Duraklat";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "duraklatıldı";
+
+"timer.resume" = "Sürdür";
+
+"timer.start" = "Başlat";
+
+"timer.stop" = "Durdur";
+
+"timer.taskPlaceholder" = "Ne üzerinde çalışıyorsun?";
+
+"timer.todayEntries" = "Bugünkü kayıtlar";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "bugün %@";
 
 "tool.backup" = "Yedekleme";
 

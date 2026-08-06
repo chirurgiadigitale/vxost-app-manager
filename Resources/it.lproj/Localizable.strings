@@ -178,6 +178,9 @@
 /* Titolo di sezione */
 "section.services" = "Servizi";
 
+/* Titolo della sezione cronometro */
+"section.timer" = "Tempo di lavoro";
+
 "section.tools" = "Strumenti";
 
 "service.detail.busy" = "attendere…";
@@ -211,6 +214,39 @@
 "theme.hint" = "Automatico segue l'impostazione di macOS";
 
 "theme.light" = "Chiaro";
+
+/* Ultima voce del menu a tendina */
+"timer.newProject" = "Nuova voce…";
+
+"timer.newProject.add" = "Aggiungi";
+
+"timer.newProject.body" = "Per il lavoro che non è un sito locale: una call, un preventivo, una consulenza.";
+
+"timer.newProject.placeholder" = "Nome";
+
+"timer.newProject.title" = "Nuova voce da tracciare";
+
+"timer.noEntries" = "Nessuna sessione registrata oggi";
+
+"timer.noTask" = "nessuna descrizione";
+
+"timer.pause" = "Pausa";
+
+/* Aggiunto accanto al task quando è in pausa */
+"timer.paused" = "in pausa";
+
+"timer.resume" = "Riprendi";
+
+"timer.start" = "Avvia";
+
+"timer.stop" = "Stop";
+
+"timer.taskPlaceholder" = "A cosa stai lavorando?";
+
+"timer.todayEntries" = "Registrazioni di oggi";
+
+/* %@ è la durata già formattata */
+"timer.todayTotal" = "oggi %@";
 
 "tool.backup" = "Backup";
 
