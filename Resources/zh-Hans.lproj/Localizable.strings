@@ -60,6 +60,12 @@
 
 "config.none" = "未找到配置文件";
 
+"history.byProject" = "按项目";
+
+"history.empty" = "暂无记录";
+
+"history.title" = "工作历史";
+
 "link.dashboard" = "仪表板";
 
 "link.htdocsFolder" = "htdocs 文件夹";
@@ -215,6 +221,8 @@
 
 "theme.light" = "浅色";
 
+"timer.history" = "历史记录…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "新建条目…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "已暂停";
 
 "timer.resume" = "继续";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu 项进行中";
 
 "timer.start" = "开始";
 

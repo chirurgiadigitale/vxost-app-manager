@@ -60,6 +60,12 @@
 
 "config.none" = "Aucun fichier de configuration trouvé";
 
+"history.byProject" = "Par projet";
+
+"history.empty" = "Aucune session enregistrée";
+
+"history.title" = "Historique du travail";
+
 "link.dashboard" = "Tableau de bord";
 
 "link.htdocsFolder" = "Dossier htdocs";
@@ -215,6 +221,8 @@
 
 "theme.light" = "Clair";
 
+"timer.history" = "Sessions passées…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "Nouvelle entrée…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "en pause";
 
 "timer.resume" = "Reprendre";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu en cours";
 
 "timer.start" = "Démarrer";
 

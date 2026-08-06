@@ -16,4 +16,9 @@
 /// Rilegge lo stato dal tracker e aggiorna quanto serve.
 - (void)refresh;
 
+/// Riga di una sessione conclusa: nome, durata e orari.
+/// Esposta perché la usa anche la finestra dello storico, e le due devono
+/// avere lo stesso aspetto.
++ (NSView *)rowForEntry:(id)entry formatter:(NSDateFormatter *)formatter;
+
 @end

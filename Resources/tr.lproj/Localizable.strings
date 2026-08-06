@@ -60,6 +60,12 @@
 
 "config.none" = "Yapılandırma dosyası bulunamadı";
 
+"history.byProject" = "Projeye göre";
+
+"history.empty" = "Henüz kayıtlı oturum yok";
+
+"history.title" = "Çalışma geçmişi";
+
 "link.dashboard" = "Panel";
 
 "link.htdocsFolder" = "htdocs klasörü";
@@ -215,6 +221,8 @@
 
 "theme.light" = "Açık";
 
+"timer.history" = "Geçmiş oturumlar…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "Yeni kayıt…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "duraklatıldı";
 
 "timer.resume" = "Sürdür";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu çalışıyor";
 
 "timer.start" = "Başlat";
 

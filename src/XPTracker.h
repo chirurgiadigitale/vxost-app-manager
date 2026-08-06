@@ -28,15 +28,31 @@ extern NSString *const XPTrackerDidChangeNotification;
 
 + (instancetype)shared;
 
-#pragma mark - Sessione in corso
+#pragma mark - Sessioni in corso
+//
+// Si può lavorare su più progetti nello stesso momento, quindi il tracker
+// regge più sessioni aperte insieme, ognuna con la sua pausa e il suo
+// cronometro. Una sola sessione per progetto, però: avviare due volte lo
+// stesso progetto non ha senso e verrebbe conteggiato due volte.
 
-/// nil se non si sta tracciando nulla.
-@property (nonatomic, strong, readonly) XPTimeEntry *currentEntry;
+/// Sessioni aperte, nell'ordine in cui sono state avviate.
+@property (nonatomic, strong, readonly) NSArray<XPTimeEntry *> *currentEntries;
 
+/// Sessione aperta per quel progetto, nil se non ce n'è.
+- (XPTimeEntry *)currentEntryForProjectKey:(NSString *)key;
+
+/// Avvia una sessione. Se il progetto ne ha già una aperta non fa nulla.
 - (void)startProject:(XPTrackableProject *)project task:(NSString *)task;
-- (void)pause;
-- (void)resume;
-- (void)stop;
+
+- (void)pauseEntry:(XPTimeEntry *)entry;
+- (void)resumeEntry:(XPTimeEntry *)entry;
+- (void)stopEntry:(XPTimeEntry *)entry;
+
+/// Ferma tutte le sessioni aperte.
+- (void)stopAll;
+
+/// Somma delle sessioni aperte in questo momento.
+- (NSTimeInterval)runningTotal;
 
 #pragma mark - Progetti
 

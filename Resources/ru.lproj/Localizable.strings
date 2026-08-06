@@ -60,6 +60,12 @@
 
 "config.none" = "Файл конфигурации не найден";
 
+"history.byProject" = "По проектам";
+
+"history.empty" = "Записей пока нет";
+
+"history.title" = "История работы";
+
 "link.dashboard" = "Панель";
 
 "link.htdocsFolder" = "Папка htdocs";
@@ -215,6 +221,8 @@
 
 "theme.light" = "Светлая";
 
+"timer.history" = "Прошлые сессии…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "Новая запись…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "на паузе";
 
 "timer.resume" = "Продолжить";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu активно";
 
 "timer.start" = "Старт";
 

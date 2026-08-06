@@ -60,6 +60,12 @@
 
 "config.none" = "Nu s-a găsit niciun fișier de configurare";
 
+"history.byProject" = "Pe proiect";
+
+"history.empty" = "Nicio sesiune înregistrată";
+
+"history.title" = "Istoricul muncii";
+
 "link.dashboard" = "Panou";
 
 "link.htdocsFolder" = "Dosar htdocs";
@@ -215,6 +221,8 @@
 
 "theme.light" = "Luminos";
 
+"timer.history" = "Sesiuni anterioare…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "Intrare nouă…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "în pauză";
 
 "timer.resume" = "Reia";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu în curs";
 
 "timer.start" = "Pornește";
 

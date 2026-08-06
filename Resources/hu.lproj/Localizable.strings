@@ -60,6 +60,12 @@
 
 "config.none" = "Nem található konfigurációs fájl";
 
+"history.byProject" = "Projektenként";
+
+"history.empty" = "Még nincs rögzített munkamenet";
+
+"history.title" = "Munkanapló";
+
 "link.dashboard" = "Vezérlőpult";
 
 "link.htdocsFolder" = "htdocs mappa";
@@ -215,6 +221,8 @@
 
 "theme.light" = "Világos";
 
+"timer.history" = "Korábbi munkamenetek…";
+
 /* Ultima voce del menu a tendina */
 "timer.newProject" = "Új bejegyzés…";
 
@@ -236,6 +244,9 @@
 "timer.paused" = "szüneteltetve";
 
 "timer.resume" = "Folytatás";
+
+/* %lu sessioni contemporanee */
+"timer.running" = "%lu fut";
 
 "timer.start" = "Indítás";
 
