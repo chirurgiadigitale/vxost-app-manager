@@ -8,6 +8,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "XPGitInfo.h"
 
 typedef NS_ENUM(NSInteger, XPVHostState) {
     XPVHostStateListening = 0,  ///< la porta risponde
@@ -22,6 +23,8 @@ typedef NS_ENUM(NSInteger, XPVHostState) {
 @property (nonatomic, copy)   NSString  *name;          ///< nome breve del progetto
 @property (nonatomic, copy)   NSString  *serverName;
 @property (nonatomic, assign) XPVHostState state;
+/// Repository a cui appartiene il progetto servito, nil se non ne ha uno.
+@property (nonatomic, strong) XPGitInfo *git;
 
 /// Legge httpd-vhosts.conf e restituisce i virtual host in ordine di porta,
 /// blocchi commentati compresi. Da chiamare fuori dal main thread.
