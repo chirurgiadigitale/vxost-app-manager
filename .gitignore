@@ -11,7 +11,10 @@ dist/
 .Trashes
 
 # Documenti Markdown: restano in locale e fuori dal repository.
-# L'unica eccezione è README.md, che è la documentazione ufficiale del
-# progetto pubblico: escluderlo lascerebbe la pagina del repo senza nulla.
+# Fanno eccezione i due che servono a chi arriva da fuori: README.md, che è la
+# documentazione ufficiale del progetto pubblico, e CONTRIBUTING.md, che
+# raccoglie le regole per contribuire. Il resto, contesto compreso, resta sul
+# disco.
 *.md
 !README.md
+!CONTRIBUTING.md
