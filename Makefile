@@ -21,7 +21,11 @@ ICON    := Resources/AppIcon.icns
 
 # -fobjc-arc: gestione automatica della memoria
 # -Wall -Wextra: nessun warning tollerato
-CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2
+# Universal binary: Apple Silicon runs it natively, Intel Macs run it at all.
+# Building for one architecture only would silently exclude every Mac made
+# before 2020.
+ARCHS   := -arch arm64 -arch x86_64
+CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS)
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers
 
 .PHONY: all icon strings run install clean uninstall dist
