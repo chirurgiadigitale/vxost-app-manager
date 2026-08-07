@@ -14,7 +14,7 @@
 @property (nonatomic, copy)   NSString *identifier;
 /// Chiave stabile del progetto: "vhost:4005" oppure "custom:<nome>".
 @property (nonatomic, copy)   NSString *projectKey;
-/// Nome mostrato, es. "guidaperbere/dist".
+/// Nome mostrato, es. "mio-sito/public".
 @property (nonatomic, copy)   NSString *projectName;
 /// Descrizione facoltativa del task, es. "bugfix checkout".
 @property (nonatomic, copy)   NSString *task;
