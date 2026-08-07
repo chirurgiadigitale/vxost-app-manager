@@ -1,0 +1,306 @@
+#!/bin/bash
+#
+# Builds a redistributable XAMPP stack: Apache, MariaDB, PHP, Perl, ProFTPD and
+# phpMyAdmin, together with this app and the redesigned dashboard.
+#
+# The point of this script is what it leaves out. It is built from the local
+# XAMPP installation, which on a working machine is full of the owner's
+# projects, databases, logs and virtual hosts. None of that may ship.
+#
+#   - htdocs is never copied; a clean dashboard is put in its place
+#   - var/mysql is never copied. Excluding the database folders would not be
+#     enough: InnoDB keeps every table's data in ibdata1, so a fresh database
+#     is created from scratch with mysql_install_db
+#   - logs, PID files, sockets and backups are excluded
+#   - virtual hosts are reset to the stock file
+#
+# The result is verified afterwards: the build fails if any personal string
+# survives into the package.
+#
+# Usage: bash tools/build-stack.sh
+set -euo pipefail
+
+SOURCE="/Applications/XAMPP/xamppfiles"
+DASHBOARD_REPO="/Applications/XAMPP/xamppfiles/htdocs"
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+STAGE="$HERE/build/stack"
+PAYLOAD="$STAGE/xamppfiles"
+VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$HERE/Resources/Info.plist")"
+
+# Strings that must never appear in the finished package. Add to this list
+# rather than trusting a manual check.
+FORBIDDEN=(
+    valorecasa edilcloud listeoo listeooo guidaperbere aemmecolori acshorse
+    perlahotel omacglobal rocknine arfiltrazioni atvmxeurope aecocostruizoni
+    bergamoquad daviderigo ortopediarispoli rigotest wxchirur xydschou
+    "Mac-mini-di-Davide" rigobrothersagency "/Users/rigo"
+)
+
+step() { printf "\n\033[1m%s\033[0m\n" "$*"; }
+
+# ---------------------------------------------------------------- prepare ---
+
+step "Preparing a clean staging area"
+rm -rf "$STAGE"
+mkdir -p "$PAYLOAD"
+
+# --------------------------------------------------------------- binaries ---
+
+step "Copying the stack (this takes a minute)"
+for dir in bin sbin lib libexec modules share etc man licenses phpmyadmin cgi-bin error icons; do
+    [ -d "$SOURCE/$dir" ] || continue
+    printf "  %s\n" "$dir"
+    # Sockets and caches inside phpmyadmin/tmp belong to the running instance.
+    rsync -a --quiet \
+          --exclude "tmp/" --exclude "*.sock" --exclude "*.pid" \
+          --exclude "*.log" --exclude "*.err" \
+          --exclude "*.bak" --exclude "*.bak-*" --exclude "*.bak.*" \
+          --exclude "*.orig" --exclude "*.save" --exclude "*~" \
+          --exclude "*.old" --exclude "*.backup" \
+          "$SOURCE/$dir" "$PAYLOAD/" 2>/dev/null || \
+    cp -R "$SOURCE/$dir" "$PAYLOAD/"
+
+    # A stray backup is enough to leak every virtual host ever configured.
+    find "$PAYLOAD/$dir" \( -name "*.bak*" -o -name "*.orig" -o -name "*.save" \
+         -o -name "*.old" -o -name "*~" \) -delete 2>/dev/null || true
+done
+
+printf "  control scripts\n"
+for file in xampp lampp properties.ini; do
+    [ -f "$SOURCE/$file" ] && cp "$SOURCE/$file" "$PAYLOAD/"
+done
+[ -f "$SOURCE/lib/VERSION" ] && cp "$SOURCE/lib/VERSION" "$PAYLOAD/lib/VERSION"
+
+# ------------------------------------------------------------------ state ---
+
+step "Creating empty runtime folders"
+# Logs, sockets and databases are recreated on first launch, never inherited.
+mkdir -p "$PAYLOAD/logs" "$PAYLOAD/var" "$PAYLOAD/temp" "$PAYLOAD/backup"
+touch "$PAYLOAD/logs/.gitkeep"
+
+# ------------------------------------------------------------------ htdocs ---
+
+step "Installing a clean web root"
+mkdir -p "$PAYLOAD/htdocs"
+# Only the redesigned dashboard, never the projects sitting next to it.
+for item in dashboard index.html favicon.ico README.md; do
+    [ -e "$DASHBOARD_REPO/$item" ] && cp -R "$DASHBOARD_REPO/$item" "$PAYLOAD/htdocs/"
+done
+# The upstream dashboard ships backups of the framework it used to use.
+find "$PAYLOAD/htdocs" \( -name "*.bak.*" -o -name "*.bak" -o -name "*-old.*" \) -delete 2>/dev/null || true
+
+mkdir -p "$PAYLOAD/htdocs/progetti"
+cat > "$PAYLOAD/htdocs/progetti/index.html" <<'HTML'
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Projects</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{font-family:-apple-system,sans-serif;background:#070B16;color:#E9EFFA;
+display:grid;place-items:center;height:100vh;margin:0;text-align:center}
+p{color:#8493AB;max-width:44ch;line-height:1.6}code{color:#FB7A24}</style>
+</head><body><div>
+<h1>No projects yet</h1>
+<p>Put your sites in this folder and they will show up here, and in the
+XAMPP app, as soon as you give them a virtual host in
+<code>etc/extra/httpd-vhosts.conf</code>.</p>
+</div></body></html>
+HTML
+
+# ------------------------------------------------------------ config reset ---
+
+step "Resetting configuration to stock"
+VHOSTS="$PAYLOAD/etc/extra/httpd-vhosts.conf"
+if [ -f "$VHOSTS" ]; then
+    cat > "$VHOSTS" <<'CONF'
+#
+# Virtual Hosts
+#
+# Add one block per project. The XAMPP app reads this file and shows every
+# project with the port it answers on.
+#
+# <VirtualHost *:4000>
+#     DocumentRoot "/Applications/XAMPP/xamppfiles/htdocs/progetti/my-site"
+#     ServerName localhost
+#     <Directory "/Applications/XAMPP/xamppfiles/htdocs/progetti/my-site">
+#         Options Indexes FollowSymLinks
+#         AllowOverride All
+#         Require all granted
+#     </Directory>
+# </VirtualHost>
+#
+# Remember to add a matching "Listen 4000" in httpd.conf.
+CONF
+fi
+
+# httpd.conf itself can hold VirtualHost blocks, not only the vhosts file:
+# every one of them is somebody's project and none may ship.
+if [ -f "$PAYLOAD/etc/httpd.conf" ]; then
+    python3 - "$PAYLOAD/etc/httpd.conf" <<'PYEOF'
+import sys
+
+# Parsed line by line rather than with a regex across the whole file. A
+# multiline pattern matched a commented-out <VirtualHost> in the documentation
+# near the top and swallowed everything down to the first real closing tag,
+# taking "Listen 80" with it — which left Apache unable to start at all.
+path = sys.argv[1]
+out, depth = [], 0
+
+for line in open(path, encoding="utf-8", errors="replace"):
+    stripped = line.strip()
+    commented = stripped.startswith("#")
+
+    if not commented and stripped.lower().startswith("<virtualhost"):
+        depth += 1
+        continue
+    if depth and not commented and stripped.lower().startswith("</virtualhost"):
+        depth -= 1
+        continue
+    if depth:
+        continue
+
+    # Ports other than the standard two belong to somebody's projects.
+    if not commented and stripped.lower().startswith("listen"):
+        parts = stripped.split()
+        port = parts[1].rsplit(":", 1)[-1] if len(parts) > 1 else ""
+        if port not in ("80", "443"):
+            continue
+
+    # Includes reaching outside the distribution
+    if not commented and stripped.lower().startswith("include") and "/apache2/" in stripped:
+        continue
+
+    out.append(line)
+
+open(path, "w", encoding="utf-8").write("".join(out))
+PYEOF
+fi
+
+# The same can happen in the SSL configuration.
+if [ -f "$PAYLOAD/etc/extra/httpd-ssl.conf" ]; then
+    python3 - "$PAYLOAD/etc/extra/httpd-ssl.conf" <<'PYEOF'
+import re, sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8", errors="replace").read()
+if "progetti" in text:
+    text = re.sub(r"\n?[ \t]*<VirtualHost\b(?:(?!</VirtualHost>).)*?progetti.*?</VirtualHost>[ \t]*\n?",
+                  "\n", text, flags=re.DOTALL | re.IGNORECASE)
+open(path, "w", encoding="utf-8").write(text)
+PYEOF
+fi
+
+# MySQL must listen on TCP: a "security check" run once can leave this on and
+# every project connecting to 127.0.0.1:3306 then breaks.
+if [ -f "$PAYLOAD/etc/my.cnf" ]; then
+    sed -i '' -E 's/^skip-networking/#skip-networking/' "$PAYLOAD/etc/my.cnf"
+fi
+
+# ---------------------------------------------------------------- database ---
+
+step "Creating an empty database"
+# Not copied: InnoDB stores every table in ibdata1, so copying the folder while
+# excluding database directories would still carry the data.
+#
+# An isolated defaults file is essential: without it the installer reads the
+# system my.cnf, points at the real data directory and fails on a ibdata1 it
+# cannot write — or worse, touches the live database.
+mkdir -p "$PAYLOAD/var/mysql"
+cat > "$STAGE/init-my.cnf" <<CNF
+[mysqld]
+basedir=$PAYLOAD
+datadir=$PAYLOAD/var/mysql
+socket=$PAYLOAD/var/mysql/mysql.sock
+CNF
+
+"$PAYLOAD/bin/mysql_install_db" \
+    --defaults-file="$STAGE/init-my.cnf" \
+    --basedir="$PAYLOAD" \
+    --datadir="$PAYLOAD/var/mysql" > /dev/null 2>&1 || {
+        echo "  mysql_install_db failed" >&2; exit 1; }
+
+printf "  removing the build machine's accounts and traces\n"
+
+cat > "$STAGE/db-init.sql" <<'SQL'
+DROP USER IF EXISTS 'BUILDUSER'@'localhost';
+DROP USER IF EXISTS ''@'BUILDHOST';
+DROP USER IF EXISTS ''@'localhost';
+-- Dropping the account leaves the hostname inside the Aria table file until
+-- the table is emptied and rewritten, so it is cleared explicitly.
+TRUNCATE TABLE mysql.proxies_priv;
+ALTER USER 'root'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD('root');
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED VIA mysql_native_password USING PASSWORD('root');
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;
+CREATE USER IF NOT EXISTS 'root'@'::1' IDENTIFIED VIA mysql_native_password USING PASSWORD('root');
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'::1' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+SQL
+sed -i '' "s/BUILDUSER/$(whoami)/; s/BUILDHOST/$(hostname | tr '[:upper:]' '[:lower:]')/" "$STAGE/db-init.sql"
+
+"$PAYLOAD/sbin/mysqld" --defaults-file="$STAGE/init-my.cnf" \
+    --init-file="$STAGE/db-init.sql" --skip-networking > /dev/null 2>&1 &
+sleep 8
+
+# Dropping the accounts is not enough: the hostname survives in the Aria
+# transaction logs and inside the privilege tables until they are rebuilt.
+printf "  rebuilding privilege tables\n"
+"$PAYLOAD/bin/mysql" --socket="$PAYLOAD/var/mysql/mysql.sock" -u root -proot -e "
+    INSERT INTO mysql.proxies_priv (Host, User, Proxied_host, Proxied_user, With_grant)
+        VALUES ('localhost','root','','',1)
+        ON DUPLICATE KEY UPDATE With_grant=1;
+    OPTIMIZE TABLE mysql.proxies_priv, mysql.global_priv, mysql.db,
+                   mysql.tables_priv, mysql.columns_priv, mysql.procs_priv;
+    FLUSH PRIVILEGES;" > /dev/null 2>&1 || true
+
+"$PAYLOAD/bin/mysqladmin" --socket="$PAYLOAD/var/mysql/mysql.sock" \
+    -u root -proot shutdown > /dev/null 2>&1 || true
+sleep 4
+pkill -f "$PAYLOAD/sbin/mysqld" 2>/dev/null || true
+sleep 2
+
+# Transaction logs are regenerated on first start and carry the old hostname.
+rm -f "$PAYLOAD/var/mysql/aria_log."* "$PAYLOAD/var/mysql/aria_log_control" \
+      "$PAYLOAD/var/mysql/"*.err "$PAYLOAD/var/mysql/"*.pid \
+      "$PAYLOAD/var/mysql/"*.sock "$PAYLOAD/var/mysql/multi-master.info" 2>/dev/null || true
+rm -f "$STAGE/db-init.sql" "$STAGE/init-my.cnf"
+
+# --------------------------------------------------------------- the app ---
+
+step "Adding the XAMPP app"
+cp -R "$HERE/build/XAMPP.app" "$STAGE/" 2>/dev/null || {
+    echo "  build/XAMPP.app missing — run make first" >&2; exit 1; }
+
+# ----------------------------------------------------------------- verify ---
+
+step "Checking for anything personal"
+FOUND=0
+for word in "${FORBIDDEN[@]}"; do
+    if grep -rli --binary-files=text "$word" "$STAGE" 2>/dev/null | head -3 | grep -q .; then
+        echo "  FOUND: $word"
+        grep -rl --binary-files=text "$word" "$STAGE" 2>/dev/null | head -3 | sed 's/^/      /'
+        FOUND=1
+    fi
+done
+if [ "$FOUND" = "1" ]; then
+    echo
+    echo "Refusing to package: personal data found." >&2
+    exit 1
+fi
+echo "  nothing found"
+
+step "Checking the configuration still works"
+if ! grep -qE '^\s*Listen\s+80\b' "$PAYLOAD/etc/httpd.conf"; then
+    echo "  Listen 80 is missing: Apache would not start" >&2
+    exit 1
+fi
+echo "  Listen 80 present"
+
+if "$PAYLOAD/bin/httpd" -t -d "$PAYLOAD" -f "$PAYLOAD/etc/httpd.conf" > /tmp/configtest.log 2>&1; then
+    echo "  Apache configuration valid"
+else
+    echo "  Apache configuration is broken:" >&2
+    tail -5 /tmp/configtest.log >&2
+    exit 1
+fi
+
+step "Done"
+du -sh "$STAGE" | awk '{print "  staged:", $1}'
+echo "  next: bash tools/build-stack-dmg.sh"
