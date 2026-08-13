@@ -20,8 +20,23 @@
 # Usage: bash tools/build-stack.sh
 set -euo pipefail
 
-SOURCE="/Applications/VXOST/vxostfiles"
-DASHBOARD_REPO="/Applications/VXOST/vxostfiles/htdocs"
+# The installation root is detected, not written down.
+#
+# While the folders are being renamed the old path and the new one both exist,
+# on different machines, and a fixed path makes this script fail on half of
+# them with an error that only says a directory is missing. Same rule the app
+# follows in XPPaths: no install path is hard-coded outside the code that
+# detects it. Getting this wrong in the app cost an afternoon of silent
+# failures, so it is not repeated here.
+SOURCE=""
+for _candidate in "/Applications/VXOST/vxostfiles" "/Applications/XAMPP/xamppfiles"; do
+    [ -d "$_candidate" ] && { SOURCE="$_candidate"; break; }
+done
+if [ -z "$SOURCE" ]; then
+    echo "No installation found under /Applications. Nothing to build from." >&2
+    exit 1
+fi
+DASHBOARD_REPO="$SOURCE/htdocs"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="$HERE/build/stack"
 PAYLOAD="$STAGE/vxostfiles"
@@ -44,6 +59,10 @@ FORBIDDEN=()
 for _dir in projects progetti; do
     [ -d "$DASHBOARD_REPO/$_dir" ] || continue
     while IFS= read -r name; do
+        # Only folders. The listing page index.php lives next to the projects,
+        # and taking it as a name to forbid made the check report every PHP
+        # file in the package.
+        [ -d "$DASHBOARD_REPO/$_dir/$name" ] || continue
         # Short names are skipped: as a substring they match ordinary words and
         # would fail every build on a false positive.
         [ ${#name} -ge 5 ] && FORBIDDEN+=("$name")
@@ -117,8 +136,8 @@ done
 # The upstream dashboard ships backups of the framework it used to use.
 find "$PAYLOAD/htdocs" \( -name "*.bak.*" -o -name "*.bak" -o -name "*-old.*" \) -delete 2>/dev/null || true
 
-mkdir -p "$PAYLOAD/htdocs/progetti"
-cat > "$PAYLOAD/htdocs/progetti/index.html" <<'HTML'
+mkdir -p "$PAYLOAD/htdocs/projects"
+cat > "$PAYLOAD/htdocs/projects/index.html" <<'HTML'
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>Projects</title>
@@ -147,9 +166,9 @@ if [ -f "$VHOSTS" ]; then
 # project with the port it answers on.
 #
 # <VirtualHost *:4000>
-#     DocumentRoot "/Applications/VXOST/vxostfiles/htdocs/progetti/my-site"
+#     DocumentRoot "/Applications/VXOST/vxostfiles/htdocs/projects/my-site"
 #     ServerName localhost
-#     <Directory "/Applications/VXOST/vxostfiles/htdocs/progetti/my-site">
+#     <Directory "/Applications/VXOST/vxostfiles/htdocs/projects/my-site">
 #         Options Indexes FollowSymLinks
 #         AllowOverride All
 #         Require all granted
@@ -209,8 +228,14 @@ if [ -f "$PAYLOAD/etc/extra/httpd-ssl.conf" ]; then
 import re, sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8", errors="replace").read()
-if "progetti" in text:
-    text = re.sub(r"\n?[ \t]*<VirtualHost\b(?:(?!</VirtualHost>).)*?progetti.*?</VirtualHost>[ \t]*\n?",
+
+# Both folder names are matched. The folder was renamed from progetti to
+# projects while this script already existed, and matching only the old name
+# would have let every customer's DocumentRoot through into the package: the
+# check would still have passed, because it was looking for a word that no
+# longer appears on disk.
+if re.search(r"progetti|projects", text, re.IGNORECASE):
+    text = re.sub(r"\n?[ \t]*<VirtualHost\b(?:(?!</VirtualHost>).)*?(?:progetti|projects).*?</VirtualHost>[ \t]*\n?",
                   "\n", text, flags=re.DOTALL | re.IGNORECASE)
 open(path, "w", encoding="utf-8").write(text)
 PYEOF
@@ -299,20 +324,14 @@ cp -R "$HERE/build/VXOST.app" "$STAGE/" 2>/dev/null || {
 # ----------------------------------------------------------------- verify ---
 
 step "Checking for anything personal"
-FOUND=0
-for word in "${FORBIDDEN[@]}"; do
-    if grep -rli --binary-files=text "$word" "$STAGE" 2>/dev/null | head -3 | grep -q .; then
-        echo "  FOUND: $word"
-        grep -rl --binary-files=text "$word" "$STAGE" 2>/dev/null | head -3 | sed 's/^/      /'
-        FOUND=1
-    fi
-done
-if [ "$FOUND" = "1" ]; then
+# One walk for every word, instead of one walk per word: the old form scanned
+# 900 MB seventy times over and took minutes. See tools/verify-package.py for
+# why an occurrence right after "github.com/" does not count as a leak.
+if ! printf '%s\n' "${FORBIDDEN[@]}" | python3 "$HERE/tools/verify-package.py" "$STAGE"; then
     echo
     echo "Refusing to package: personal data found." >&2
     exit 1
 fi
-echo "  nothing found"
 
 step "Checking the configuration still works"
 if ! grep -qE '^\s*Listen\s+80\b' "$PAYLOAD/etc/httpd.conf"; then
