@@ -95,17 +95,30 @@
                                                         yRadius:[XPTheme radiusSmall]];
 
     NSColor *fill = nil, *stroke = nil, *label = nil;
+    // Lo smorzamento vale per il fondo, non per la scritta. Applicandolo a
+    // entrambi il contrasto fra i due crolla: sul pulsante principale il nero
+    // al 35% su magenta al 35% arriva a 1.30:1, e l'etichetta sparisce.
+    // "Avvia tutto" era illeggibile ogni volta che i servizi erano gia' su,
+    // cioe' quasi sempre.
     CGFloat alpha = self.enabled ? 1.0 : 0.35;
+    CGFloat labelAlpha = alpha;
 
     switch (self.style) {
         case XPButtonStylePrimary:
+            // Da disabilitato la scritta resta piena e cambia colore: il fondo
+            // smorzato diventa viola scuro sul tema scuro (bianco: 11.24:1) e
+            // lilla chiaro su quello chiaro (nero: 9.58:1). Un colore solo per
+            // entrambi non esiste.
+            if (!self.enabled) {
+                labelAlpha = 1.0;
+            }
             // Tinta unita, non il gradiente: sopra il gradiente nessun colore di
             // testo regge per tutta la scala. Il nero sparisce sul blu iniziale
             // (1.87:1), il bianco sull'arancione finale (2.51:1). Il pulsante di
             // download sul sito e' pieno per la stessa ragione.
             fill   = [XPTheme accent];
             stroke = nil;
-            label  = [XPTheme accentInk];
+            label  = self.enabled ? [XPTheme accentInk] : [XPTheme accentInkDimmed];
             break;
         case XPButtonStyleGhost:
             fill   = self.hovered ? [XPTheme surface2] : [XPTheme surface];
@@ -162,13 +175,13 @@
     CGFloat available = NSWidth(self.bounds) - 10.0 - iconWidth;
     NSFont *font = [XPTheme fontBody];
     NSDictionary *attrs = @{NSFontAttributeName: font,
-                            NSForegroundColorAttributeName: [label colorWithAlphaComponent:alpha]};
+                            NSForegroundColorAttributeName: [label colorWithAlphaComponent:labelAlpha]};
     NSSize textSize = [title sizeWithAttributes:attrs];
 
     for (CGFloat size = 11.0; textSize.width > available && size >= 9.0; size -= 1.0) {
         font = [NSFont systemFontOfSize:size weight:NSFontWeightMedium];
         attrs = @{NSFontAttributeName: font,
-                  NSForegroundColorAttributeName: [label colorWithAlphaComponent:alpha]};
+                  NSForegroundColorAttributeName: [label colorWithAlphaComponent:labelAlpha]};
         textSize = [title sizeWithAttributes:attrs];
     }
 

@@ -57,6 +57,13 @@ extern NSString *const XPThemeDidChangeNotification;
 
 + (NSColor *)accent;       // --accent    magenta ufficiale VXOST
 + (NSColor *)accentInk;    // --accent-ink
+
+/// Testo sopra l'accento quando il pulsante e' disabilitato.
+///
+/// Non e' accentInk smorzato: il fondo smorzato cambia natura, diventa scuro
+/// sul tema scuro e chiaro su quello chiaro, e serve il colore opposto rispetto
+/// al pulsante attivo.
++ (NSColor *)accentInkDimmed;
 + (NSColor *)cyan;         // --cyan      dati e database
 + (NSColor *)violet;       // --violet    codice e tooling
 + (NSColor *)amber;        // --amber     avvisi

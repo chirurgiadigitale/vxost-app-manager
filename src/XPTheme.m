@@ -96,6 +96,7 @@ static NSColor *Dyn(NSColor *dark, NSColor *light) {
 
 + (NSColor *)accent    { return Dyn(Hex(0xFD47FD, 1.0), Hex(0x5A15C9, 1.0)); }
 + (NSColor *)accentInk { return Dyn(Hex(0x0A0510, 1.0), Hex(0xFFFFFF, 1.0)); }
++ (NSColor *)accentInkDimmed { return Dyn(Hex(0xFFFFFF, 1.0), Hex(0x0A0510, 1.0)); }
 + (NSColor *)cyan      { return Dyn(Hex(0xC79BFF, 1.0), Hex(0x6B21B8, 1.0)); }
 + (NSColor *)violet    { return Dyn(Hex(0xFC8A7E, 1.0), Hex(0xB03A1E, 1.0)); }
 + (NSColor *)amber     { return Dyn(Hex(0xFA8406, 1.0), Hex(0x7E4207, 1.0)); }
