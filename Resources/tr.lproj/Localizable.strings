@@ -33,6 +33,9 @@
 
 "btn.more" = "Daha fazla…";
 
+/* Pulsante della sezione Progetti che apre il wizard */
+"btn.newProject" = "Yeni proje";
+
 /* Apre il progetto nel browser */
 "btn.open" = "Aç";
 
@@ -309,3 +312,66 @@
 
 /* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
 "vhost.summary.withDisabled" = "%1$lu dinliyor · %2$lu devre dışı";
+
+/* Pulsante che avvia la creazione */
+"wizard.btn.create" = "Projeyi oluştur";
+
+/* Esito positivo: %1$@ nome del progetto, %2$ld porta */
+"wizard.done" = "%1$@ şu adreste: http://localhost:%2$ld";
+
+/* Errore: campo nome vuoto */
+"wizard.err.nameEmpty" = "Projeye bir ad verin.";
+
+/* Errore: nome con caratteri non ammessi */
+"wizard.err.nameFormat" = "Yalnızca küçük harf, rakam ve tire, 2 ile 40 karakter arası.";
+
+/* Errore: esiste già una cartella con quel nome */
+"wizard.err.nameTaken" = "Bu adda bir klasör projects/ altında zaten var.";
+
+/* Errore: porta occupata. %ld è il numero di porta */
+"wizard.err.portBusy" = "%ld portu zaten kullanılıyor.";
+
+/* Errore: porta fuori intervallo */
+"wizard.err.portRange" = "1024 ile 65535 arasında bir port kullanın.";
+
+/* Errore: indirizzo del repository in una forma non riconosciuta */
+"wizard.err.repoFormat" = "Adres tanınmadı. https://host/sahip/depo veya git@host:sahip/depo biçimini kullanın.";
+
+/* Errore: non è stato possibile copiare i file di configurazione */
+"wizard.failed.backup" = "Yapılandırma dosyaları kopyalanamadı. Hiçbir şey yazılmadı.";
+
+/* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
+"wizard.failed.configtest" = "Apache yapılandırmayı reddetti. Her şey geri alındı, hiçbir şey değişmedi.";
+
+/* Etichetta del campo nome */
+"wizard.field.name" = "Ad";
+
+/* Etichetta del campo porta */
+"wizard.field.port" = "Port";
+
+/* Etichetta del campo repository */
+"wizard.field.repo" = "GitHub deposu";
+
+/* Testo grigio dentro il campo repository */
+"wizard.field.repo.placeholder" = "isteğe bağlı, klonlanır";
+
+/* Nota sotto il campo nome */
+"wizard.hint.name" = "Küçük harfler, rakamlar ve tireler. projects/ altındaki klasör adı olur.";
+
+/* Nota sotto il campo porta */
+"wizard.hint.port" = "Zaten yapılandırılmış olanlardan sonraki ilk boş port.";
+
+/* Avanzamento: clone del repository */
+"wizard.progress.cloning" = "Depo klonlanıyor…";
+
+/* Avanzamento: creazione della cartella */
+"wizard.progress.creating" = "Klasör oluşturuluyor…";
+
+/* Avanzamento: scrittura del virtual host */
+"wizard.progress.vhost" = "Sanal sunucu yazılıyor ve Apache yeniden başlatılıyor…";
+
+/* Cosa fa il wizard, sotto il titolo */
+"wizard.subtitle" = "VXOST klasörü oluşturur, sanal sunucuyu yazar ve portu açar. Apache kendiliğinden yeniden başlar.";
+
+/* Titolo della finestra del wizard */
+"wizard.title" = "Yeni proje";

@@ -108,6 +108,10 @@ static NSArray<NSNumber *> *PortsFromConfig(NSString *path, NSString *directive)
 
 @implementation XPService
 
++ (BOOL)portIsListening:(uint16_t)port timeout:(NSTimeInterval)timeout {
+    return PortIsListening(port, timeout);
+}
+
 + (NSArray<XPService *> *)allServices {
     XPService *apache = [[XPService alloc] init];
     apache.key          = @"apache";

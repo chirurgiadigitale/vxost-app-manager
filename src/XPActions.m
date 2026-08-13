@@ -216,6 +216,322 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
     }
 }
 
+#pragma mark - Nuovo progetto
+
+/// Porte già dichiarate in httpd.conf, righe commentate comprese.
+///
+/// Le commentate contano: una porta spenta a mano appartiene comunque a un
+/// progetto, e riassegnarla farebbe scoppiare il conflitto il giorno in cui
+/// qualcuno toglie il commento. È il caso della 4003 su questa macchina.
+static NSSet<NSNumber *> *XPDeclaredPorts(void) {
+    NSMutableSet<NSNumber *> *ports = [NSMutableSet set];
+    NSString *conf = [NSString stringWithContentsOfFile:[XPPaths root:@"etc/httpd.conf"]
+                                               encoding:NSUTF8StringEncoding
+                                                  error:NULL];
+    if (conf.length == 0) return ports;
+
+    NSRegularExpression *re =
+        [NSRegularExpression regularExpressionWithPattern:
+            @"^[ \\t]*#*[ \\t]*Listen[ \\t]+(?:[0-9.]+:)?([0-9]{1,5})"
+                                                  options:NSRegularExpressionAnchorsMatchLines
+                                                    error:NULL];
+    [re enumerateMatchesInString:conf
+                         options:0
+                           range:NSMakeRange(0, conf.length)
+                      usingBlock:^(NSTextCheckingResult *m, NSMatchingFlags flags, BOOL *stop) {
+        [ports addObject:@([[conf substringWithRange:[m rangeAtIndex:1]] integerValue])];
+    }];
+    return ports;
+}
+
+/// Cartella del progetto sotto htdocs/projects.
+static NSString *XPProjectFolder(NSString *name) {
+    return [[XPPaths htdocs] stringByAppendingPathComponent:
+            [@"projects" stringByAppendingPathComponent:name]];
+}
+
++ (NSInteger)suggestedPort {
+    NSSet<NSNumber *> *declared = XPDeclaredPorts();
+
+    // Si parte dalla fascia che il progetto usa già per i vhost, non dalla 80.
+    NSInteger candidate = 4000;
+    for (NSNumber *port in declared) {
+        if (port.integerValue >= candidate && port.integerValue < 65000) {
+            candidate = port.integerValue + 1;
+        }
+    }
+    while (candidate < 65535 &&
+           ([declared containsObject:@(candidate)] ||
+            [XPService portIsListening:(uint16_t)candidate timeout:0.1])) {
+        candidate++;
+    }
+    return candidate;
+}
+
++ (NSString *)validationErrorForProjectName:(NSString *)name {
+    NSString *trimmed = [name stringByTrimmingCharactersInSet:
+                         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+
+    if (trimmed.length == 0) return NSLocalizedString(@"wizard.err.nameEmpty", nil);
+
+    // Il nome finisce in un percorso, in un nome di file di log e dentro lo
+    // script che gira come root: l'insieme dei caratteri ammessi è ristretto
+    // apposta, così non c'è niente da citare e niente da sfuggire.
+    NSRegularExpression *re = [NSRegularExpression regularExpressionWithPattern:
+                               @"^[a-z0-9][a-z0-9-]{1,39}$" options:0 error:NULL];
+    if ([re numberOfMatchesInString:trimmed options:0
+                              range:NSMakeRange(0, trimmed.length)] == 0) {
+        return NSLocalizedString(@"wizard.err.nameFormat", nil);
+    }
+
+    if ([[NSFileManager defaultManager] fileExistsAtPath:XPProjectFolder(trimmed)]) {
+        return NSLocalizedString(@"wizard.err.nameTaken", nil);
+    }
+    return nil;
+}
+
++ (NSString *)validationErrorForPort:(NSInteger)port {
+    if (port < 1024 || port > 65535) {
+        return NSLocalizedString(@"wizard.err.portRange", nil);
+    }
+    if ([XPDeclaredPorts() containsObject:@(port)] ||
+        [XPService portIsListening:(uint16_t)port timeout:0.2]) {
+        return [NSString stringWithFormat:NSLocalizedString(@"wizard.err.portBusy", nil), (long)port];
+    }
+    return nil;
+}
+
+/// L'indirizzo del repository è accettato solo nelle due forme che GitHub,
+/// GitLab e Bitbucket usano davvero. Non è pignoleria: serve a non passare a
+/// git una stringa qualsiasi scritta a mano.
+static BOOL XPRepositoryURLIsValid(NSString *url) {
+    NSRegularExpression *re = [NSRegularExpression regularExpressionWithPattern:
+        @"^(https://[a-z0-9.-]+/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(\\.git)?/?"
+        @"|[a-z]+@[a-z0-9.-]+:[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(\\.git)?)$"
+                                                                       options:0 error:NULL];
+    return [re numberOfMatchesInString:url options:0 range:NSMakeRange(0, url.length)] > 0;
+}
+
+- (void)createProjectNamed:(NSString *)name
+                repository:(NSString *)repositoryURL
+                      port:(NSInteger)port
+                completion:(void (^)(BOOL ok))completion {
+
+    NSCharacterSet *spaces = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+    NSString *project = [name stringByTrimmingCharactersInSet:spaces];
+    NSString *repository = [(repositoryURL ?: @"") stringByTrimmingCharactersInSet:spaces];
+
+    // Ricontrollo, anche se la finestra ha già validato: chi scrive la riga di
+    // comando che diventa root non si fida di quello che gli passa la UI.
+    NSString *problem = [XPActions validationErrorForProjectName:project]
+                     ?: [XPActions validationErrorForPort:port];
+    if (!problem && repository.length > 0 && !XPRepositoryURLIsValid(repository)) {
+        problem = NSLocalizedString(@"wizard.err.repoFormat", nil);
+    }
+    if (problem) {
+        [self postMessage:problem isError:YES];
+        if (completion) completion(NO);
+        return;
+    }
+
+    NSString *folder = XPProjectFolder(project);
+    [self postMessage:(repository.length > 0
+                       ? NSLocalizedString(@"wizard.progress.cloning", nil)
+                       : NSLocalizedString(@"wizard.progress.creating", nil)) isError:NO];
+
+    // Il clone può metterci parecchio: fuori dal main thread, sempre.
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *failure = [self prepareFolder:folder
+                                     repository:repository
+                                        project:project
+                                           port:port];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (failure) {
+                [self postMessage:failure isError:YES];
+                if (completion) completion(NO);
+                return;
+            }
+            [self installVirtualHostForProject:project
+                                        folder:folder
+                                          port:port
+                                    completion:completion];
+        });
+    });
+}
+
+/// Clona il repository, oppure crea una cartella con una pagina minima.
+/// Restituisce il motivo del fallimento, nil se è andata.
+- (NSString *)prepareFolder:(NSString *)folder
+                 repository:(NSString *)repository
+                    project:(NSString *)project
+                       port:(NSInteger)port {
+
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    if (repository.length > 0) {
+        // Argomenti in array, non riga di shell: così l'indirizzo non passa mai
+        // da un interprete di comandi. Il `--` separa le opzioni dagli argomenti.
+        XPTaskResult *result = [XPTaskRunner run:@"/usr/bin/git"
+                                       arguments:@[@"clone", @"--", repository, folder]];
+        if (!result.succeeded) {
+            // Un clone interrotto lascia una cartella a metà: va tolta, altrimenti
+            // il secondo tentativo fallisce dicendo che il nome è già preso.
+            [fm removeItemAtPath:folder error:NULL];
+            return [self firstMeaningfulLine:result.output];
+        }
+        return nil;
+    }
+
+    NSError *error = nil;
+    if (![fm createDirectoryAtPath:folder
+       withIntermediateDirectories:YES attributes:nil error:&error]) {
+        return error.localizedDescription;
+    }
+
+    // Una pagina minima: senza, la porta risponderebbe con l'elenco di una
+    // cartella vuota e sembrerebbe che qualcosa non abbia funzionato.
+    NSString *index = [NSString stringWithFormat:
+        @"<!doctype html>\n<html lang=\"en\">\n<meta charset=\"utf-8\">\n"
+        @"<title>%@</title>\n<h1>%@</h1>\n<p>Served by VXOST on port %ld.</p>\n",
+        project, project, (long)port];
+    [index writeToFile:[folder stringByAppendingPathComponent:@"index.html"]
+            atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    return nil;
+}
+
+/// Scrive il virtual host e apre la porta, come amministratore.
+- (void)installVirtualHostForProject:(NSString *)project
+                              folder:(NSString *)folder
+                                port:(NSInteger)port
+                          completion:(void (^)(BOOL ok))completion {
+
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    // Laravel, Symfony e i progetti con front controller si servono da una
+    // sottocartella. Puntare alla radice mostrerebbe i sorgenti e il .env.
+    NSString *docroot = folder;
+    for (NSString *candidate in @[@"public", @"public_html", @"web", @"dist"]) {
+        NSString *sub = [folder stringByAppendingPathComponent:candidate];
+        BOOL isDirectory = NO;
+        if ([fm fileExistsAtPath:sub isDirectory:&isDirectory] && isDirectory) {
+            docroot = sub;
+            break;
+        }
+    }
+
+    // Lo script va su file invece che dentro la stringa di AppleScript: un
+    // programma di venti righe con virgolette e heredoc, passato a
+    // "do shell script", diventa illeggibile e si rompe al primo apostrofo.
+    // La cartella temporanea su macOS è privata dell'utente (/var/folders/…),
+    // e il file nasce comunque con permessi 0700.
+    NSString *scriptPath = [NSTemporaryDirectory() stringByAppendingPathComponent:
+        [NSString stringWithFormat:@"vxost-new-project-%@.sh", [NSUUID UUID].UUIDString]];
+
+    NSError *error = nil;
+    if (![[self privilegedScriptForProject:project docroot:docroot port:port]
+            writeToFile:scriptPath atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+        [self postMessage:error.localizedDescription isError:YES];
+        if (completion) completion(NO);
+        return;
+    }
+    [fm setAttributes:@{NSFilePosixPermissions: @(0700)} ofItemAtPath:scriptPath error:NULL];
+
+    [self postMessage:NSLocalizedString(@"wizard.progress.vhost", nil) isError:NO];
+
+    [XPTaskRunner runPrivilegedShell:[NSString stringWithFormat:@"/bin/sh '%@'", scriptPath]
+                          completion:^(XPTaskResult *result) {
+        [fm removeItemAtPath:scriptPath error:NULL];
+
+        BOOL ok = NO;
+        NSString *message;
+        if (result.cancelled) {
+            message = NSLocalizedString(@"msg.cancelled", nil);
+        } else if ([result.output containsString:@"VXOST_BACKUP_FAILED"]) {
+            message = NSLocalizedString(@"wizard.failed.backup", nil);
+        } else if ([result.output containsString:@"VXOST_CONFIGTEST_FAILED"]) {
+            message = NSLocalizedString(@"wizard.failed.configtest", nil);
+        } else if ([result.output containsString:@"VXOST_OK"]) {
+            ok = YES;
+            message = [NSString stringWithFormat:
+                       NSLocalizedString(@"wizard.done", nil), project, (long)port];
+        } else {
+            message = [self firstMeaningfulLine:result.output];
+        }
+
+        [self postMessage:message isError:!ok];
+        [[XPServiceMonitor shared] refreshNow];
+        if (completion) completion(ok);
+    }];
+}
+
+/// Lo script che gira come root.
+///
+/// ⚠️ Esce sempre con 0 e comunica l'esito con un marcatore stampato:
+/// `do shell script` di AppleScript trasforma un'uscita diversa da zero in un
+/// errore proprio, e il codice vero non arriverebbe mai fin qui.
+- (NSString *)privilegedScriptForProject:(NSString *)project
+                                 docroot:(NSString *)docroot
+                                    port:(NSInteger)port {
+
+    NSString *root = [XPPaths installRoot];
+    NSString *control = [XPPaths controlScript];
+
+    return [NSString stringWithFormat:
+        @"#!/bin/sh\n"
+        @"# Generato da VXOST per il progetto %1$@. Si cancella da solo.\n"
+        @"set -u\n"
+        @"\n"
+        @"R='%2$@'\n"
+        @"CTL='%3$@'\n"
+        @"HTTPD=\"$R/etc/httpd.conf\"\n"
+        @"VHOSTS=\"$R/etc/extra/httpd-vhosts.conf\"\n"
+        @"STAMP=$(date +%%Y%%m%%d-%%H%%M%%S)\n"
+        @"\n"
+        @"# Copie prima di toccare qualsiasi cosa. Restano sul disco: sono la\n"
+        @"# via di ritorno anche per chi arriva dopo, non solo per questo script.\n"
+        @"cp \"$HTTPD\"  \"$HTTPD.vxost-$STAMP.bak\"  || { echo VXOST_BACKUP_FAILED; exit 0; }\n"
+        @"cp \"$VHOSTS\" \"$VHOSTS.vxost-$STAMP.bak\" || { echo VXOST_BACKUP_FAILED; exit 0; }\n"
+        @"\n"
+        @"cat >> \"$HTTPD\" <<'VXOST_EOF_LISTEN'\n"
+        @"\n"
+        @"# VXOST wizard: %1$@\n"
+        @"Listen %4$ld\n"
+        @"VXOST_EOF_LISTEN\n"
+        @"\n"
+        @"cat >> \"$VHOSTS\" <<'VXOST_EOF_VHOST'\n"
+        @"\n"
+        @"# VXOST wizard: %1$@\n"
+        @"<VirtualHost *:%4$ld>\n"
+        @"    DocumentRoot \"%5$@\"\n"
+        @"    ServerName localhost\n"
+        @"    <Directory \"%5$@\">\n"
+        @"        Options Indexes FollowSymLinks\n"
+        @"        AllowOverride All\n"
+        @"        Require all granted\n"
+        @"    </Directory>\n"
+        @"    ErrorLog \"logs/%1$@-error_log\"\n"
+        @"    CustomLog \"logs/%1$@-access_log\" common\n"
+        @"</VirtualHost>\n"
+        @"VXOST_EOF_VHOST\n"
+        @"\n"
+        @"# Il controllo prima del riavvio: una configurazione malformata non\n"
+        @"# lascerebbe giù solo il progetto nuovo, ma tutti quelli che ci sono.\n"
+        @"if \"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" 2>&1 | grep -qi 'Syntax OK'; then\n"
+        @"    if pgrep -x httpd >/dev/null 2>&1; then\n"
+        @"        \"$CTL\" restartapache >/dev/null 2>&1\n"
+        @"    else\n"
+        @"        \"$CTL\" startapache >/dev/null 2>&1\n"
+        @"    fi\n"
+        @"    echo VXOST_OK\n"
+        @"else\n"
+        @"    cp \"$HTTPD.vxost-$STAMP.bak\"  \"$HTTPD\"\n"
+        @"    cp \"$VHOSTS.vxost-$STAMP.bak\" \"$VHOSTS\"\n"
+        @"    echo VXOST_CONFIGTEST_FAILED\n"
+        @"fi\n"
+        @"exit 0\n",
+        project, root, control, (long)port, docroot];
+}
+
 #pragma mark - Messaggi
 
 - (void)postMessage:(NSString *)message isError:(BOOL)isError {

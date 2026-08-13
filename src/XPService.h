@@ -29,6 +29,13 @@ typedef NS_ENUM(NSInteger, XPServiceState) {
 /// I tre servizi, nell'ordine di visualizzazione.
 + (NSArray<XPService *> *)allServices;
 
+/// Qualcuno è in ascolto su quella porta di 127.0.0.1?
+///
+/// Esposta qui perché la stessa domanda se la pongono anche i virtual host e
+/// il wizard dei progetti, e la risposta era finita duplicata in tre file.
+/// `lsof` non va bene: da utente normale non vede i processi di root.
++ (BOOL)portIsListening:(uint16_t)port timeout:(NSTimeInterval)timeout;
+
 /// Rilegge stato, pid e porte in ascolto. Da chiamare fuori dal main thread.
 - (void)refresh;
 

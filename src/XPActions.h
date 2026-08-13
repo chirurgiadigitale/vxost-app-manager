@@ -52,6 +52,33 @@ extern NSString *const XPActionMessageNotification;
 /// Esegue il backup nel Terminale: è interattivo.
 - (void)runBackup;
 
+#pragma mark - Nuovo progetto
+
+/// Prima porta libera dopo quelle già dichiarate in httpd.conf.
+///
+/// Legge le righe `Listen`, comprese quelle commentate: una porta spenta a mano
+/// è comunque destinata a un progetto, e riusarla creerebbe un conflitto il
+/// giorno in cui viene riattivata.
++ (NSInteger)suggestedPort;
+
+/// Perché il nome non va bene, nil se va bene.
++ (NSString *)validationErrorForProjectName:(NSString *)name;
+
+/// Perché la porta non va bene, nil se va bene.
++ (NSString *)validationErrorForPort:(NSInteger)port;
+
+/// Crea la cartella (o clona il repository), scrive il virtual host, apre la
+/// porta e riavvia Apache.
+///
+/// ⚠️ È l'unica operazione dell'app che scrive sulla configurazione di Apache.
+/// Copia i due file prima di toccarli, valida con `httpd -t` e rimette i
+/// backup se la validazione fallisce: un httpd.conf malformato lascerebbe giù
+/// tutti i progetti locali, non solo quello nuovo.
+- (void)createProjectNamed:(NSString *)name
+                repository:(NSString *)repositoryURL
+                      port:(NSInteger)port
+                completion:(void (^)(BOOL ok))completion;
+
 #pragma mark - Utilità
 
 /// Diffonde un messaggio verso le interfacce.

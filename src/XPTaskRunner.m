@@ -3,6 +3,7 @@
 //
 
 #import "XPTaskRunner.h"
+#import "XPPaths.h"
 
 @implementation XPTaskResult
 - (BOOL)succeeded { return self.status == 0 && !self.cancelled; }
@@ -51,9 +52,14 @@ static NSString *EscapeForAppleScript(NSString *s) {
 
 + (void)runPrivilegedVxostAction:(NSString *)action
                       completion:(void (^)(XPTaskResult *))completion {
+    // Il percorso dello script si chiede a XPPaths, che lo rileva a runtime.
+    // ⚠️ Scriverlo in duro qui è già costato un pomeriggio: l'app puntava a
+    // /Applications/VXOST/vxostfiles/vxost su una macchina che ha ancora la
+    // cartella vecchia, e ogni avvio o arresto falliva senza dire perché.
+    //
     // L'azione arriva sempre da una costante interna dell'app, mai da input
     // dell'utente; il quoting del percorso protegge comunque da spazi.
-    NSString *command = [NSString stringWithFormat:@"'/Applications/VXOST/vxostfiles/vxost' %@", action];
+    NSString *command = [NSString stringWithFormat:@"'%@' %@", [XPPaths controlScript], action];
     [self runPrivilegedShell:command completion:completion];
 }
 

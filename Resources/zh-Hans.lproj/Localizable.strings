@@ -33,6 +33,9 @@
 
 "btn.more" = "更多…";
 
+/* Pulsante della sezione Progetti che apre il wizard */
+"btn.newProject" = "新建项目";
+
 /* Apre il progetto nel browser */
 "btn.open" = "打开";
 
@@ -309,3 +312,66 @@
 
 /* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
 "vhost.summary.withDisabled" = "%1$lu 监听中 · %2$lu 已停用";
+
+/* Pulsante che avvia la creazione */
+"wizard.btn.create" = "创建项目";
+
+/* Esito positivo: %1$@ nome del progetto, %2$ld porta */
+"wizard.done" = "%1$@ 已在 http://localhost:%2$ld 上运行";
+
+/* Errore: campo nome vuoto */
+"wizard.err.nameEmpty" = "请为项目取一个名称。";
+
+/* Errore: nome con caratteri non ammessi */
+"wizard.err.nameFormat" = "只能使用小写字母、数字和连字符，长度为 2 到 40 个字符。";
+
+/* Errore: esiste già una cartella con quel nome */
+"wizard.err.nameTaken" = "projects/ 下已存在同名文件夹。";
+
+/* Errore: porta occupata. %ld è il numero di porta */
+"wizard.err.portBusy" = "端口 %ld 已被占用。";
+
+/* Errore: porta fuori intervallo */
+"wizard.err.portRange" = "请使用 1024 到 65535 之间的端口。";
+
+/* Errore: indirizzo del repository in una forma non riconosciuta */
+"wizard.err.repoFormat" = "无法识别该地址。请使用 https://host/owner/repo 或 git@host:owner/repo。";
+
+/* Errore: non è stato possibile copiare i file di configurazione */
+"wizard.failed.backup" = "无法复制配置文件。没有写入任何内容。";
+
+/* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
+"wizard.failed.configtest" = "Apache 拒绝了该配置。一切已还原，没有任何改动。";
+
+/* Etichetta del campo nome */
+"wizard.field.name" = "名称";
+
+/* Etichetta del campo porta */
+"wizard.field.port" = "端口";
+
+/* Etichetta del campo repository */
+"wizard.field.repo" = "GitHub 仓库";
+
+/* Testo grigio dentro il campo repository */
+"wizard.field.repo.placeholder" = "可选，会被克隆";
+
+/* Nota sotto il campo nome */
+"wizard.hint.name" = "小写字母、数字和连字符。它会成为 projects/ 下的文件夹名。";
+
+/* Nota sotto il campo porta */
+"wizard.hint.port" = "已配置端口之后的第一个空闲端口。";
+
+/* Avanzamento: clone del repository */
+"wizard.progress.cloning" = "正在克隆仓库…";
+
+/* Avanzamento: creazione della cartella */
+"wizard.progress.creating" = "正在创建文件夹…";
+
+/* Avanzamento: scrittura del virtual host */
+"wizard.progress.vhost" = "正在写入虚拟主机并重启 Apache…";
+
+/* Cosa fa il wizard, sotto il titolo */
+"wizard.subtitle" = "VXOST 会创建文件夹、写入虚拟主机并开放端口。Apache 会自动重启。";
+
+/* Titolo della finestra del wizard */
+"wizard.title" = "新建项目";

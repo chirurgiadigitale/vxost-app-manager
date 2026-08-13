@@ -33,6 +33,9 @@
 
 "btn.more" = "Más…";
 
+/* Pulsante della sezione Progetti che apre il wizard */
+"btn.newProject" = "Nuevo proyecto";
+
 /* Apre il progetto nel browser */
 "btn.open" = "Abrir";
 
@@ -309,3 +312,66 @@
 
 /* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
 "vhost.summary.withDisabled" = "%1$lu escuchando · %2$lu desactivado";
+
+/* Pulsante che avvia la creazione */
+"wizard.btn.create" = "Crear proyecto";
+
+/* Esito positivo: %1$@ nome del progetto, %2$ld porta */
+"wizard.done" = "%1$@ está en http://localhost:%2$ld";
+
+/* Errore: campo nome vuoto */
+"wizard.err.nameEmpty" = "Ponle un nombre al proyecto.";
+
+/* Errore: nome con caratteri non ammessi */
+"wizard.err.nameFormat" = "Solo minúsculas, números y guiones, de 2 a 40 caracteres.";
+
+/* Errore: esiste già una cartella con quel nome */
+"wizard.err.nameTaken" = "Ya existe una carpeta con este nombre dentro de projects/.";
+
+/* Errore: porta occupata. %ld è il numero di porta */
+"wizard.err.portBusy" = "El puerto %ld ya está ocupado.";
+
+/* Errore: porta fuori intervallo */
+"wizard.err.portRange" = "Usa un puerto entre 1024 y 65535.";
+
+/* Errore: indirizzo del repository in una forma non riconosciuta */
+"wizard.err.repoFormat" = "Dirección no reconocida. Usa https://host/usuario/repo o git@host:usuario/repo.";
+
+/* Errore: non è stato possibile copiare i file di configurazione */
+"wizard.failed.backup" = "No se pudieron copiar los archivos de configuración. No se escribió nada.";
+
+/* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
+"wizard.failed.configtest" = "Apache rechazó la configuración. Se restauró todo, no cambió nada.";
+
+/* Etichetta del campo nome */
+"wizard.field.name" = "Nombre";
+
+/* Etichetta del campo porta */
+"wizard.field.port" = "Puerto";
+
+/* Etichetta del campo repository */
+"wizard.field.repo" = "Repositorio de GitHub";
+
+/* Testo grigio dentro il campo repository */
+"wizard.field.repo.placeholder" = "opcional, se clona";
+
+/* Nota sotto il campo nome */
+"wizard.hint.name" = "Minúsculas, números y guiones. Se convierte en la carpeta dentro de projects/.";
+
+/* Nota sotto il campo porta */
+"wizard.hint.port" = "El primero libre después de los ya configurados.";
+
+/* Avanzamento: clone del repository */
+"wizard.progress.cloning" = "Clonando el repositorio…";
+
+/* Avanzamento: creazione della cartella */
+"wizard.progress.creating" = "Creando la carpeta…";
+
+/* Avanzamento: scrittura del virtual host */
+"wizard.progress.vhost" = "Escribiendo el virtual host y reiniciando Apache…";
+
+/* Cosa fa il wizard, sotto il titolo */
+"wizard.subtitle" = "VXOST crea la carpeta, escribe el virtual host y abre el puerto. Apache se reinicia solo.";
+
+/* Titolo della finestra del wizard */
+"wizard.title" = "Nuevo proyecto";

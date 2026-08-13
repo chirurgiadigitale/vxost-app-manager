@@ -4,57 +4,10 @@
 
 #import "XPVirtualHost.h"
 #import "XPPaths.h"
+#import "XPService.h"
 
-#import <sys/socket.h>
-#import <netinet/in.h>
-#import <arpa/inet.h>
-#import <fcntl.h>
-#import <unistd.h>
-#import <errno.h>
-
-/// Verifica se qualcosa è in ascolto su 127.0.0.1:port.
-///
-/// Come per i servizi, si usa una connect() invece di lsof: da utente normale
-/// lsof non vede i processi di root e daemon, quindi non vedrebbe httpd.
-static BOOL VHostPortIsListening(uint16_t port, NSTimeInterval timeout) {
-    int fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0) return NO;
-
-    int flags = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port   = htons(port);
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-
-    BOOL open = NO;
-    int rc = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
-
-    if (rc == 0) {
-        open = YES;
-    } else if (errno == EINPROGRESS) {
-        fd_set write_set;
-        FD_ZERO(&write_set);
-        FD_SET(fd, &write_set);
-
-        struct timeval tv;
-        tv.tv_sec  = (time_t)timeout;
-        tv.tv_usec = (suseconds_t)((timeout - (NSTimeInterval)tv.tv_sec) * 1e6);
-
-        if (select(fd + 1, NULL, &write_set, NULL, &tv) > 0) {
-            int err = 0;
-            socklen_t len = sizeof(err);
-            if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) == 0 && err == 0) {
-                open = YES;
-            }
-        }
-    }
-
-    close(fd);
-    return open;
-}
+// Il probe TCP sta in XPService: ne esisteva una copia identica anche qui, e
+// due copie della stessa funzione sono due posti dove correggere lo stesso bug.
 
 /// Toglie il commento iniziale da una riga, se c'è.
 static NSString *Uncomment(NSString *line) {
@@ -155,7 +108,7 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
     if (probe) {
         for (XPVirtualHost *host in hosts) {
             if (host.state == XPVHostStateDisabled) continue;
-            if (VHostPortIsListening((uint16_t)host.port, 0.15)) {
+            if ([XPService portIsListening:(uint16_t)host.port timeout:0.15]) {
                 host.state = XPVHostStateListening;
             }
         }

@@ -13,6 +13,7 @@
 #import "XPLogWindowController.h"
 #import "XPVirtualHost.h"
 #import "XPVHostRowView.h"
+#import "XPProjectWizard.h"
 #import "XPTimerSectionView.h"
 #import "XPTracker.h"
 
@@ -344,7 +345,6 @@ static const CGFloat XPWinPadding = 22.0;
 
 - (void)addProjectsSection {
     NSArray<XPVirtualHost *> *hosts = [XPVirtualHost allHosts];
-    if (hosts.count == 0) return;
 
     NSUInteger listening = 0, disabled = 0;
     for (XPVirtualHost *host in hosts) {
@@ -368,6 +368,16 @@ static const CGFloat XPWinPadding = 22.0;
         [row.heightAnchor constraintEqualToConstant:30].active = YES;
         [self.rootStack addArrangedSubview:row];
     }
+
+    // La sezione compare anche senza virtual host: su un'installazione nuova
+    // è proprio il momento in cui questo pulsante serve.
+    __weak typeof(self) weakSelf = self;
+    XPButton *newProject = [XPButton buttonWithTitle:NSLocalizedString(@"btn.newProject", nil)
+                                               style:XPButtonStylePrimary
+                                             onClick:^(XPButton *sender) {
+        [XPProjectWizard presentFromWindow:weakSelf.window];
+    }];
+    [self.rootStack addArrangedSubview:[self equalRowWithViews:@[newProject] height:32]];
 }
 
 - (void)addTimerSection {

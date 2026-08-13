@@ -33,6 +33,9 @@
 
 "btn.more" = "مزید…";
 
+/* Pulsante della sezione Progetti che apre il wizard */
+"btn.newProject" = "نیا پروجیکٹ";
+
 /* Apre il progetto nel browser */
 "btn.open" = "کھولیں";
 
@@ -309,3 +312,66 @@
 
 /* Riepilogo sezione Progetti: %1$lu in ascolto, %2$lu disattivati */
 "vhost.summary.withDisabled" = "%1$lu فعال · %2$lu غیر فعال";
+
+/* Pulsante che avvia la creazione */
+"wizard.btn.create" = "پروجیکٹ بنائیں";
+
+/* Esito positivo: %1$@ nome del progetto, %2$ld porta */
+"wizard.done" = "%1$@ اب http://localhost:%2$ld پر ہے";
+
+/* Errore: campo nome vuoto */
+"wizard.err.nameEmpty" = "پروجیکٹ کو نام دیں۔";
+
+/* Errore: nome con caratteri non ammessi */
+"wizard.err.nameFormat" = "صرف چھوٹے حروف، ہندسے اور ڈیش، 2 سے 40 حروف تک۔";
+
+/* Errore: esiste già una cartella con quel nome */
+"wizard.err.nameTaken" = "اس نام کا فولڈر پہلے ہی projects/ میں موجود ہے۔";
+
+/* Errore: porta occupata. %ld è il numero di porta */
+"wizard.err.portBusy" = "پورٹ %ld پہلے سے استعمال میں ہے۔";
+
+/* Errore: porta fuori intervallo */
+"wizard.err.portRange" = "1024 اور 65535 کے درمیان پورٹ استعمال کریں۔";
+
+/* Errore: indirizzo del repository in una forma non riconosciuta */
+"wizard.err.repoFormat" = "پتہ پہچانا نہیں گیا۔ https://host/owner/repo یا git@host:owner/repo استعمال کریں۔";
+
+/* Errore: non è stato possibile copiare i file di configurazione */
+"wizard.failed.backup" = "کنفیگریشن فائلیں کاپی نہیں ہو سکیں۔ کچھ نہیں لکھا گیا۔";
+
+/* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
+"wizard.failed.configtest" = "Apache نے کنفیگریشن مسترد کر دی۔ سب کچھ واپس بحال کر دیا گیا، کچھ تبدیل نہیں ہوا۔";
+
+/* Etichetta del campo nome */
+"wizard.field.name" = "نام";
+
+/* Etichetta del campo porta */
+"wizard.field.port" = "پورٹ";
+
+/* Etichetta del campo repository */
+"wizard.field.repo" = "GitHub ریپوزٹری";
+
+/* Testo grigio dentro il campo repository */
+"wizard.field.repo.placeholder" = "اختیاری، یہ کلون ہو جائے گا";
+
+/* Nota sotto il campo nome */
+"wizard.hint.name" = "چھوٹے حروف، ہندسے اور ڈیش۔ یہ projects/ کے اندر فولڈر بن جاتا ہے۔";
+
+/* Nota sotto il campo porta */
+"wizard.hint.port" = "پہلے سے ترتیب شدہ پورٹس کے بعد پہلا خالی پورٹ۔";
+
+/* Avanzamento: clone del repository */
+"wizard.progress.cloning" = "ریپوزٹری کلون کی جا رہی ہے…";
+
+/* Avanzamento: creazione della cartella */
+"wizard.progress.creating" = "فولڈر بنایا جا رہا ہے…";
+
+/* Avanzamento: scrittura del virtual host */
+"wizard.progress.vhost" = "ورچوئل ہوسٹ لکھا جا رہا ہے اور Apache دوبارہ شروع ہو رہا ہے…";
+
+/* Cosa fa il wizard, sotto il titolo */
+"wizard.subtitle" = "VXOST فولڈر بناتا ہے، ورچوئل ہوسٹ لکھتا ہے اور پورٹ کھولتا ہے۔ Apache خود دوبارہ شروع ہو جاتا ہے۔";
+
+/* Titolo della finestra del wizard */
+"wizard.title" = "نیا پروجیکٹ";
