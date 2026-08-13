@@ -27,9 +27,9 @@
 /// Esegue un comando senza privilegi. Sincrono, per letture rapide (pgrep, lsof).
 + (XPTaskResult *)run:(NSString *)launchPath arguments:(NSArray<NSString *> *)arguments;
 
-/// Esegue `xampp <action>` come amministratore, in background.
+/// Esegue `vxost <action>` come amministratore, in background.
 /// Il completion arriva sul main thread.
-+ (void)runPrivilegedXamppAction:(NSString *)action
++ (void)runPrivilegedVxostAction:(NSString *)action
                       completion:(void (^)(XPTaskResult *result))completion;
 
 /// Esegue una riga di shell arbitraria come amministratore, in background.

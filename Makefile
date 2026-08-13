@@ -1,12 +1,12 @@
-# XAMPP — build senza Xcode, solo Command Line Tools.
+# VXOST, build senza Xcode, solo Command Line Tools.
 #
-#   make          compila e crea build/XAMPP.app
+#   make          compila e crea build/VXOST.app
 #   make icon     rigenera Resources/AppIcon.icns dal logo ufficiale
 #   make run      compila e avvia
-#   make install  copia l'app in /Applications/XAMPP/
+#   make install  copia l'app in /Applications/VXOST/
 #   make clean    rimuove build/
 
-APP_NAME  := XAMPP
+APP_NAME  := VXOST
 BUNDLE    := build/$(APP_NAME).app
 CONTENTS  := $(BUNDLE)/Contents
 MACOS_DIR := $(CONTENTS)/MacOS
@@ -16,7 +16,7 @@ VERSION   := $(shell /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionStri
 DIST_DIR  := dist
 
 SOURCES := $(wildcard src/*.m)
-LOGO    := Resources/xampp-logo.svg
+LOGO    := Resources/vxost-logo.svg
 ICON    := Resources/AppIcon.icns
 
 # -fobjc-arc: gestione automatica della memoria
@@ -74,14 +74,14 @@ run: all
 
 install: all
 	@pkill -x "$(APP_NAME)" 2>/dev/null || true
-	@rm -rf "/Applications/XAMPP/$(APP_NAME).app"
-	@cp -R "$(BUNDLE)" "/Applications/XAMPP/"
-	@echo "Installata in /Applications/XAMPP/$(APP_NAME).app"
+	@rm -rf "/Applications/VXOST/$(APP_NAME).app"
+	@cp -R "$(BUNDLE)" "/Applications/VXOST/"
+	@echo "Installata in /Applications/VXOST/$(APP_NAME).app"
 
 uninstall:
 	@pkill -x "$(APP_NAME)" 2>/dev/null || true
-	@rm -rf "/Applications/XAMPP/$(APP_NAME).app"
-	@echo "Rimossa da /Applications/XAMPP/"
+	@rm -rf "/Applications/VXOST/$(APP_NAME).app"
+	@echo "Rimossa da /Applications/VXOST/"
 
 # Pacchetti pronti da pubblicare: uno zip e un'immagine disco.
 #

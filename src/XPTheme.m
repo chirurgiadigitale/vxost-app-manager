@@ -94,12 +94,12 @@ static NSColor *Dyn(NSColor *dark, NSColor *light) {
 
 #pragma mark - Accenti
 
-+ (NSColor *)accent    { return Dyn(Hex(0xFB7A24, 1.0), Hex(0xA8480B, 1.0)); }
-+ (NSColor *)accentInk { return Dyn(Hex(0x1A0A00, 1.0), Hex(0xFFFFFF, 1.0)); }
-+ (NSColor *)cyan      { return Dyn(Hex(0xFFB35C, 1.0), Hex(0x8A4A08, 1.0)); }
-+ (NSColor *)violet    { return Dyn(Hex(0xFF6B3D, 1.0), Hex(0xA8380F, 1.0)); }
-+ (NSColor *)amber     { return Dyn(Hex(0xFFC15E, 1.0), Hex(0x7A4E10, 1.0)); }
-+ (NSColor *)danger    { return Dyn(Hex(0xE5341C, 1.0), Hex(0xA3200D, 1.0)); }
++ (NSColor *)accent    { return Dyn(Hex(0xFD47FD, 1.0), Hex(0x5A15C9, 1.0)); }
++ (NSColor *)accentInk { return Dyn(Hex(0x0A0510, 1.0), Hex(0xFFFFFF, 1.0)); }
++ (NSColor *)cyan      { return Dyn(Hex(0xC79BFF, 1.0), Hex(0x6B21B8, 1.0)); }
++ (NSColor *)violet    { return Dyn(Hex(0xFC8A7E, 1.0), Hex(0xB03A1E, 1.0)); }
++ (NSColor *)amber     { return Dyn(Hex(0xFA8406, 1.0), Hex(0x7E4207, 1.0)); }
++ (NSColor *)danger    { return Dyn(Hex(0xFF5C5C, 1.0), Hex(0xA3200D, 1.0)); }
 + (NSColor *)running   { return Dyn(Hex(0x3FD68C, 1.0), Hex(0x0F7A47, 1.0)); }
 
 #pragma mark - Tipografia

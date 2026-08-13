@@ -361,7 +361,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,
                                                          NSUserDomainMask, YES);
     NSString *directory = [paths.firstObject
-                           stringByAppendingPathComponent:@"it.chirurgiadigitale.xampp"];
+                           stringByAppendingPathComponent:@"it.equipedigitale.vxost"];
     [[NSFileManager defaultManager] createDirectoryAtPath:directory
                              withIntermediateDirectories:YES
                                               attributes:nil

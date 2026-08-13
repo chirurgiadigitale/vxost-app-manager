@@ -4,8 +4,8 @@
 
 #import "XPPaths.h"
 
-NSString *const XPRoot = @"/Applications/XAMPP/xamppfiles";
-NSString *const XPControlScript = @"/Applications/XAMPP/xamppfiles/xampp";
+NSString *const XPRoot = @"/Applications/VXOST/vxostfiles";
+NSString *const XPControlScript = @"/Applications/VXOST/vxostfiles/vxost";
 
 @implementation XPPaths
 
@@ -22,8 +22,8 @@ NSString *const XPControlScript = @"/Applications/XAMPP/xamppfiles/xampp";
     return [self root:@"htdocs"];
 }
 
-+ (NSString *)xamppVersion {
-    // Stessa fonte usata dallo script di controllo: `cat $XAMPP_ROOT/lib/VERSION`.
++ (NSString *)vxostVersion {
+    // Stessa fonte usata dallo script di controllo: `cat $VXOST_ROOT/lib/VERSION`.
     NSString *raw = [NSString stringWithContentsOfFile:[self root:@"lib/VERSION"]
                                               encoding:NSUTF8StringEncoding
                                                  error:NULL];
@@ -74,7 +74,7 @@ NSString *const XPControlScript = @"/Applications/XAMPP/xamppfiles/xampp";
 
         NSString *host = [name stringByReplacingOccurrencesOfString:(isError ? @"-error_log" : @"-access_log")
                                                          withString:@""];
-        NSString *title = [NSString stringWithFormat:@"%@ — %@", host, isError ? @"error" : @"access"];
+        NSString *title = [NSString stringWithFormat:@"%@, %@", host, isError ? @"error" : @"access"];
         [result addObject:@{@"title": title,
                             @"path": [logsDir stringByAppendingPathComponent:name]}];
     }

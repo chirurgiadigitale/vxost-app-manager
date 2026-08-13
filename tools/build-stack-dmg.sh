@@ -12,34 +12,34 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="$HERE/build/stack"
 DIST="$HERE/dist"
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$HERE/Resources/Info.plist")"
-NAME="XAMPP-Stack-$VERSION"
+NAME="VXOST-Stack-$VERSION"
 
-[ -d "$STAGE/xamppfiles" ] || { echo "Nothing staged. Run tools/build-stack.sh first." >&2; exit 1; }
+[ -d "$STAGE/vxostfiles" ] || { echo "Nothing staged. Run tools/build-stack.sh first." >&2; exit 1; }
 
 mkdir -p "$DIST"
 
 # The image carries an installer note next to the payload, because dragging a
-# folder called xamppfiles into Applications is not obvious on its own.
+# folder called vxostfiles into Applications is not obvious on its own.
 cat > "$STAGE/READ ME FIRST.txt" <<EOF
-XAMPP Stack $VERSION for macOS
+VXOST Stack $VERSION for macOS
 ==============================
 
 Apache, MariaDB, PHP, Perl, ProFTPD and phpMyAdmin, with a redesigned
 dashboard and a native control app.
 
-This is an independent redistribution, not an official Apache Friends build.
-XAMPP is their project: https://www.apachefriends.org
+This is an independent redistribution, not an official VXOST build.
+VXOST is their project: https://www.vxost.com
 
 
 INSTALLING
 ----------
 
-1. Drag the "xamppfiles" folder to /Applications/XAMPP/
-   (create the XAMPP folder if it does not exist)
+1. Drag the "vxostfiles" folder to /Applications/VXOST/
+   (create the VXOST folder if it does not exist)
 
-2. Drag "XAMPP.app" to your Applications folder
+2. Drag "VXOST.app" to your Applications folder
 
-3. Open XAMPP.app and press "Start all".
+3. Open VXOST.app and press "Start all".
    macOS will ask for your password: starting a web server on port 80
    requires it, as it always has.
 
@@ -64,8 +64,8 @@ first.
 YOUR PROJECTS
 -------------
 
-Put them in xamppfiles/htdocs/progetti/ and give each one a virtual host
-in xamppfiles/etc/extra/httpd-vhosts.conf. The app then shows every
+Put them in vxostfiles/htdocs/progetti/ and give each one a virtual host
+in vxostfiles/etc/extra/httpd-vhosts.conf. The app then shows every
 project with the port it answers on, and the repository it belongs to.
 
 
@@ -80,14 +80,14 @@ choose "Open Anyway".
 LICENCE
 -------
 
-GNU GPL, the same terms as XAMPP. Every bundled component keeps its own
-licence; see xamppfiles/licenses/.
+GNU GPL, the same terms as VXOST. Every bundled component keeps its own
+licence; see vxostfiles/licenses/.
 EOF
 
 echo "Building the disk image (this takes a while)…"
 rm -f "$DIST/$NAME.dmg"
 hdiutil create \
-    -volname "XAMPP Stack $VERSION" \
+    -volname "VXOST Stack $VERSION" \
     -srcfolder "$STAGE" \
     -ov -format UDZO -quiet \
     "$DIST/$NAME.dmg"

@@ -1,6 +1,6 @@
 //
 //  main.m
-//  XAMPP — punto di ingresso.
+//  VXOST, punto di ingresso.
 //
 //  L'app sta in due posti contemporaneamente: l'icona nel Dock apre la
 //  finestra con tutte le funzioni, quella nella barra di stato dà accesso

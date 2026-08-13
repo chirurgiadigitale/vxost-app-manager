@@ -30,7 +30,7 @@ static const NSTimeInterval XPPollSlow = 8.0;
 - (instancetype)init {
     if ((self = [super init])) {
         _services = [XPService allServices];
-        _queue    = dispatch_queue_create("it.chirurgiadigitale.xampp-manager.monitor",
+        _queue    = dispatch_queue_create("it.equipedigitale.vxost-manager.monitor",
                                           DISPATCH_QUEUE_SERIAL);
         _interval = XPPollSlow;
     }

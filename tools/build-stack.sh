@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Builds a redistributable XAMPP stack: Apache, MariaDB, PHP, Perl, ProFTPD and
+# Builds a redistributable VXOST stack: Apache, MariaDB, PHP, Perl, ProFTPD and
 # phpMyAdmin, together with this app and the redesigned dashboard.
 #
 # The point of this script is what it leaves out. It is built from the local
-# XAMPP installation, which on a working machine is full of the owner's
+# VXOST installation, which on a working machine is full of the owner's
 # projects, databases, logs and virtual hosts. None of that may ship.
 #
 #   - htdocs is never copied; a clean dashboard is put in its place
@@ -20,21 +20,49 @@
 # Usage: bash tools/build-stack.sh
 set -euo pipefail
 
-SOURCE="/Applications/XAMPP/xamppfiles"
-DASHBOARD_REPO="/Applications/XAMPP/xamppfiles/htdocs"
+SOURCE="/Applications/VXOST/vxostfiles"
+DASHBOARD_REPO="/Applications/VXOST/vxostfiles/htdocs"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="$HERE/build/stack"
-PAYLOAD="$STAGE/xamppfiles"
+PAYLOAD="$STAGE/vxostfiles"
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$HERE/Resources/Info.plist")"
 
-# Strings that must never appear in the finished package. Add to this list
-# rather than trusting a manual check.
-FORBIDDEN=(
-    valorecasa edilcloud listeoo listeooo guidaperbere aemmecolori acshorse
-    perlahotel omacglobal rocknine arfiltrazioni atvmxeurope aecocostruizoni
-    bergamoquad daviderigo ortopediarispoli rigotest wxchirur xydschou
-    "Mac-mini-di-Davide" rigobrothersagency "/Users/rigo"
-)
+# Strings that must never appear in the finished package.
+#
+# This list is BUILT AT RUNTIME and is deliberately not hard-coded: writing the
+# customer names into a public repository would leak exactly the data the check
+# exists to protect. It is also self-maintaining, a project added tomorrow is
+# covered without touching this file.
+#
+# Anything that cannot be derived (a company name, a former project no longer
+# on disk) goes in tools/forbidden.local.txt, one entry per line, which is
+# git-ignored and never leaves this machine.
+FORBIDDEN=()
+
+# 1. Every project folder served by the local web root. Both names are checked
+#    while the folder is being renamed from progetti to projects.
+for _dir in projects progetti; do
+    [ -d "$DASHBOARD_REPO/$_dir" ] || continue
+    while IFS= read -r name; do
+        # Short names are skipped: as a substring they match ordinary words and
+        # would fail every build on a false positive.
+        [ ${#name} -ge 5 ] && FORBIDDEN+=("$name")
+    done < <(ls "$DASHBOARD_REPO/$_dir" 2>/dev/null | grep -v '^\.')
+done
+
+# 2. The identity of the machine doing the build. $HOME is used rather than
+#    $USER, which as a bare substring would match unrelated words.
+FORBIDDEN+=("$HOME")
+_hostname="$(scutil --get LocalHostName 2>/dev/null || hostname -s 2>/dev/null || true)"
+[ ${#_hostname} -ge 5 ] && FORBIDDEN+=("$_hostname")
+
+# 3. Private additions, if the file is there.
+if [ -f "$HERE/tools/forbidden.local.txt" ]; then
+    while IFS= read -r line; do
+        case "$line" in ''|\#*) continue ;; esac
+        FORBIDDEN+=("$line")
+    done < "$HERE/tools/forbidden.local.txt"
+fi
 
 step() { printf "\n\033[1m%s\033[0m\n" "$*"; }
 
@@ -66,7 +94,7 @@ for dir in bin sbin lib libexec modules share etc man licenses phpmyadmin cgi-bi
 done
 
 printf "  control scripts\n"
-for file in xampp lampp properties.ini; do
+for file in vxost lampp properties.ini; do
     [ -f "$SOURCE/$file" ] && cp "$SOURCE/$file" "$PAYLOAD/"
 done
 [ -f "$SOURCE/lib/VERSION" ] && cp "$SOURCE/lib/VERSION" "$PAYLOAD/lib/VERSION"
@@ -97,11 +125,11 @@ cat > "$PAYLOAD/htdocs/progetti/index.html" <<'HTML'
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>body{font-family:-apple-system,sans-serif;background:#070B16;color:#E9EFFA;
 display:grid;place-items:center;height:100vh;margin:0;text-align:center}
-p{color:#8493AB;max-width:44ch;line-height:1.6}code{color:#FB7A24}</style>
+p{color:#8493AB;max-width:44ch;line-height:1.6}code{color:#FD47FD}</style>
 </head><body><div>
 <h1>No projects yet</h1>
 <p>Put your sites in this folder and they will show up here, and in the
-XAMPP app, as soon as you give them a virtual host in
+VXOST app, as soon as you give them a virtual host in
 <code>etc/extra/httpd-vhosts.conf</code>.</p>
 </div></body></html>
 HTML
@@ -115,13 +143,13 @@ if [ -f "$VHOSTS" ]; then
 #
 # Virtual Hosts
 #
-# Add one block per project. The XAMPP app reads this file and shows every
+# Add one block per project. The VXOST app reads this file and shows every
 # project with the port it answers on.
 #
 # <VirtualHost *:4000>
-#     DocumentRoot "/Applications/XAMPP/xamppfiles/htdocs/progetti/my-site"
+#     DocumentRoot "/Applications/VXOST/vxostfiles/htdocs/progetti/my-site"
 #     ServerName localhost
-#     <Directory "/Applications/XAMPP/xamppfiles/htdocs/progetti/my-site">
+#     <Directory "/Applications/VXOST/vxostfiles/htdocs/progetti/my-site">
 #         Options Indexes FollowSymLinks
 #         AllowOverride All
 #         Require all granted
@@ -141,7 +169,7 @@ import sys
 # Parsed line by line rather than with a regex across the whole file. A
 # multiline pattern matched a commented-out <VirtualHost> in the documentation
 # near the top and swallowed everything down to the first real closing tag,
-# taking "Listen 80" with it — which left Apache unable to start at all.
+# taking "Listen 80" with it, which left Apache unable to start at all.
 path = sys.argv[1]
 out, depth = [], 0
 
@@ -202,7 +230,7 @@ step "Creating an empty database"
 #
 # An isolated defaults file is essential: without it the installer reads the
 # system my.cnf, points at the real data directory and fails on a ibdata1 it
-# cannot write — or worse, touches the live database.
+# cannot write, or worse, touches the live database.
 mkdir -p "$PAYLOAD/var/mysql"
 cat > "$STAGE/init-my.cnf" <<CNF
 [mysqld]
@@ -264,9 +292,9 @@ rm -f "$STAGE/db-init.sql" "$STAGE/init-my.cnf"
 
 # --------------------------------------------------------------- the app ---
 
-step "Adding the XAMPP app"
-cp -R "$HERE/build/XAMPP.app" "$STAGE/" 2>/dev/null || {
-    echo "  build/XAMPP.app missing — run make first" >&2; exit 1; }
+step "Adding the VXOST app"
+cp -R "$HERE/build/VXOST.app" "$STAGE/" 2>/dev/null || {
+    echo "  build/VXOST.app missing, run make first" >&2; exit 1; }
 
 # ----------------------------------------------------------------- verify ---
 

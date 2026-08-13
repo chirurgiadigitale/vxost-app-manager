@@ -55,7 +55,7 @@ extern NSString *const XPThemeDidChangeNotification;
 
 #pragma mark - Accenti
 
-+ (NSColor *)accent;       // --accent    arancione ufficiale XAMPP
++ (NSColor *)accent;       // --accent    arancione ufficiale VXOST
 + (NSColor *)accentInk;    // --accent-ink
 + (NSColor *)cyan;         // --cyan      dati e database
 + (NSColor *)violet;       // --violet    codice e tooling

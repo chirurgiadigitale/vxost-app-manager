@@ -151,7 +151,7 @@ static NSArray<NSNumber *> *PortsFromConfig(NSString *path, NSString *directive)
 }
 
 - (void)refreshProcess {
-    // pgrep -f confronta l'intera riga di comando: distingue l'httpd di XAMPP
+    // pgrep -f confronta l'intera riga di comando: distingue l'httpd di VXOST
     // da un eventuale Apache di sistema, perché il pattern è il percorso pieno.
     XPTaskResult *result = [XPTaskRunner run:@"/usr/bin/pgrep" arguments:@[@"-f", self.matchPattern]];
 

@@ -10,11 +10,16 @@ dist/
 .Spotlight-V100
 .Trashes
 
-# Documenti Markdown: restano in locale e fuori dal repository.
-# Fanno eccezione i due che servono a chi arriva da fuori: README.md, che è la
-# documentazione ufficiale del progetto pubblico, e CONTRIBUTING.md, che
-# raccoglie le regole per contribuire. Il resto, contesto compreso, resta sul
-# disco.
+# Private data
+# Strings the packaging script must keep out of a release. Local to this
+# machine: publishing the list would leak what it exists to protect.
+tools/forbidden.local.txt
+
+# Markdown documents: they stay local, outside the repository.
+# Two are kept for people arriving from outside: README.md, the official
+# documentation of the public project, and CONTRIBUTING.md, which holds the
+# rules for contributing. Everything else, working context included, stays on
+# disk.
 *.md
 !README.md
 !CONTRIBUTING.md

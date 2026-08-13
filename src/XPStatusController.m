@@ -27,7 +27,7 @@
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     self.statusItem.button.target = self;
     self.statusItem.button.action = @selector(togglePopover:);
-    self.statusItem.button.toolTip = @"XAMPP";
+    self.statusItem.button.toolTip = @"VXOST";
     [self.statusItem.button sendActionOn:(NSEventMaskLeftMouseUp | NSEventMaskRightMouseUp)];
 
     self.panel = [[XPPanelView alloc] initWithServices:[XPServiceMonitor shared].services];
@@ -238,7 +238,7 @@
     [self.popover performClose:nil];
 }
 
-- (void)panelDidRequestXamppAction:(NSString *)action confirmMessage:(NSString *)message {
+- (void)panelDidRequestVxostAction:(NSString *)action confirmMessage:(NSString *)message {
     [self.popover performClose:nil];
 
     if ([action isEqualToString:@"security"])      [[XPActions shared] runSecurityCheck];

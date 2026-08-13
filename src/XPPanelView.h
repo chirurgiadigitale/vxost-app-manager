@@ -18,7 +18,7 @@
 - (void)panelDidRequestOpenHtdocs;
 - (void)panelDidRequestOpenLogs;
 - (void)panelDidRequestOpenMainWindow;
-- (void)panelDidRequestXamppAction:(NSString *)action confirmMessage:(NSString *)message;
+- (void)panelDidRequestVxostAction:(NSString *)action confirmMessage:(NSString *)message;
 - (void)panelDidRequestOpenFile:(NSString *)path;
 - (void)panelDidRequestQuit;
 @end

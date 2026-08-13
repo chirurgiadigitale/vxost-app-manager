@@ -1,6 +1,6 @@
 //
 //  XPService.h
-//  Un servizio XAMPP (Apache, MySQL, ProFTPD) e il suo stato.
+//  Un servizio VXOST (Apache, MySQL, ProFTPD) e il suo stato.
 //
 
 #import <Cocoa/Cocoa.h>
@@ -16,7 +16,7 @@ typedef NS_ENUM(NSInteger, XPServiceState) {
 @property (nonatomic, copy,   readonly) NSString *key;        ///< apache | mysql | ftp
 @property (nonatomic, copy,   readonly) NSString *name;       ///< nome mostrato
 @property (nonatomic, copy,   readonly) NSString *matchPattern; ///< pattern per pgrep -f
-@property (nonatomic, copy,   readonly) NSString *startAction;  ///< azione dello script xampp
+@property (nonatomic, copy,   readonly) NSString *startAction;  ///< azione dello script vxost
 @property (nonatomic, copy,   readonly) NSString *stopAction;
 @property (nonatomic, copy,   readonly) NSString *reloadAction;
 @property (nonatomic, strong, readonly) NSColor  *tint;       ///< colore semantico dal design system

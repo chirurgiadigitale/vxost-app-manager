@@ -23,17 +23,17 @@
 		<string>ur</string>
 	</array>
 	<key>CFBundleExecutable</key>
-	<string>XAMPP</string>
+	<string>VXOST</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>it.chirurgiadigitale.xampp</string>
+	<string>it.equipedigitale.vxost</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>XAMPP</string>
+	<string>VXOST</string>
 	<key>CFBundleDisplayName</key>
-	<string>XAMPP</string>
+	<string>VXOST</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -45,8 +45,8 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>GNU GPL — stessi termini di XAMPP</string>
+	<string>GNU GPL v2</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Serve per eseguire i comandi di avvio e arresto di XAMPP con privilegi di amministratore e per aprire il Terminale sulle operazioni interattive.</string>
+	<string>Serve per eseguire i comandi di avvio e arresto di VXOST con privilegi di amministratore e per aprire il Terminale sulle operazioni interattive.</string>
 </dict>
 </plist>

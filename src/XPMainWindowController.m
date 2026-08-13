@@ -65,7 +65,7 @@ static const CGFloat XPWinPadding = 22.0;
                                                               NSWindowStyleMaskResizable)
                                                      backing:NSBackingStoreBuffered
                                                        defer:NO];
-    window.title = @"XAMPP";
+    window.title = @"VXOST";
     window.releasedWhenClosed = NO;
     window.titlebarAppearsTransparent = YES;
     window.backgroundColor = [XPTheme bg];
@@ -194,14 +194,14 @@ static const CGFloat XPWinPadding = 22.0;
 
     NSTextField *title = [self labelWithFont:[NSFont systemFontOfSize:22 weight:NSFontWeightBold]
                                        color:[XPTheme text]];
-    title.stringValue = @"XAMPP";
+    title.stringValue = @"VXOST";
 
     NSString *appVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-    NSString *xamppVersion = [XPPaths xamppVersion];
+    NSString *vxostVersion = [XPPaths vxostVersion];
     NSTextField *subtitle = [self labelWithFont:[XPTheme fontSmall] color:[XPTheme textMuted]];
-    subtitle.stringValue = xamppVersion
+    subtitle.stringValue = vxostVersion
         ? [NSString stringWithFormat:NSLocalizedString(@"app.subtitle.full", nil),
-           xamppVersion, appVersion]
+           vxostVersion, appVersion]
         : [NSString stringWithFormat:NSLocalizedString(@"app.subtitle.short", nil), appVersion];
 
     self.statusBadge = [self labelWithFont:[XPTheme fontBody] color:[XPTheme textMuted]];
@@ -387,10 +387,10 @@ static const CGFloat XPWinPadding = 22.0;
         [[XPActions shared] revealFile:files[index][@"path"]];
     }];
 
-    XPButton *folder = [XPButton buttonWithTitle:NSLocalizedString(@"link.xamppFolder", nil)
+    XPButton *folder = [XPButton buttonWithTitle:NSLocalizedString(@"link.vxostFolder", nil)
                                             style:XPButtonStyleQuiet
                                           onClick:^(XPButton *b) {
-        [[XPActions shared] openXamppFolder];
+        [[XPActions shared] openVxostFolder];
     }];
     folder.symbolName = @"folder.badge.gearshape";
     folder.translatesAutoresizingMaskIntoConstraints = NO;

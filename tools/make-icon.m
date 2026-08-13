@@ -1,6 +1,6 @@
 //
 //  make-icon.m
-//  Genera Resources/AppIcon.icns dal logo ufficiale XAMPP.
+//  Genera Resources/AppIcon.icns dal logo ufficiale VXOST.
 //
 //  Il logo di partenza è l'SVG usato dalla dashboard, così app e web root
 //  mostrano esattamente lo stesso marchio. macOS carica l'SVG nativamente

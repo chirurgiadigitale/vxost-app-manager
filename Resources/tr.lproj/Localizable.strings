@@ -1,4 +1,4 @@
-/* Generato da tools/i18n/build-strings.py — non modificare a mano.
+/* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
 "alert.confirm.title" = "İşlemi onaylıyor musunuz?";
@@ -10,12 +10,12 @@
 /* %@ è il percorso dello script di controllo */
 "alert.missing.body" = "Denetim betiği yok ya da çalıştırılabilir değil:\n%@\n\nUygulama açık kalır ancak hizmetleri başlatıp durduramaz.";
 
-"alert.missing.title" = "XAMPP kurulumu bulunamadı";
+"alert.missing.title" = "VXOST kurulumu bulunamadı";
 
-/* Sottotitolo della finestra: %1$@ versione XAMPP, %2$@ versione del restyling */
-"app.subtitle.full" = "XAMPP %1$@ · v%2$@ yeni arayüz";
+/* Sottotitolo della finestra: %1$@ versione VXOST, %2$@ versione del restyling */
+"app.subtitle.full" = "VXOST %1$@ · v%2$@ yeni arayüz";
 
-/* Sottotitolo quando la versione di XAMPP non è leggibile */
+/* Sottotitolo quando la versione di VXOST non è leggibile */
 "app.subtitle.short" = "v%@ yeni arayüz";
 
 /* Badge compatto nel popover */
@@ -72,7 +72,7 @@
 
 "link.viewLogs" = "Günlükleri görüntüle";
 
-"link.xamppFolder" = "XAMPP klasörünü aç";
+"link.vxostFolder" = "VXOST klasörünü aç";
 
 "log.autoRefresh" = "Yenile";
 
@@ -93,23 +93,23 @@
 
 "log.reveal" = "Finder'da";
 
-"log.system.apacheAccess" = "Apache — access_log";
+"log.system.apacheAccess" = "Apache, access_log";
 
-"log.system.apacheError" = "Apache — error_log";
+"log.system.apacheError" = "Apache, error_log";
 
-"log.system.mysqlError" = "MySQL — error";
+"log.system.mysqlError" = "MySQL, error";
 
 /* %1$@ percorso, %2$@ dimensione leggibile */
 "log.tailNote" = "%1$@ · %2$@ · dosyanın sonu gösteriliyor";
 
-"log.title" = "XAMPP günlükleri";
+"log.title" = "VXOST günlükleri";
 
 /* %@ è il nome del file */
 "log.unreadable" = "%@ kullanıcınız tarafından okunamıyor: dosya başka bir sahibe ait.";
 
 "log.veryLarge" = "  ⚠︎ çok büyük dosya";
 
-"menu.about" = "XAMPP hakkında";
+"menu.about" = "VXOST hakkında";
 
 "menu.close" = "Kapat";
 
@@ -119,7 +119,7 @@
 
 "menu.find" = "Bul";
 
-"menu.hide" = "XAMPP'ı gizle";
+"menu.hide" = "VXOST'ı gizle";
 
 "menu.minimize" = "Küçült";
 
@@ -127,9 +127,9 @@
 
 "menu.openPhpMyAdmin" = "phpMyAdmin'i aç";
 
-"menu.openWindow" = "XAMPP penceresini aç";
+"menu.openWindow" = "VXOST penceresini aç";
 
-"menu.quit" = "XAMPP'tan çık";
+"menu.quit" = "VXOST'tan çık";
 
 "menu.selectAll" = "Tümünü seç";
 
@@ -227,7 +227,7 @@
 "service.ports.none" = "yapılandırılmış port yok";
 
 /* Tooltip con l'elenco completo: %1$@ nome servizio, %2$@ porte */
-"service.ports.tooltip" = "%1$@ — portlar: %2$@";
+"service.ports.tooltip" = "%1$@, portlar: %2$@";
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "%@ yeniden yükle";

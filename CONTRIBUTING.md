@@ -3,10 +3,10 @@
 Thanks for looking. This document covers what the app is meant to be, how to
 build it, and the decisions that are not obvious from reading the code.
 
-## What this app is — and is not
+## What this app is, and is not
 
 It is a **local development environment app**. It exists to do two things: add
-functions that help someone working with XAMPP, and make the whole thing
+functions that help someone working with VXOST, and make the whole thing
 pleasant to look at.
 
 That boundary is deliberate, so some directions are closed:
@@ -29,9 +29,9 @@ You need macOS 13 or later and the Command Line Tools. **Xcode is not
 required**, and neither is any package manager or dependency.
 
 ```sh
-make          # builds build/XAMPP.app
+make          # builds build/VXOST.app
 make run      # builds and launches
-make install  # copies to /Applications/XAMPP/
+make install  # copies to /Applications/VXOST/
 make strings  # regenerates the 15 Localizable.strings from the catalogue
 make icon     # regenerates the icon from the logo
 make dist     # produces .dmg, .zip and SHA256SUMS.txt
@@ -55,7 +55,7 @@ have a working Swift toolchain, that is not a reason to rewrite anything.
 | File | Responsibility |
 | --- | --- |
 | `main.m` | entry point, application menu |
-| `XPPaths` | every XAMPP path, log list, configuration files |
+| `XPPaths` | every VXOST path, log list, configuration files |
 | `XPTheme` | design tokens, shared with the dashboard; light and dark |
 | `XPTaskRunner` | command execution; privileged ones through `osascript` |
 | `XPService` | one service: process detection, ports, state |
@@ -108,7 +108,7 @@ instead of running silently.
 **Elapsed time is not end minus start.** Pauses are subtracted, including one
 that is still open, which must be counted up to the present or the clock would
 keep running while paused. Sessions shorter than five seconds are discarded as
-accidental clicks — a test written with three-second sessions will fail for
+accidental clicks, a test written with three-second sessions will fail for
 that reason, not because of a bug.
 
 ## Interface conventions
@@ -121,7 +121,7 @@ mirrored by the system.
 
 The rows that draw themselves (`XPServiceRowView`, `XPVHostRowView`,
 `XPButton`) still use coordinates internally, and they must use the helpers in
-`XPLayout` — `XPMirror()` and `XPNaturalParagraphStyle()` — or they will stay
+`XPLayout`, `XPMirror()` and `XPNaturalParagraphStyle()`, or they will stay
 the wrong way round in Urdu.
 
 Colours come from `XPTheme` and match the dashboard's tokens. Do not hardcode a
@@ -135,7 +135,7 @@ bundles. The generated files must not be edited by hand: the next build
 overwrites them.
 
 The generator refuses to write if a language is missing a key, or if a format
-specifier does not match the base language — a `%@` lost in translation breaks
+specifier does not match the base language, a `%@` lost in translation breaks
 formatting in that language alone, and that is the kind of bug that reaches
 production.
 
@@ -161,7 +161,7 @@ They cover the duration maths, parallel sessions, report generation and CSV
 quoting, the virtual host parser and the repository detection.
 
 ⚠️ **The tracker checks write to the real data file** in
-`~/Library/Application Support/it.chirurgiadigitale.xampp/timesheet.json`, and
+`~/Library/Application Support/it.equipedigitale.vxost/timesheet.json`, and
 they interfere with each other if run back to back. Clear it between runs, and
 save it first if it holds real hours.
 
@@ -175,11 +175,11 @@ Apple Developer account. Building from source avoids the block entirely.
 
 ## Commits
 
-Explain **why**, not what — the diff already says what changed. Mention the
+Explain **why**, not what, the diff already says what changed. Mention the
 decision behind a change and the alternative that was rejected, so the next
 person does not have to rediscover it.
 
 ## Licence
 
-GNU GPL, the same terms as XAMPP. By contributing you agree your work is
+GNU GPL, the same terms as VXOST. By contributing you agree your work is
 released under it.

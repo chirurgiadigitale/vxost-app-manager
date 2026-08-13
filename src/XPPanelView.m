@@ -183,28 +183,28 @@ static const CGFloat XPRowH         = 52.0;
     configItem.submenu = configMenu;
     [menu addItem:configItem];
 
-    [menu addItemWithTitle:NSLocalizedString(@"link.xamppFolder", nil) action:@selector(openXamppFolder:) keyEquivalent:@""].target = self;
+    [menu addItemWithTitle:NSLocalizedString(@"link.vxostFolder", nil) action:@selector(openVxostFolder:) keyEquivalent:@""].target = self;
 
     NSPoint point = NSMakePoint(0, NSHeight(button.bounds) + 4);
     [menu popUpMenuPositioningItem:nil atLocation:point inView:button];
 }
 
 - (void)enableSSL:(id)sender {
-    [self.delegate panelDidRequestXamppAction:@"enablessl"
+    [self.delegate panelDidRequestVxostAction:@"enablessl"
                                confirmMessage:nil];
 }
 
 - (void)disableSSL:(id)sender {
-    [self.delegate panelDidRequestXamppAction:@"disablessl"
+    [self.delegate panelDidRequestVxostAction:@"disablessl"
                                confirmMessage:nil];
 }
 
 - (void)securityCheck:(id)sender {
-    [self.delegate panelDidRequestXamppAction:@"security" confirmMessage:nil];
+    [self.delegate panelDidRequestVxostAction:@"security" confirmMessage:nil];
 }
 
 - (void)backup:(id)sender {
-    [self.delegate panelDidRequestXamppAction:@"backup"
+    [self.delegate panelDidRequestVxostAction:@"backup"
                                confirmMessage:nil];
 }
 
@@ -212,7 +212,7 @@ static const CGFloat XPRowH         = 52.0;
     [self.delegate panelDidRequestOpenFile:sender.representedObject];
 }
 
-- (void)openXamppFolder:(id)sender {
+- (void)openVxostFolder:(id)sender {
     [self.delegate panelDidRequestOpenFile:XPRoot];
 }
 
@@ -262,7 +262,7 @@ static const CGFloat XPRowH         = 52.0;
     };
     NSMutableDictionary *titleDraw = [titleAttrs mutableCopy];
     titleDraw[NSParagraphStyleAttributeName] = XPNaturalParagraphStyle(NSLineBreakByClipping);
-    [@"XAMPP" drawInRect:XPMirror(NSMakeRect(20, 13, 160, 22), NSWidth(self.bounds))
+    [@"VXOST" drawInRect:XPMirror(NSMakeRect(20, 13, 160, 22), NSWidth(self.bounds))
           withAttributes:titleDraw];
 
     // Badge di stato complessivo, allineato a destra

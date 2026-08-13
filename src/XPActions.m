@@ -20,7 +20,7 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
 #pragma mark - Esecuzione
 
-/// Esegue un'azione dello script xampp marcando i servizi come "in transizione".
+/// Esegue un'azione dello script vxost marcando i servizi come "in transizione".
 ///
 /// Il messaggio di avanzamento arriva già formato e tradotto: comporlo qui da
 /// pezzi ("Avvio" + "di" + nome) darebbe frasi sgrammaticate in metà delle
@@ -34,7 +34,7 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
                                                         object:self];
     [self postMessage:progressMessage isError:NO];
 
-    [XPTaskRunner runPrivilegedXamppAction:action completion:^(XPTaskResult *result) {
+    [XPTaskRunner runPrivilegedVxostAction:action completion:^(XPTaskResult *result) {
         // Lo stato torna a essere dedotto dai processi reali.
         for (XPService *service in services) service.state = XPServiceStateStopped;
 
@@ -142,7 +142,7 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
     [[NSWorkspace sharedWorkspace] openURL:[host url]];
 }
 
-- (void)openXamppFolder {
+- (void)openVxostFolder {
     [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:XPRoot]];
 }
 

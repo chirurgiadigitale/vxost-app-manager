@@ -49,11 +49,11 @@ static NSString *EscapeForAppleScript(NSString *s) {
     return [escaped stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
 }
 
-+ (void)runPrivilegedXamppAction:(NSString *)action
++ (void)runPrivilegedVxostAction:(NSString *)action
                       completion:(void (^)(XPTaskResult *))completion {
     // L'azione arriva sempre da una costante interna dell'app, mai da input
     // dell'utente; il quoting del percorso protegge comunque da spazi.
-    NSString *command = [NSString stringWithFormat:@"'/Applications/XAMPP/xamppfiles/xampp' %@", action];
+    NSString *command = [NSString stringWithFormat:@"'/Applications/VXOST/vxostfiles/vxost' %@", action];
     [self runPrivilegedShell:command completion:completion];
 }
 

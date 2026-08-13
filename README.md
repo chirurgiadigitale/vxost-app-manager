@@ -1,11 +1,11 @@
-# XAMPP
+# VXOST
 
 A native replacement for `manager-osx.app` on macOS: a Dock and menu bar app
 that starts, stops and watches over Apache, MySQL and ProFTPD.
 
 The original manager is a BitRock InstallBuilder binary from 2018, shipped only
 for `i386`, `ppc` and `x86_64`. It still works on Apple Silicon, but only
-because macOS runs it through Rosetta 2 — the bundle carries no `arm64` slice.
+because macOS runs it through Rosetta 2, the bundle carries no `arm64` slice.
 Launched from a native shell it exits immediately, because its launcher picks
 the executable by reading `uname -p` and has no branch for `arm`.
 
@@ -22,31 +22,31 @@ The app lives in two places at once, and both lead to the same functions: the
 Dock icon opens the full window, the menu bar icon gives quick access without
 leaving what you were doing.
 
-**Menu bar** — three bars, one per service, filled in the service colour when
+**Menu bar**, three bars, one per service, filled in the service colour when
 running and outlined when stopped. The state of the whole stack is readable
 without opening anything.
 
-**Window** — services, projects, control, links, tools and configuration files,
+**Window**, services, projects, control, links, tools and configuration files,
 all reachable without digging through a menu. Opens from the Dock, from the
 menu bar icon's context menu, or with ⌘0.
 
-**Projects** — answers the question "who owns port 4002?". It reads the
+**Projects**, answers the question "who owns port 4002?". It reads the
 `<VirtualHost>` blocks from `httpd-vhosts.conf` and shows the port, the project
 being served and its state, with buttons to open it in the browser or in the
 Finder. It tells three cases apart: listening, configured but Apache is not
-answering, and commented out in the configuration — the last one being why an
+answering, and commented out in the configuration, the last one being why an
 expected port turns up closed, something you would otherwise only discover by
 opening the file.
 
-**Panel** — state, PID and listening ports for each service; start and stop
+**Panel**, state, PID and listening ports for each service; start and stop
 individually or all together; restart; reload a single service from the context
 menu on its row.
 
-**Logs** — system logs and per-virtual-host logs, with a text filter and
+**Logs**, system logs and per-virtual-host logs, with a text filter and
 automatic refresh. It always reads only the tail of the file: MySQL's `.err` can
 grow past 3 GB and loading it whole would freeze the app.
 
-**More** — enable and disable SSL, security check, backup, quick access to the
+**More**, enable and disable SSL, security check, backup, quick access to the
 configuration files.
 
 ## How it detects state
@@ -57,7 +57,7 @@ look stopped. Instead:
 
 | Information | Method | Why |
 | --- | --- | --- |
-| Service running | `pgrep -f <binary path>` | works without privileges, and the full path tells XAMPP's httpd apart from a system Apache |
+| Service running | `pgrep -f <binary path>` | works without privileges, and the full path tells VXOST's httpd apart from a system Apache |
 | Configured ports | parsing `httpd.conf`, `httpd-ssl.conf`, `my.cnf`, `proftpd.conf` | reflects the real configuration, virtual hosts included |
 | Listening ports | `connect()` on `127.0.0.1` | `lsof` run as a normal user cannot see `root` and `daemon` processes, a TCP probe can |
 
@@ -65,7 +65,7 @@ look stopped. Instead:
 
 Starting and stopping the services requires root. The app uses
 `do shell script … with administrator privileges`, that is the native macOS
-password prompt — the same mechanism as the original manager. It does not touch
+password prompt, the same mechanism as the original manager. It does not touch
 `sudoers` and installs no privileged helper.
 
 `security` and `backup` ask interactive questions, so they are opened in
@@ -97,28 +97,28 @@ alignment.
 To try a language other than the system one:
 
 ```sh
-defaults write it.chirurgiadigitale.xampp AppleLanguages -array de
-open -b it.chirurgiadigitale.xampp
-defaults delete it.chirurgiadigitale.xampp AppleLanguages   # restore
+defaults write it.equipedigitale.vxost AppleLanguages -array de
+open -b it.equipedigitale.vxost
+defaults delete it.equipedigitale.vxost AppleLanguages   # restore
 ```
 
 ## Icon
 
-The icon is generated from the official XAMPP logo, the same SVG the dashboard
+The icon is generated from the official VXOST logo, the same SVG the dashboard
 uses, so the app and the web root show the same mark.
 
 `tools/make-icon.m` renders it at every size macOS asks for, from 16 px to
 1024 px. None of them is an upscale: macOS loads the SVG natively and each size
-is drawn from the vector. The mark is clipped to the system icon shape — a
-superellipse, not a rectangle with circular corners — with a shadow applied from
+is drawn from the vector. The mark is clipped to the system icon shape, a
+superellipse, not a rectangle with circular corners, with a shadow applied from
 64 px upwards.
 
 It regenerates itself when the logo changes, or with `make icon`.
 
 ## Installing
 
-Download the `.dmg` from the releases page, open it and drag `XAMPP.app` where
-you prefer — `/Applications`, or `/Applications/XAMPP` next to the rest of the
+Download the `.dmg` from the releases page, open it and drag `VXOST.app` where
+you prefer, `/Applications`, or `/Applications/VXOST` next to the rest of the
 installation.
 
 ### macOS blocks it on first launch
@@ -132,7 +132,7 @@ To authorise it once:
 
 1. try opening it with a double click and dismiss the warning;
 2. go to **System Settings → Privacy & Security**;
-3. scroll to the bottom: *"XAMPP was blocked"* appears, with an **Open Anyway**
+3. scroll to the bottom: *"VXOST was blocked"* appears, with an **Open Anyway**
    button;
 4. confirm with your password.
 
@@ -141,7 +141,7 @@ From then on it launches normally.
 Alternatively, from Terminal:
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/XAMPP.app
+xattr -dr com.apple.quarantine /Applications/VXOST.app
 ```
 
 Anyone who would rather not trust a binary can build from source: the result is
@@ -155,11 +155,11 @@ Line Tools; Xcode is not required.
 ## Build
 
 ```sh
-make          # builds build/XAMPP.app
+make          # builds build/VXOST.app
 make icon     # regenerates the icon from the logo
 make strings  # regenerates the 15 Localizable.strings from the catalogue
 make run      # builds and launches
-make install  # copies to /Applications/XAMPP/
+make install  # copies to /Applications/VXOST/
 make dist     # creates dist/ with .dmg, .zip and SHA256SUMS.txt
 make clean
 ```
@@ -170,4 +170,4 @@ signature.
 
 ## Licence
 
-GNU GPL, the same terms as XAMPP.
+GNU GPL, the same terms as VXOST.

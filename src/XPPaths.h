@@ -1,14 +1,14 @@
 //
 //  XPPaths.h
-//  Percorsi dell'installazione XAMPP, centralizzati in un punto solo.
+//  Percorsi dell'installazione VXOST, centralizzati in un punto solo.
 //
-//  Tutto il resto dell'app passa da qui: se un giorno XAMPP cambia layout
+//  Tutto il resto dell'app passa da qui: se un giorno VXOST cambia layout
 //  si tocca questo file e basta.
 //
 
 #import <Foundation/Foundation.h>
 
-/// Radice dell'installazione: /Applications/XAMPP/xamppfiles
+/// Radice dell'installazione: /Applications/VXOST/vxostfiles
 extern NSString *const XPRoot;
 
 /// Script di controllo ufficiale (start/stop/reload/backup/ssl/security).
@@ -16,10 +16,10 @@ extern NSString *const XPControlScript;
 
 @interface XPPaths : NSObject
 
-/// Percorso assoluto a partire dalla radice XAMPP.
+/// Percorso assoluto a partire dalla radice VXOST.
 + (NSString *)root:(NSString *)relative;
 
-/// true se l'installazione XAMPP è presente e lo script di controllo è eseguibile.
+/// true se l'installazione VXOST è presente e lo script di controllo è eseguibile.
 + (BOOL)installationIsValid;
 
 #pragma mark - Log
@@ -39,8 +39,8 @@ extern NSString *const XPControlScript;
 /// Document root di Apache.
 + (NSString *)htdocs;
 
-/// Versione di XAMPP installata, letta da lib/VERSION (es. "8.2.4").
+/// Versione di VXOST installata, letta da lib/VERSION (es. "8.2.4").
 /// Nil se il file manca.
-+ (NSString *)xamppVersion;
++ (NSString *)vxostVersion;
 
 @end

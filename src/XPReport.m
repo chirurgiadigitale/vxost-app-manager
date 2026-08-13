@@ -145,7 +145,7 @@
 
     void (^flushDay)(void) = ^{
         if (!currentDay) return;
-        [text appendFormat:@"%@ — %@\n", [dayFormatter stringFromDate:currentDay],
+        [text appendFormat:@"%@, %@\n", [dayFormatter stringFromDate:currentDay],
          [XPTimeEntry shortStringFromInterval:dayTotal]];
         for (NSString *line in dayLines) [text appendFormat:@"%@\n", line];
         [text appendString:@"\n"];
@@ -168,7 +168,7 @@
             task = [NSString stringWithFormat:@"%@ (%@)", entry.task, entry.projectName];
         }
 
-        [dayLines addObject:[NSString stringWithFormat:@"  %@ – %@   %@   %@",
+        [dayLines addObject:[NSString stringWithFormat:@"  %@, %@   %@   %@",
                              [timeFormatter stringFromDate:entry.startDate],
                              entry.endDate ? [timeFormatter stringFromDate:entry.endDate]
                                            : NSLocalizedString(@"report.ongoing", nil),

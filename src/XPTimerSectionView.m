@@ -448,7 +448,7 @@
 
     NSTextField *name = label([XPTheme fontBody], [XPTheme text]);
     name.stringValue = entry.task.length > 0
-        ? [NSString stringWithFormat:@"%@ — %@", entry.task, entry.projectName]
+        ? [NSString stringWithFormat:@"%@, %@", entry.task, entry.projectName]
         : (entry.projectName ?: @"");
 
     NSTextField *duration = label([NSFont monospacedDigitSystemFontOfSize:11
@@ -458,7 +458,7 @@
     duration.alignment = NSTextAlignmentRight;
 
     NSTextField *range = label([XPTheme fontSmall], [XPTheme textMuted]);
-    range.stringValue = [NSString stringWithFormat:@"%@ – %@",
+    range.stringValue = [NSString stringWithFormat:@"%@, %@",
                          [formatter stringFromDate:entry.startDate],
                          entry.endDate ? [formatter stringFromDate:entry.endDate] : @"…"];
     range.alignment = NSTextAlignmentRight;

@@ -38,7 +38,7 @@ extern NSString *const XPActionMessageNotification;
 - (void)openDashboard;
 - (void)openPhpMyAdmin;
 - (void)openHtdocs;
-- (void)openXamppFolder;
+- (void)openVxostFolder;
 - (void)revealFile:(NSString *)path;
 /// Apre nel browser il progetto servito da un virtual host.
 - (void)openVirtualHost:(XPVirtualHost *)host;

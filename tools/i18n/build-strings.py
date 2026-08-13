@@ -81,7 +81,7 @@ def write_strings(catalog):
         os.makedirs(directory, exist_ok=True)
 
         lines = [
-            "/* Generato da tools/i18n/build-strings.py — non modificare a mano.",
+            "/* Generato da tools/i18n/build-strings.py, non modificare a mano.",
             "   Le traduzioni vivono in tools/i18n/catalog.json. */",
             "",
         ]
