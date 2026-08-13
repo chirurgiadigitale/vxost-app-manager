@@ -12,11 +12,11 @@
 
 "alert.missing.title" = "No se encontró la instalación de VXOST";
 
-/* Sottotitolo della finestra: %1$@ versione VXOST, %2$@ versione del restyling */
-"app.subtitle.full" = "VXOST %1$@ · v%2$@ rediseño";
+/* Sottotitolo della finestra: %1$@ versione dello stack, %2$@ versione di VXOST */
+"app.subtitle.full" = "Stack %1$@ · VXOST v%2$@";
 
-/* Sottotitolo quando la versione di VXOST non è leggibile */
-"app.subtitle.short" = "v%@ rediseño";
+/* Sottotitolo quando la versione dello stack non e' leggibile */
+"app.subtitle.short" = "VXOST v%@";
 
 /* Badge compatto nel popover */
 "badge.allRunning" = "todo activo";

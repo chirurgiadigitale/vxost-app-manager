@@ -12,11 +12,11 @@
 
 "alert.missing.title" = "未找到 VXOST 安装";
 
-/* Sottotitolo della finestra: %1$@ versione VXOST, %2$@ versione del restyling */
-"app.subtitle.full" = "VXOST %1$@ · v%2$@ 新界面";
+/* Sottotitolo della finestra: %1$@ versione dello stack, %2$@ versione di VXOST */
+"app.subtitle.full" = "Stack %1$@ · VXOST v%2$@";
 
-/* Sottotitolo quando la versione di VXOST non è leggibile */
-"app.subtitle.short" = "v%@ 新界面";
+/* Sottotitolo quando la versione dello stack non e' leggibile */
+"app.subtitle.short" = "VXOST v%@";
 
 /* Badge compatto nel popover */
 "badge.allRunning" = "全部运行";

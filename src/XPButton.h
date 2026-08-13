@@ -9,7 +9,7 @@
 #import <Cocoa/Cocoa.h>
 
 typedef NS_ENUM(NSInteger, XPButtonStyle) {
-    XPButtonStylePrimary,  ///< pieno, arancione accento
+    XPButtonStylePrimary,  ///< pieno, magenta accento
     XPButtonStyleGhost,    ///< superficie tenue con bordo
     XPButtonStyleDanger,   ///< bordo e testo rossi
     XPButtonStyleQuiet     ///< solo testo, per il footer

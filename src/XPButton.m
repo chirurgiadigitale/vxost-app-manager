@@ -99,6 +99,10 @@
 
     switch (self.style) {
         case XPButtonStylePrimary:
+            // Tinta unita, non il gradiente: sopra il gradiente nessun colore di
+            // testo regge per tutta la scala. Il nero sparisce sul blu iniziale
+            // (1.87:1), il bianco sull'arancione finale (2.51:1). Il pulsante di
+            // download sul sito e' pieno per la stessa ragione.
             fill   = [XPTheme accent];
             stroke = nil;
             label  = [XPTheme accentInk];
