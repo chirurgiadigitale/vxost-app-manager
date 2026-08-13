@@ -213,7 +213,7 @@ static const CGFloat XPRowH         = 52.0;
 }
 
 - (void)openVxostFolder:(id)sender {
-    [self.delegate panelDidRequestOpenFile:XPRoot];
+    [self.delegate panelDidRequestOpenFile:[XPPaths installRoot]];
 }
 
 #pragma mark - Aggiornamento

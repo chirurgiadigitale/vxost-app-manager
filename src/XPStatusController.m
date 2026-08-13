@@ -257,7 +257,7 @@
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = NSLocalizedString(@"alert.missing.title", nil);
     alert.informativeText = [NSString stringWithFormat:
-        NSLocalizedString(@"alert.missing.body", nil), XPControlScript];
+        NSLocalizedString(@"alert.missing.body", nil), [XPPaths controlScript]];
     alert.alertStyle = NSAlertStyleWarning;
     [alert addButtonWithTitle:NSLocalizedString(@"btn.understood", nil)];
     [alert runModal];

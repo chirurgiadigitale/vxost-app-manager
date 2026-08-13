@@ -8,13 +8,18 @@
 
 #import <Foundation/Foundation.h>
 
-/// Radice dell'installazione: /Applications/VXOST/vxostfiles
-extern NSString *const XPRoot;
-
-/// Script di controllo ufficiale (start/stop/reload/backup/ssl/security).
-extern NSString *const XPControlScript;
-
 @interface XPPaths : NSObject
+
+/// La radice dell'installazione, decisa a runtime.
+///
+/// Non e' una costante perche' non puo' esserlo: durante la transizione dei
+/// nomi convivono la vecchia cartella e la nuova, e un percorso compilato
+/// rende l'app inservibile su meta' delle macchine.
++ (NSString *)installRoot;
+
+/// Lo script di controllo dentro quella radice
+/// (start/stop/reload/backup/ssl/security).
++ (NSString *)controlScript;
 
 /// Percorso assoluto a partire dalla radice VXOST.
 + (NSString *)root:(NSString *)relative;

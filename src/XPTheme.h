@@ -55,13 +55,22 @@ extern NSString *const XPThemeDidChangeNotification;
 
 #pragma mark - Accenti
 
-+ (NSColor *)accent;       // --accent    arancione ufficiale VXOST
++ (NSColor *)accent;       // --accent    magenta ufficiale VXOST
 + (NSColor *)accentInk;    // --accent-ink
 + (NSColor *)cyan;         // --cyan      dati e database
 + (NSColor *)violet;       // --violet    codice e tooling
 + (NSColor *)amber;        // --amber     avvisi
 + (NSColor *)danger;       // --danger    errori
-+ (NSColor *)running;      // stato attivo (verde, unico colore fuori scala: lo stato
++ (NSColor *)running;
+
+/// Il gradiente di marchio, dal blu all'arancione.
+///
+/// Decorativo soltanto: nessuno dei suoi capi tiene il contrasto su entrambi i
+/// fondi, quindi non ci va mai del testo sopra. Per il testo c'e' accent.
++ (NSGradient *)brandGradient;
+
+/// Disegna il gradiente in un rettangolo, in diagonale come sul sito.
++ (void)drawBrandGradientInRect:(NSRect)rect;      // stato attivo (verde, unico colore fuori scala: lo stato
                            // "acceso" va letto a colpo d'occhio anche da daltonici
                            // insieme alla forma del pallino)
 

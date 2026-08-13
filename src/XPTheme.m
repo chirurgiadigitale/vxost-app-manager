@@ -100,6 +100,32 @@ static NSColor *Dyn(NSColor *dark, NSColor *light) {
 + (NSColor *)violet    { return Dyn(Hex(0xFC8A7E, 1.0), Hex(0xB03A1E, 1.0)); }
 + (NSColor *)amber     { return Dyn(Hex(0xFA8406, 1.0), Hex(0x7E4207, 1.0)); }
 + (NSColor *)danger    { return Dyn(Hex(0xFF5C5C, 1.0), Hex(0xA3200D, 1.0)); }
+
+#pragma mark - Gradiente di marchio
+
+// Gli stessi cinque capi del sito e dell'icona: blu, viola, magenta, corallo,
+// arancione. Sono fissi, non dinamici: il gradiente e' il marchio e resta
+// identico sui due temi, come l'icona nel Dock.
++ (NSGradient *)brandGradient {
+    static NSGradient *g = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        g = [[NSGradient alloc] initWithColorsAndLocations:
+             Hex(0x0E05D0, 1.0), 0.00,
+             Hex(0x6619E3, 1.0), 0.26,
+             Hex(0xFD3BFC, 1.0), 0.55,
+             Hex(0xFC6D5F, 1.0), 0.78,
+             Hex(0xFA8406, 1.0), 1.00,
+             nil];
+    });
+    return g;
+}
+
++ (void)drawBrandGradientInRect:(NSRect)rect {
+    // 45 gradi, dal basso a sinistra all'alto a destra: la stessa diagonale
+    // dell'icona e della testata del sito.
+    [[self brandGradient] drawInRect:rect angle:45.0];
+}
 + (NSColor *)running   { return Dyn(Hex(0x3FD68C, 1.0), Hex(0x0F7A47, 1.0)); }
 
 #pragma mark - Tipografia

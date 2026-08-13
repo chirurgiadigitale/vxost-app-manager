@@ -143,7 +143,7 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 }
 
 - (void)openVxostFolder {
-    [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:XPRoot]];
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:[XPPaths installRoot]]];
 }
 
 - (void)revealFile:(NSString *)path {
@@ -199,7 +199,7 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 /// Apre il Terminale sul comando indicato: `security` e `backup` fanno domande
 /// e in esecuzione silenziosa resterebbero appesi in attesa di risposta.
 - (void)runInTerminal:(NSString *)action {
-    NSString *command = [NSString stringWithFormat:@"sudo '%@' %@", XPControlScript, action];
+    NSString *command = [NSString stringWithFormat:@"sudo '%@' %@", [XPPaths controlScript], action];
     NSString *source = [NSString stringWithFormat:
         @"tell application \"Terminal\"\n"
         @"  activate\n"

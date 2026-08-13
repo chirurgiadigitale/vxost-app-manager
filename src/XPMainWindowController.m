@@ -48,6 +48,44 @@ static const CGFloat XPWinPadding = 22.0;
 @end
 
 
+
+#pragma mark - Testata di marchio
+
+/// Fascia con il gradiente ufficiale, come la testata del sito.
+///
+/// Il velo non e' decorazione: sopra il gradiente nudo il testo chiaro
+/// sparisce, il magenta arriva a 2.9:1 contro il bianco. Denso a sinistra dove
+/// stanno il titolo e la versione, leggero a destra dove non c'e' scritto
+/// niente e l'immagine si vede.
+@interface XPBrandHeaderView : NSView
+@end
+
+@implementation XPBrandHeaderView
+
+- (BOOL)isOpaque { return NO; }
+
+- (void)drawRect:(NSRect)dirtyRect {
+    [XPTheme drawBrandGradientInRect:self.bounds];
+
+    NSColor *veil = [XPTheme isDark]
+        ? [NSColor colorWithSRGBRed:0.027 green:0.043 blue:0.086 alpha:1.0]
+        : [NSColor colorWithSRGBRed:0.957 green:0.969 blue:0.988 alpha:1.0];
+
+    NSGradient *fade = [[NSGradient alloc] initWithColorsAndLocations:
+                        [veil colorWithAlphaComponent:0.90], 0.00,
+                        [veil colorWithAlphaComponent:0.88], 0.46,
+                        [veil colorWithAlphaComponent:0.55], 0.74,
+                        [veil colorWithAlphaComponent:0.34], 1.00,
+                        nil];
+    [fade drawInRect:self.bounds angle:0.0];
+
+    // Un filo di gradiente pieno in basso, dove nessun testo lo attraversa.
+    NSRect line = NSMakeRect(0, 0, NSWidth(self.bounds), 2.0);
+    [XPTheme drawBrandGradientInRect:line];
+}
+
+@end
+
 @implementation XPMainWindowController
 
 + (instancetype)shared {
@@ -183,7 +221,7 @@ static const CGFloat XPWinPadding = 22.0;
 }
 
 - (void)addHeader {
-    NSView *header = [[NSView alloc] init];
+    XPBrandHeaderView *header = [[XPBrandHeaderView alloc] init];
     header.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSImageView *iconView = [[NSImageView alloc] init];
