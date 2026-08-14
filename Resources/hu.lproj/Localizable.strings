@@ -223,6 +223,36 @@
 
 "msg.terminalOpened" = "A parancs megnyílt a Terminálban";
 
+/* Il nome della versione compilata nello stack */
+"php.bundled" = "a beépített verzió";
+
+/* Esito: cambiata. %1$@ progetto, %2$@ versione */
+"php.done" = "%1$@ mostantól ezen fut: %2$@";
+
+/* Esito: usava già quella versione */
+"php.done.nochange" = "Már azt a verziót használta.";
+
+/* Errore: il progetto è spento */
+"php.err.disabled" = "Ez a projekt ki van kommentelve. Előbb kapcsold vissza.";
+
+/* Errore: manca php-fpm per quella versione */
+"php.err.nofpm" = "Ahhoz a PHP-hoz nincs php-fpm, így nem tud projektet kiszolgálni.";
+
+/* Errore: il pool php-fpm non è partito */
+"php.err.pool" = "A PHP elindult, de sosem nyitotta meg a socketjét.";
+
+/* Avanzamento: si sta preparando la versione */
+"php.progress.pool" = "A PHP előkészítése…";
+
+/* Suggerimento del pulsante della versione */
+"php.tooltip" = "Kattints a projekt verziójának módosításához.";
+
+/* Suggerimento quando la versione indicata non c'è. %@ è il socket */
+"php.tooltip.missing" = "Ez a projekt a(z) %@ címre mutat, és egyetlen telepített PHP sem szolgálja ki azt a socketet. Addig nem fut, amíg nem választasz egyet.";
+
+/* Etichetta quando il socket non corrisponde a nessuna versione */
+"php.unknown" = "PHP ?";
+
 "progress.disablingSSL" = "SSL letiltása…";
 
 "progress.enablingSSL" = "SSL engedélyezése…";

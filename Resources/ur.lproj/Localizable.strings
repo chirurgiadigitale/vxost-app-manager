@@ -223,6 +223,36 @@
 
 "msg.terminalOpened" = "کمانڈ ٹرمینل میں کھولی گئی";
 
+/* Il nome della versione compilata nello stack */
+"php.bundled" = "شامل ورژن";
+
+/* Esito: cambiata. %1$@ progetto, %2$@ versione */
+"php.done" = "%1$@ اب %2$@ پر چل رہا ہے";
+
+/* Esito: usava già quella versione */
+"php.done.nochange" = "یہ پہلے ہی وہ ورژن استعمال کر رہا تھا۔";
+
+/* Errore: il progetto è spento */
+"php.err.disabled" = "یہ پروجیکٹ کمنٹ میں ہے۔ پہلے اسے واپس چالو کریں۔";
+
+/* Errore: manca php-fpm per quella versione */
+"php.err.nofpm" = "اس PHP میں php-fpm نہیں، اس لیے یہ پروجیکٹ فراہم نہیں کر سکتا۔";
+
+/* Errore: il pool php-fpm non è partito */
+"php.err.pool" = "PHP شروع ہوا مگر اس نے اپنا ساکٹ کبھی نہیں کھولا۔";
+
+/* Avanzamento: si sta preparando la versione */
+"php.progress.pool" = "PHP تیار کیا جا رہا ہے…";
+
+/* Suggerimento del pulsante della versione */
+"php.tooltip" = "اس پروجیکٹ کے لیے بدلنے کو کلک کریں۔";
+
+/* Suggerimento quando la versione indicata non c'è. %@ è il socket */
+"php.tooltip.missing" = "یہ پروجیکٹ %@ کی طرف اشارہ کرتا ہے، اور کوئی نصب شدہ PHP وہ ساکٹ فراہم نہیں کرتا۔ جب تک آپ ایک نہ چنیں یہ نہیں چلے گا۔";
+
+/* Etichetta quando il socket non corrisponde a nessuna versione */
+"php.unknown" = "PHP ?";
+
 "progress.disablingSSL" = "SSL غیر فعال ہو رہا ہے…";
 
 "progress.enablingSSL" = "SSL فعال ہو رہا ہے…";

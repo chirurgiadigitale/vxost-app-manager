@@ -26,6 +26,14 @@ typedef NS_ENUM(NSInteger, XPVHostState) {
 /// Repository a cui appartiene il progetto servito, nil se non ne ha uno.
 @property (nonatomic, strong) XPGitInfo *git;
 
+/// Il socket php-fpm che il blocco indica, nil se il progetto usa la versione
+/// compilata nello stack.
+///
+/// ⚠️ È il socket e non la versione: nel file c'è scritto solo quello. La
+/// versione la sa XPPhpVersion, che i socket li costruisce, e i due si
+/// incrociano lì.
+@property (nonatomic, copy) NSString *phpSocket;
+
 /// Legge httpd-vhosts.conf e restituisce i virtual host in ordine di porta,
 /// blocchi commentati compresi. Da chiamare fuori dal main thread.
 + (NSArray<XPVirtualHost *> *)allHosts;
@@ -33,6 +41,19 @@ typedef NS_ENUM(NSInteger, XPVHostState) {
 /// Come sopra ma da un file indicato, e senza sondare le porte.
 /// Esposto per poter provare il parser su configurazioni di esempio.
 + (NSArray<XPVirtualHost *> *)hostsFromFile:(NSString *)path probePorts:(BOOL)probe;
+
+/// Riscrive una configurazione mettendo, o togliendo, il blocco PHP di un
+/// virtual host. Restituisce nil se non c'è niente da cambiare.
+///
+/// `directive` è quello che produce -[XPPhpVersion virtualHostDirective]:
+/// stringa vuota per tornare alla versione dello stack.
+///
+/// ⚠️ Tocca solo il blocco attivo di quella porta. Un blocco commentato resta
+/// com'è: è un progetto spento, e cambiargli il PHP senza che nessuno lo veda
+/// vuol dire lasciargli una sorpresa per il giorno in cui lo riaccende.
++ (NSString *)configuration:(NSString *)configuration
+                 settingPhp:(NSString *)directive
+                    forPort:(NSInteger)port;
 
 /// URL da aprire nel browser.
 - (NSURL *)url;

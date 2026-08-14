@@ -223,6 +223,36 @@
 
 "msg.terminalOpened" = "已在终端中打开命令";
 
+/* Il nome della versione compilata nello stack */
+"php.bundled" = "内置版本";
+
+/* Esito: cambiata. %1$@ progetto, %2$@ versione */
+"php.done" = "%1$@ 现在运行在 %2$@ 上";
+
+/* Esito: usava già quella versione */
+"php.done.nochange" = "它本来就在用那个版本。";
+
+/* Errore: il progetto è spento */
+"php.err.disabled" = "该项目被注释掉了。请先重新启用。";
+
+/* Errore: manca php-fpm per quella versione */
+"php.err.nofpm" = "那个 PHP 没有 php-fpm，无法为项目提供服务。";
+
+/* Errore: il pool php-fpm non è partito */
+"php.err.pool" = "PHP 启动了，但一直没有打开它的套接字。";
+
+/* Avanzamento: si sta preparando la versione */
+"php.progress.pool" = "正在准备 PHP…";
+
+/* Suggerimento del pulsante della versione */
+"php.tooltip" = "点击可为该项目更改。";
+
+/* Suggerimento quando la versione indicata non c'è. %@ è il socket */
+"php.tooltip.missing" = "该项目指向 %@，但没有已安装的 PHP 提供这个套接字。在你选择之前它不会运行。";
+
+/* Etichetta quando il socket non corrisponde a nessuna versione */
+"php.unknown" = "PHP ?";
+
 "progress.disablingSSL" = "正在停用 SSL…";
 
 "progress.enablingSSL" = "正在启用 SSL…";

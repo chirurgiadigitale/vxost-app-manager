@@ -31,7 +31,7 @@ CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS)
 # tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security
 
-.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest exposuretest
+.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest exposuretest phptest
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
@@ -106,7 +106,15 @@ exposuretest:
 		tests/exposuretest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/exposuretest
 
-test: wizardtest updatetest exposuretest
+# La versione di PHP per progetto: il blocco che si aggiunge, si sostituisce e
+# si toglie dentro un <VirtualHost>, senza toccare quello che gli sta intorno.
+phptest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/phptest \
+		tests/phptest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/phptest
+
+test: wizardtest updatetest exposuretest phptest
 
 # L'app va in /Applications, non dentro la cartella dello stack.
 #

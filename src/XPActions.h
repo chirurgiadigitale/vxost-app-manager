@@ -14,6 +14,7 @@
 #import <Cocoa/Cocoa.h>
 #import "XPService.h"
 #import "XPVirtualHost.h"
+
 #import "XPPhpVersion.h"
 
 /// Inviata a ogni esito. userInfo: @{@"message": NSString, @"isError": NSNumber}
@@ -89,6 +90,27 @@ extern NSString *const XPActionMessageNotification;
 #pragma mark - Utilità
 
 /// Diffonde un messaggio verso le interfacce.
+/// Cambia la versione di PHP con cui un progetto viene servito.
+///
+/// Passando nil si torna a quella compilata nello stack. Se la versione
+/// scelta ha un pool php-fpm che non gira, viene avviato prima: scrivere il
+/// virtual host per primo darebbe 503 finché il pool non c'è.
+- (void)setPhpVersion:(XPPhpVersion *)version
+              forHost:(XPVirtualHost *)host
+           completion:(void (^)(BOOL ok))completion;
+
+/// Mette i file preparati al posto di quelli veri, con copia di sicurezza,
+/// `httpd -t` e ripristino se la validazione fallisce. Le chiavi sono i file
+/// da sostituire, i valori i file preparati.
+///
+/// ⚠️ È l'unico posto in cui la configurazione di Apache viene scritta. Averne
+/// due vorrebbe dire due reti di sicurezza da tenere allineate, e quella che
+/// si dimentica è sempre l'altra.
+- (void)replaceConfiguration:(NSDictionary<NSString *, NSString *> *)staged
+                    progress:(NSString *)progress
+                     success:(NSString *)success
+                  completion:(void (^)(BOOL ok))completion;
+
 - (void)postMessage:(NSString *)message isError:(BOOL)isError;
 
 @end

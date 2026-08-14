@@ -223,6 +223,36 @@
 
 "msg.terminalOpened" = "Komut Terminal'de açıldı";
 
+/* Il nome della versione compilata nello stack */
+"php.bundled" = "kutudaki sürüm";
+
+/* Esito: cambiata. %1$@ progetto, %2$@ versione */
+"php.done" = "%1$@ artık %2$@ ile çalışıyor";
+
+/* Esito: usava già quella versione */
+"php.done.nochange" = "Zaten o sürümü kullanıyordu.";
+
+/* Errore: il progetto è spento */
+"php.err.disabled" = "Bu proje yorum satırına alınmış. Önce geri açın.";
+
+/* Errore: manca php-fpm per quella versione */
+"php.err.nofpm" = "O PHP'de php-fpm yok, bu yüzden bir projeyi sunamaz.";
+
+/* Errore: il pool php-fpm non è partito */
+"php.err.pool" = "PHP başladı ama soketini hiç açmadı.";
+
+/* Avanzamento: si sta preparando la versione */
+"php.progress.pool" = "PHP hazırlanıyor…";
+
+/* Suggerimento del pulsante della versione */
+"php.tooltip" = "Bu proje için değiştirmek üzere tıklayın.";
+
+/* Suggerimento quando la versione indicata non c'è. %@ è il socket */
+"php.tooltip.missing" = "Bu proje %@ adresini gösteriyor ve kurulu hiçbir PHP bu soketi sunmuyor. Bir tane seçene kadar çalışmaz.";
+
+/* Etichetta quando il socket non corrisponde a nessuna versione */
+"php.unknown" = "PHP ?";
+
 "progress.disablingSSL" = "SSL devre dışı bırakılıyor…";
 
 "progress.enablingSSL" = "SSL etkinleştiriliyor…";

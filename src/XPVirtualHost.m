@@ -94,7 +94,25 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
         }
 
         NSString *serverName = DirectiveValue(line, @"ServerName");
-        if (serverName) current.serverName = serverName;
+        if (serverName) {
+            current.serverName = serverName;
+            continue;
+        }
+
+        // SetHandler "proxy:unix:/tmp/vxost-php85.sock|fcgi://localhost"
+        //
+        // Si cerca la sottostringa invece di analizzare la direttiva: sta
+        // dentro un <FilesMatch>, quindi non è in cima al blocco, e la
+        // funzione che legge le direttive vuole la riga che comincia con il
+        // nome. Qui interessa solo il percorso fra "unix:" e la barra.
+        NSRange unix = [line rangeOfString:@"proxy:unix:"];
+        if (unix.location != NSNotFound) {
+            NSString *rest = [line substringFromIndex:NSMaxRange(unix)];
+            NSRange pipe = [rest rangeOfString:@"|"];
+            if (pipe.location != NSNotFound) {
+                current.phpSocket = [rest substringToIndex:pipe.location];
+            }
+        }
     }
 
     // Il repository si cerca una volta sola per host: sono due file di testo
@@ -119,6 +137,101 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
         return a.port < b.port ? NSOrderedAscending : NSOrderedDescending;
     }];
     return hosts;
+}
+
++ (NSString *)configuration:(NSString *)configuration
+                 settingPhp:(NSString *)directive
+                    forPort:(NSInteger)port {
+
+    NSMutableArray<NSString *> *out = [NSMutableArray array];
+    NSMutableArray<NSString *> *pendingComments = [NSMutableArray array];
+    NSMutableArray<NSString *> *filesMatch = nil;
+    BOOL inTarget = NO;
+    BOOL changed = NO;
+
+    NSString *wanted = directive ?: @"";
+
+    for (NSString *raw in [configuration componentsSeparatedByString:@"\n"]) {
+        NSString *line = [raw stringByTrimmingCharactersInSet:
+                          [NSCharacterSet whitespaceCharacterSet]];
+        NSString *lower = [line lowercaseString];
+
+        // Dentro un <FilesMatch> si accumula: se contiene un socket php-fpm il
+        // blocco intero sparisce, altrimenti torna dov'era. Deciderlo riga per
+        // riga cancellerebbe anche i FilesMatch che non c'entrano niente.
+        if (filesMatch) {
+            [filesMatch addObject:raw];
+            if ([lower hasPrefix:@"</filesmatch"]) {
+                BOOL isPhpPool = NO;
+                for (NSString *buffered in filesMatch) {
+                    if ([buffered containsString:@"proxy:unix:"]) { isPhpPool = YES; break; }
+                }
+                if (isPhpPool) {
+                    changed = YES;              // il vecchio blocco se ne va
+                    [pendingComments removeAllObjects];
+                } else {
+                    [out addObjectsFromArray:pendingComments];
+                    [pendingComments removeAllObjects];
+                    [out addObjectsFromArray:filesMatch];
+                }
+                filesMatch = nil;
+            }
+            continue;
+        }
+
+        if (inTarget && [lower hasPrefix:@"<filesmatch"]) {
+            filesMatch = [@[raw] mutableCopy];
+            continue;
+        }
+
+        // I commenti in attesa: quelli che il blocco PHP si porta dietro se ne
+        // vanno con lui, gli altri restano. Finché non si sa cosa segue, si
+        // tengono da parte.
+        if (inTarget && [line hasPrefix:@"#"]) {
+            [pendingComments addObject:raw];
+            continue;
+        }
+        [out addObjectsFromArray:pendingComments];
+        [pendingComments removeAllObjects];
+
+        if ([lower hasPrefix:@"<virtualhost"]) {
+            // ⚠️ Solo i blocchi vivi. Il confronto sul raw e non sul trimmed
+            // ripulito: un blocco commentato comincia con # e qui non deve
+            // entrare.
+            NSRange colon = [line rangeOfString:@":"];
+            NSRange close = [line rangeOfString:@">"];
+            inTarget = NO;
+            if (colon.location != NSNotFound && close.location != NSNotFound &&
+                close.location > colon.location) {
+                NSString *text = [line substringWithRange:
+                                  NSMakeRange(colon.location + 1,
+                                              close.location - colon.location - 1)];
+                inTarget = text.integerValue == port;
+            }
+            [out addObject:raw];
+            continue;
+        }
+
+        if (inTarget && [lower hasPrefix:@"</virtualhost"]) {
+            if (wanted.length > 0) {
+                // La direttiva finisce già con un a capo: si divide e si
+                // aggiungono le righe, o nel file resterebbe una riga vuota.
+                for (NSString *piece in [wanted componentsSeparatedByString:@"\n"]) {
+                    if (piece.length > 0) [out addObject:piece];
+                }
+                changed = YES;
+            }
+            inTarget = NO;
+            [out addObject:raw];
+            continue;
+        }
+
+        [out addObject:raw];
+    }
+    [out addObjectsFromArray:pendingComments];
+    if (filesMatch) [out addObjectsFromArray:filesMatch];   // blocco mai chiuso
+
+    return changed ? [out componentsJoinedByString:@"\n"] : nil;
 }
 
 /// Ricava un nome leggibile dal DocumentRoot.

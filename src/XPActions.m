@@ -644,6 +644,176 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 
 #pragma mark - Messaggi
 
+#pragma mark - Versione di PHP di un progetto
+
+- (void)setPhpVersion:(XPPhpVersion *)version
+              forHost:(XPVirtualHost *)host
+           completion:(void (^)(BOOL ok))completion {
+
+    if (!host || host.port <= 0) {
+        if (completion) completion(NO);
+        return;
+    }
+    if (host.state == XPVHostStateDisabled) {
+        [self postMessage:NSLocalizedString(@"php.err.disabled", nil) isError:YES];
+        if (completion) completion(NO);
+        return;
+    }
+
+    NSString *vhosts = [XPPaths root:@"etc/extra/httpd-vhosts.conf"];
+    NSString *text = [NSString stringWithContentsOfFile:vhosts
+                                               encoding:NSUTF8StringEncoding
+                                                  error:NULL];
+    if (!text) {
+        [self postMessage:NSLocalizedString(@"wizard.failed.backup", nil) isError:YES];
+        if (completion) completion(NO);
+        return;
+    }
+
+    NSString *directive = version ? [version virtualHostDirective] : @"";
+    NSString *rewritten = [XPVirtualHost configuration:text
+                                            settingPhp:directive
+                                               forPort:host.port];
+    if (!rewritten) {
+        [self postMessage:NSLocalizedString(@"php.done.nochange", nil) isError:NO];
+        if (completion) completion(YES);
+        return;
+    }
+
+    [self postMessage:NSLocalizedString(@"php.progress.pool", nil) isError:NO];
+
+    // ⚠️ Prima il pool, poi il virtual host. Scrivendo il virtual host per
+    // primo, Apache riparte puntando a un socket che non esiste e il progetto
+    // risponde 503 finché qualcuno non accende il pool: un errore che sembra
+    // un guasto e invece è un ordine sbagliato.
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *poolProblem = version ? [version startPool] : nil;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) self = weakSelf;
+            if (!self) return;
+            if (poolProblem) {
+                [self postMessage:poolProblem isError:YES];
+                if (completion) completion(NO);
+                return;
+            }
+
+            NSString *temporary = [NSTemporaryDirectory() stringByAppendingPathComponent:
+                [NSString stringWithFormat:@"vxost-vhosts-%@.conf", [NSUUID UUID].UUIDString]];
+            if (![rewritten writeToFile:temporary atomically:YES
+                               encoding:NSUTF8StringEncoding error:NULL]) {
+                [self postMessage:NSLocalizedString(@"wizard.failed.backup", nil) isError:YES];
+                if (completion) completion(NO);
+                return;
+            }
+
+            NSString *done = [NSString stringWithFormat:
+                NSLocalizedString(@"php.done", nil), host.name ?: @"",
+                version ? version.description : NSLocalizedString(@"php.bundled", nil)];
+
+            [self replaceConfiguration:@{vhosts: temporary}
+                              progress:NSLocalizedString(@"wizard.progress.vhost", nil)
+                               success:done
+                            completion:^(BOOL ok) {
+                [[NSFileManager defaultManager] removeItemAtPath:temporary error:NULL];
+                if (completion) completion(ok);
+            }];
+        });
+    });
+}
+
+#pragma mark - Scrittura protetta della configurazione
+
+- (void)replaceConfiguration:(NSDictionary<NSString *, NSString *> *)staged
+                    progress:(NSString *)progress
+                     success:(NSString *)success
+                  completion:(void (^)(BOOL ok))completion {
+
+    if (staged.count == 0) {
+        if (completion) completion(YES);
+        return;
+    }
+
+    NSString *root = [XPPaths installRoot];
+    NSString *control = [XPPaths controlScript];
+
+    NSMutableString *script = [NSMutableString string];
+    [script appendString:@"#!/bin/sh\n"];
+    [script appendString:@"# Generato da VXOST. Si cancella da solo.\n"];
+    [script appendString:@"set -u\n\n"];
+    [script appendFormat:@"R='%@'\n", root];
+    [script appendFormat:@"CTL='%@'\n", control];
+    [script appendString:@"HTTPD=\"$R/etc/httpd.conf\"\n"];
+    [script appendString:@"STAMP=$(date +%Y%m%d-%H%M%S)\n\n"];
+
+    // Le copie restano sul disco: sono la via di ritorno anche per chi arriva
+    // dopo, non solo per questo script.
+    for (NSString *source in staged) {
+        [script appendFormat:@"cp '%@' '%@.vxost-$STAMP.bak' || { echo VXOST_BACKUP_FAILED; exit 0; }\n",
+         source, source];
+    }
+    [script appendString:@"\n"];
+    for (NSString *source in staged) {
+        [script appendFormat:@"cat '%@' > '%@'\n", staged[source], source];
+    }
+
+    [script appendString:@"\n# Il controllo prima del riavvio: una configurazione malformata non\n"];
+    [script appendString:@"# lascerebbe giu' un progetto, li lascerebbe giu' tutti.\n"];
+    [script appendString:@"if \"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" 2>&1 | grep -qi 'Syntax OK'; then\n"];
+    [script appendString:@"    if pgrep -x httpd >/dev/null 2>&1; then\n"];
+    [script appendString:@"        \"$CTL\" restartapache >/dev/null 2>&1\n"];
+    [script appendString:@"    else\n"];
+    [script appendString:@"        \"$CTL\" startapache >/dev/null 2>&1\n"];
+    [script appendString:@"    fi\n"];
+    [script appendString:@"    echo VXOST_OK\n"];
+    [script appendString:@"else\n"];
+    for (NSString *source in staged) {
+        [script appendFormat:@"    cp '%@.vxost-$STAMP.bak' '%@'\n", source, source];
+    }
+    [script appendString:@"    echo VXOST_CONFIGTEST_FAILED\n"];
+    [script appendString:@"fi\n"];
+    // ⚠️ Esce sempre con 0: `do shell script` trasforma un'uscita diversa da
+    // zero in un errore AppleScript e il codice vero non arriverebbe mai qui.
+    [script appendString:@"exit 0\n"];
+
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSString *scriptPath = [NSTemporaryDirectory() stringByAppendingPathComponent:
+        [NSString stringWithFormat:@"vxost-config-%@.sh", [NSUUID UUID].UUIDString]];
+    if (![script writeToFile:scriptPath atomically:YES
+                    encoding:NSUTF8StringEncoding error:NULL]) {
+        [self postMessage:NSLocalizedString(@"wizard.failed.backup", nil) isError:YES];
+        if (completion) completion(NO);
+        return;
+    }
+    [fm setAttributes:@{NSFilePosixPermissions: @(0700)} ofItemAtPath:scriptPath error:NULL];
+
+    if (progress.length > 0) [self postMessage:progress isError:NO];
+
+    [XPTaskRunner runPrivilegedShell:[NSString stringWithFormat:@"/bin/sh '%@'", scriptPath]
+                          completion:^(XPTaskResult *result) {
+        [fm removeItemAtPath:scriptPath error:NULL];
+
+        BOOL ok = NO;
+        NSString *message;
+        if (result.cancelled) {
+            message = NSLocalizedString(@"msg.cancelled", nil);
+        } else if ([result.output containsString:@"VXOST_BACKUP_FAILED"]) {
+            message = NSLocalizedString(@"wizard.failed.backup", nil);
+        } else if ([result.output containsString:@"VXOST_CONFIGTEST_FAILED"]) {
+            message = NSLocalizedString(@"wizard.failed.configtest", nil);
+        } else if ([result.output containsString:@"VXOST_OK"]) {
+            ok = YES;
+            message = success;
+        } else {
+            message = [self firstMeaningfulLine:result.output];
+        }
+
+        [self postMessage:message isError:!ok];
+        [[XPServiceMonitor shared] refreshNow];
+        if (completion) completion(ok);
+    }];
+}
+
 - (void)postMessage:(NSString *)message isError:(BOOL)isError {
     [[NSNotificationCenter defaultCenter] postNotificationName:XPActionMessageNotification
                                                         object:self

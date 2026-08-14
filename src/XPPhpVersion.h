@@ -37,8 +37,36 @@
 /// Da chiamare fuori dal main thread: interroga i binari.
 + (NSArray<XPPhpVersion *> *)available;
 
+/// Come sopra ma senza rifare la ricerca ogni volta.
+///
+/// ⚠️ Serve alle viste. Trovare le versioni vuol dire lanciare `php -r` per
+/// ogni binario che c'è: farlo a ogni riga della sezione Progetti, a ogni
+/// ridisegno, sono decine di processi per una tendina che cambia una volta al
+/// mese. Si aggiorna da sé dopo un quarto d'ora, e -[XPPhpVersion forget] la
+/// butta via subito.
++ (NSArray<XPPhpVersion *> *)cachedAvailable;
+
+/// Dimentica l'elenco: la prossima richiesta rifà la ricerca.
++ (void)forget;
+
 /// Il blocco da mettere nel virtual host perché il progetto usi questa
 /// versione. Stringa vuota per quella dello stack, che è già il default.
 - (NSString *)virtualHostDirective;
+
+/// La versione che serve su questo socket, fra quelle disponibili.
+/// Passando nil si ottiene quella dello stack, che socket non ne ha.
++ (XPPhpVersion *)versionForSocket:(NSString *)socket;
+
+/// Avvia il pool php-fpm di questa versione, se non gira già.
+/// Restituisce il motivo del fallimento, nil se è andata o se non serviva.
+///
+/// ⚠️ Il pool gira come l'utente, non come root. Un php-fpm di root eseguirebbe
+/// il codice dei progetti con tutti i permessi della macchina, ed è un prezzo
+/// che non vale la comodità.
+///
+/// ⏳ E non sopravvive al riavvio del Mac: è un processo lanciato a mano, non
+/// un servizio. Finché non c'è un LaunchAgent, un progetto su una versione di
+/// Homebrew va riacceso dall'app dopo ogni riavvio.
+- (NSString *)startPool;
 
 @end

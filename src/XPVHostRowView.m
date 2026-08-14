@@ -5,6 +5,7 @@
 #import "XPVHostRowView.h"
 #import "XPTheme.h"
 #import "XPButton.h"
+#import "XPPhpVersion.h"
 #import "XPActions.h"
 #import "XPLayout.h"
 #import "XPGitInfo.h"
@@ -14,8 +15,13 @@
 @property (nonatomic, strong) XPButton *openButton;
 @property (nonatomic, strong) XPButton *folderButton;
 @property (nonatomic, strong) XPButton *repoButton;
+@property (nonatomic, strong) XPButton *phpButton;
 @end
 
+
+/// Larghezza del pulsante della versione di PHP. "PHP 8.2" ci sta comodo, e
+/// XPButton rimpicciolisce il corpo prima di troncare.
+static const CGFloat XPPhpButtonWidth = 66;
 
 @implementation XPVHostRowView
 
@@ -47,6 +53,29 @@
     }];
     [self addSubview:self.folderButton];
 
+    // La versione di PHP con cui il progetto viene servito.
+    //
+    // ⚠️ Nil vuol dire che il blocco punta a un socket di una versione che
+    // qui non c'è: si scrive "PHP ?" invece di far finta che sia quella dello
+    // stack, perché quel progetto adesso non funziona e la riga deve dirlo.
+    XPPhpVersion *php = [XPPhpVersion versionForSocket:host.phpSocket];
+    NSString *label = php
+        ? [NSString stringWithFormat:@"PHP %@", php.shortVersion]
+        : NSLocalizedString(@"php.unknown", nil);
+
+    __weak typeof(self) weakSelf = self;
+    self.phpButton = [XPButton buttonWithTitle:label
+                                          style:XPButtonStyleQuiet
+                                        onClick:^(XPButton *b) {
+        [weakSelf showPhpMenu:b];
+    }];
+    self.phpButton.toolTip = php
+        ? [NSString stringWithFormat:@"%@\n%@", php.description,
+           NSLocalizedString(@"php.tooltip", nil)]
+        : [NSString stringWithFormat:NSLocalizedString(@"php.tooltip.missing", nil),
+           host.phpSocket ?: @""];
+    [self addSubview:self.phpButton];
+
     // Il repository, se c'è: cliccandolo si apre su GitHub.
     if (host.git.webURL) {
         XPGitInfo *git = host.git;
@@ -77,11 +106,56 @@
     self.folderButton.frame = XPMirror(NSMakeRect(right - 74, y, 74, 24), width);
     self.openButton.frame   = XPMirror(NSMakeRect(right - 74 - 4 - 58, y, 58, 24), width);
 
-    if (self.repoButton) {
-        CGFloat repoWidth = MIN(190, MAX(120, width - 470));
-        self.repoButton.frame = XPMirror(NSMakeRect(right - 74 - 4 - 58 - 6 - repoWidth,
-                                                    y, repoWidth, 24), width);
+    CGFloat cursor = right - 74 - 4 - 58 - 6;
+    if (self.phpButton) {
+        cursor -= XPPhpButtonWidth;
+        self.phpButton.frame = XPMirror(NSMakeRect(cursor, y, XPPhpButtonWidth, 24), width);
+        cursor -= 6;
     }
+    if (self.repoButton) {
+        // Il repository prende quello che resta, fra un minimo e un massimo.
+        // Senza il minimo, su finestre strette la sua cornice finisce sotto
+        // quella del PHP e i due pulsanti si sovrappongono.
+        CGFloat repoWidth = MIN(190, MAX(120, width - 470 - XPPhpButtonWidth));
+        self.repoButton.frame = XPMirror(NSMakeRect(cursor - repoWidth, y, repoWidth, 24),
+                                         width);
+    }
+}
+
+/// La tendina delle versioni. Si costruisce al clic e non alla creazione della
+/// riga: un menu costruito in anticipo è un menu che invecchia, e installare
+/// una versione con Homebrew non dovrebbe richiedere di riavviare l'app.
+- (void)showPhpMenu:(XPButton *)sender {
+    XPVirtualHost *host = self.host;
+    XPPhpVersion *now = [XPPhpVersion versionForSocket:host.phpSocket];
+
+    NSMenu *menu = [[NSMenu alloc] init];
+    for (XPPhpVersion *version in [XPPhpVersion cachedAvailable]) {
+        NSMenuItem *item = [menu addItemWithTitle:version.description
+                                           action:@selector(phpChosen:)
+                                    keyEquivalent:@""];
+        item.target = self;
+        item.representedObject = version;
+        if (now && [now.version isEqualToString:version.version]) {
+            item.state = NSControlStateValueOn;
+        }
+    }
+    if (menu.numberOfItems == 0) {
+        [menu addItemWithTitle:NSLocalizedString(@"wizard.php.none", nil)
+                        action:NULL keyEquivalent:@""];
+    }
+    [menu popUpMenuPositioningItem:nil
+                        atLocation:NSMakePoint(0, NSHeight(sender.bounds))
+                            inView:sender];
+}
+
+- (void)phpChosen:(NSMenuItem *)item {
+    XPPhpVersion *version = item.representedObject;
+    if (!version) return;
+    // Quella dello stack si passa come nil: vuol dire "togli il blocco".
+    [[XPActions shared] setPhpVersion:version.isBundled ? nil : version
+                              forHost:self.host
+                           completion:nil];
 }
 
 - (void)drawRect:(NSRect)dirtyRect {
@@ -117,7 +191,8 @@
     // Nome del progetto, troncato se non ci sta.
     CGFloat nameX = 70;
     CGFloat available = NSWidth(self.bounds) - nameX - (disabled ? 200 : 150)
-                        - (self.repoButton ? NSWidth(self.repoButton.frame) + 6 : 0);
+                        - (self.repoButton ? NSWidth(self.repoButton.frame) + 6 : 0)
+                        - (self.phpButton ? XPPhpButtonWidth + 6 : 0);
 
     NSDictionary *nameAttrs = @{
         NSFontAttributeName: [XPTheme fontBody],

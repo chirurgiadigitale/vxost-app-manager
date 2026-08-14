@@ -223,6 +223,36 @@
 
 "msg.terminalOpened" = "Comando aberto no Terminal";
 
+/* Il nome della versione compilata nello stack */
+"php.bundled" = "a versão que vem junto";
+
+/* Esito: cambiata. %1$@ progetto, %2$@ versione */
+"php.done" = "%1$@ agora roda em %2$@";
+
+/* Esito: usava già quella versione */
+"php.done.nochange" = "Já estava usando essa versão.";
+
+/* Errore: il progetto è spento */
+"php.err.disabled" = "Este projeto está comentado. Reative-o primeiro.";
+
+/* Errore: manca php-fpm per quella versione */
+"php.err.nofpm" = "Esse PHP não tem php-fpm, então não pode servir um projeto.";
+
+/* Errore: il pool php-fpm non è partito */
+"php.err.pool" = "O PHP iniciou mas nunca abriu seu socket.";
+
+/* Avanzamento: si sta preparando la versione */
+"php.progress.pool" = "Preparando o PHP…";
+
+/* Suggerimento del pulsante della versione */
+"php.tooltip" = "Clique para mudar neste projeto.";
+
+/* Suggerimento quando la versione indicata non c'è. %@ è il socket */
+"php.tooltip.missing" = "Este projeto aponta para %@, e nenhum PHP instalado atende esse socket. Não vai funcionar até você escolher um.";
+
+/* Etichetta quando il socket non corrisponde a nessuna versione */
+"php.unknown" = "PHP ?";
+
 "progress.disablingSSL" = "Desativando SSL…";
 
 "progress.enablingSSL" = "Ativando SSL…";

@@ -223,6 +223,36 @@
 
 "msg.terminalOpened" = "ターミナルでコマンドを開きました";
 
+/* Il nome della versione compilata nello stack */
+"php.bundled" = "同梱のバージョン";
+
+/* Esito: cambiata. %1$@ progetto, %2$@ versione */
+"php.done" = "%1$@ は %2$@ で動くようになりました";
+
+/* Esito: usava già quella versione */
+"php.done.nochange" = "すでにそのバージョンを使っていました。";
+
+/* Errore: il progetto è spento */
+"php.err.disabled" = "このプロジェクトはコメントアウトされています。先に戻してください。";
+
+/* Errore: manca php-fpm per quella versione */
+"php.err.nofpm" = "その PHP には php-fpm がないため、プロジェクトを配信できません。";
+
+/* Errore: il pool php-fpm non è partito */
+"php.err.pool" = "PHP は起動しましたが、ソケットを開きませんでした。";
+
+/* Avanzamento: si sta preparando la versione */
+"php.progress.pool" = "PHP を準備しています…";
+
+/* Suggerimento del pulsante della versione */
+"php.tooltip" = "クリックすると、このプロジェクトの分だけ変えられます。";
+
+/* Suggerimento quando la versione indicata non c'è. %@ è il socket */
+"php.tooltip.missing" = "このプロジェクトは %@ を指していますが、そのソケットを提供する PHP はインストールされていません。選ぶまで動きません。";
+
+/* Etichetta quando il socket non corrisponde a nessuna versione */
+"php.unknown" = "PHP ?";
+
 "progress.disablingSSL" = "SSL を無効にしています…";
 
 "progress.enablingSSL" = "SSL を有効にしています…";

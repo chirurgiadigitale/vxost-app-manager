@@ -191,92 +191,23 @@ static NSString *const XPLoopback = @"127.0.0.1";
         return;
     }
 
-    NSString *script = [self scriptMoving:staged onto:sources];
-    NSString *scriptPath = [NSTemporaryDirectory() stringByAppendingPathComponent:
-        [NSString stringWithFormat:@"vxost-listen-%@.sh", [NSUUID UUID].UUIDString]];
-    [script writeToFile:scriptPath atomically:YES encoding:NSUTF8StringEncoding error:NULL];
-    [fm setAttributes:@{NSFilePosixPermissions: @(0700)} ofItemAtPath:scriptPath error:NULL];
+    // La scrittura protetta e' una sola, e vive in XPActions: copia di
+    // sicurezza, httpd -t, ripristino se fallisce, riavvio. Averne due
+    // vorrebbe dire due reti di sicurezza da tenere allineate, e quella che si
+    // dimentica e' sempre l'altra.
+    NSMutableDictionary<NSString *, NSString *> *plan = [NSMutableDictionary dictionary];
+    for (NSUInteger i = 0; i < sources.count; i++) plan[sources[i]] = staged[i];
 
-    [[XPActions shared] postMessage:NSLocalizedString(@"exposure.applying", nil) isError:NO];
+    NSString *done = [NSString stringWithFormat:NSLocalizedString(@"exposure.done", nil),
+                      [self nameForScope:scope]];
 
-    [XPTaskRunner runPrivilegedShell:[NSString stringWithFormat:@"/bin/sh '%@'", scriptPath]
-                          completion:^(XPTaskResult *result) {
-        [fm removeItemAtPath:scriptPath error:NULL];
+    [[XPActions shared] replaceConfiguration:plan
+                                    progress:NSLocalizedString(@"exposure.applying", nil)
+                                     success:done
+                                  completion:^(BOOL ok) {
         for (NSString *path in staged) [fm removeItemAtPath:path error:NULL];
-
-        BOOL ok = NO;
-        NSString *message;
-        if (result.cancelled) {
-            message = NSLocalizedString(@"msg.cancelled", nil);
-        } else if ([result.output containsString:@"VXOST_BACKUP_FAILED"]) {
-            message = NSLocalizedString(@"wizard.failed.backup", nil);
-        } else if ([result.output containsString:@"VXOST_CONFIGTEST_FAILED"]) {
-            message = NSLocalizedString(@"wizard.failed.configtest", nil);
-        } else if ([result.output containsString:@"VXOST_OK"]) {
-            ok = YES;
-            message = [NSString stringWithFormat:NSLocalizedString(@"exposure.done", nil),
-                       [self nameForScope:scope]];
-        } else {
-            message = NSLocalizedString(@"wizard.failed.configtest", nil);
-        }
-
-        [[XPActions shared] postMessage:message isError:!ok];
-        [[XPServiceMonitor shared] refreshNow];
         if (completion) completion(ok);
     }];
-}
-
-/// Lo script che mette i file nuovi al posto dei vecchi, e li rimette a posto
-/// se Apache non è d'accordo.
-///
-/// ⚠️ Esce sempre con 0. `do shell script` di AppleScript trasforma un'uscita
-/// diversa da zero in un errore e il codice vero non arriverebbe mai all'app:
-/// l'esito viaggia come marcatore stampato.
-+ (NSString *)scriptMoving:(NSArray<NSString *> *)staged
-                      onto:(NSArray<NSString *> *)sources {
-
-    NSString *root = [XPPaths installRoot];
-    NSString *control = [XPPaths controlScript];
-
-    NSMutableString *script = [NSMutableString string];
-    [script appendString:@"#!/bin/sh\n"];
-    [script appendString:@"# Generato da VXOST per cambiare chi raggiunge i progetti.\n"];
-    [script appendString:@"set -u\n\n"];
-    [script appendFormat:@"R='%@'\n", root];
-    [script appendFormat:@"CTL='%@'\n", control];
-    [script appendString:@"HTTPD=\"$R/etc/httpd.conf\"\n"];
-    [script appendString:@"STAMP=$(date +%Y%m%d-%H%M%S)\n\n"];
-
-    [script appendString:@"# Le copie restano sul disco: sono la via di ritorno anche per chi\n"];
-    [script appendString:@"# arriva dopo, non solo per questo script.\n"];
-    for (NSString *path in sources) {
-        [script appendFormat:@"cp '%@' '%@.vxost-$STAMP.bak' || { echo VXOST_BACKUP_FAILED; exit 0; }\n",
-         path, path];
-    }
-    [script appendString:@"\n"];
-
-    for (NSUInteger i = 0; i < sources.count; i++) {
-        [script appendFormat:@"cat '%@' > '%@'\n", staged[i], sources[i]];
-    }
-
-    [script appendString:@"\n# Il controllo prima del riavvio: una Listen sbagliata non lascia giù\n"];
-    [script appendString:@"# un progetto, li lascia giù tutti.\n"];
-    [script appendString:@"if \"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" 2>&1 | grep -qi 'Syntax OK'; then\n"];
-    [script appendString:@"    if pgrep -x httpd >/dev/null 2>&1; then\n"];
-    [script appendString:@"        \"$CTL\" restartapache >/dev/null 2>&1\n"];
-    [script appendString:@"    else\n"];
-    [script appendString:@"        \"$CTL\" startapache >/dev/null 2>&1\n"];
-    [script appendString:@"    fi\n"];
-    [script appendString:@"    echo VXOST_OK\n"];
-    [script appendString:@"else\n"];
-    for (NSString *path in sources) {
-        [script appendFormat:@"    cp '%@.vxost-$STAMP.bak' '%@'\n", path, path];
-    }
-    [script appendString:@"    echo VXOST_CONFIGTEST_FAILED\n"];
-    [script appendString:@"fi\n"];
-    [script appendString:@"exit 0\n"];
-
-    return script;
 }
 
 #pragma mark - Nomi

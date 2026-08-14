@@ -223,6 +223,36 @@
 
 "msg.terminalOpened" = "Comandă deschisă în Terminal";
 
+/* Il nome della versione compilata nello stack */
+"php.bundled" = "versiunea inclusă";
+
+/* Esito: cambiata. %1$@ progetto, %2$@ versione */
+"php.done" = "%1$@ rulează acum pe %2$@";
+
+/* Esito: usava già quella versione */
+"php.done.nochange" = "Folosea deja acea versiune.";
+
+/* Errore: il progetto è spento */
+"php.err.disabled" = "Acest proiect este comentat. Reactivează-l mai întâi.";
+
+/* Errore: manca php-fpm per quella versione */
+"php.err.nofpm" = "Acel PHP nu are php-fpm, deci nu poate servi un proiect.";
+
+/* Errore: il pool php-fpm non è partito */
+"php.err.pool" = "PHP a pornit dar nu și-a deschis niciodată socketul.";
+
+/* Avanzamento: si sta preparando la versione */
+"php.progress.pool" = "Se pregătește PHP…";
+
+/* Suggerimento del pulsante della versione */
+"php.tooltip" = "Dă clic ca s-o schimbi pentru acest proiect.";
+
+/* Suggerimento quando la versione indicata non c'è. %@ è il socket */
+"php.tooltip.missing" = "Acest proiect indică spre %@, și niciun PHP instalat nu servește acel socket. Nu va merge până nu alegi unul.";
+
+/* Etichetta quando il socket non corrisponde a nessuna versione */
+"php.unknown" = "PHP ?";
+
 "progress.disablingSSL" = "Se dezactivează SSL…";
 
 "progress.enablingSSL" = "Se activează SSL…";
