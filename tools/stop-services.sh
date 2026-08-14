@@ -134,37 +134,37 @@ fi
 
 say "MySQL"
 if pgrep -x mysqld >/dev/null 2>&1 || pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
-    # ⚠️ Il guardiano per primo. Uccidendo mysqld mentre mysqld_safe e' vivo,
-    # ne parte subito un altro e sembra che MySQL non si fermi mai.
-    if pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
-        pkill -f "bin/mysqld_safe" 2>/dev/null
-        # ⚠️ Non basta dormire un secondo. mysqld_safe resta in giro finche' il
-        # figlio non ha finito di chiudere, e il controllo finale lo trovava
-        # ancora vivo: lo script diceva di aver fallito quando aveva funzionato,
-        # e bisognava rilanciarlo per sentirsi dire che era tutto a posto.
-        i=0
-        while [ $i -lt 30 ] && pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; do
-            sleep 1
-            i=$((i + 1))
-        done
-        if pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
-            fail "mysqld_safe is still there after 30s"
-        else
-            ok "mysqld_safe stopped, nothing will restart it now"
-        fi
-    fi
+    # ⚠️ L'ordine e' questo e non un altro.
+    #
+    # mysqld_safe va segnalato per primo, altrimenti fa ripartire il figlio.
+    # Ma non si puo' aspettare che se ne vada prima di toccare mysqld: il
+    # guardiano resta in attesa proprio del figlio, e i due si aspettano a
+    # vicenda. Si segnalano entrambi, poi si aspetta.
+    pkill -f "bin/mysqld_safe" 2>/dev/null && ok "mysqld_safe signalled"
 
     if pgrep -x mysqld >/dev/null 2>&1; then
         pkill -TERM -x mysqld 2>/dev/null
         echo "  waiting for InnoDB to flush, this can take a while on big databases"
-        if wait_gone mysqld "MySQL" 60; then
-            ok "stopped cleanly"
-        else
-            fail "still running after 60s"
-            echo "      do NOT kill -9: the next start would have to recover from a crash"
-            echo "      wait and check with: pgrep -lx mysqld"
-            exit 1
-        fi
+    fi
+
+    if wait_gone mysqld "MySQL" 60; then
+        ok "mysqld stopped cleanly"
+    else
+        fail "mysqld still running after 60s"
+        echo "      do NOT kill -9: the next start would have to recover from a crash"
+        exit 1
+    fi
+
+    # Ora che il figlio non c'e' piu', il guardiano esce da solo in un istante.
+    i=0
+    while [ $i -lt 15 ] && pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; do
+        sleep 1
+        i=$((i + 1))
+    done
+    if pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
+        fail "mysqld_safe is still there"
+    else
+        ok "mysqld_safe gone"
     fi
 else
     ok "already stopped"
