@@ -68,11 +68,15 @@ if [ -z "$CONTROL" ]; then
     fail "no control script found in $ROOT"
     exit 1
 fi
-if [ "$CONTROL" = "vxost" ]; then
-    ok "the control script is already called vxost, nothing to do"
+echo "  control script: $CONTROL"
+
+# ⚠️ Il nome non basta per dire che il lavoro e' fatto. Dopo un ripristino
+# andato a meta' il file puo' chiamarsi vxost e contenere ancora lo script
+# originale: uscire qui lascerebbe il lavoro a meta' senza dirlo.
+if ! grep -q "XAMPP_ROOT" "$ROOT/$CONTROL" 2>/dev/null; then
+    ok "already renamed inside as well, nothing to do"
     exit 0
 fi
-echo "  control script: $CONTROL"
 
 leftovers=$(grep -rli "xampp" "$ROOT/share/xampp" "$ROOT/$CONTROL" 2>/dev/null | wc -l | tr -d ' ')
 echo "  $leftovers files still carry the old name"
@@ -97,18 +101,38 @@ ok "$BACKUP"
 
 rollback() {
     say "Rolling back"
-    rm -f "$ROOT/vxost"
+    # Se il nome di partenza era gia' vxost, il file va rimesso li' e non
+    # cancellato: cancellarlo lascerebbe l'installazione senza script.
+    [ "$CONTROL" = "vxost" ] || rm -f "$ROOT/vxost"
     rm -rf "$ROOT/share/vxost" "$ROOT/share/vxost-control-panel"
     tar -xf "$BACKUP/share.tar" -C "$ROOT/share" 2>/dev/null
+    # ⚠️ Il symlink va tolto PRIMA della copia. cp segue i collegamenti: senza
+    # questa riga scrive dentro vxost invece che al posto del symlink, e il
+    # ripristino lascia i due nomi incrociati. E' successo.
+    rm -f "$ROOT/$CONTROL"
     cp "$BACKUP/$CONTROL" "$ROOT/$CONTROL"
     chmod 755 "$ROOT/$CONTROL"
     fail "put back as it was, from $BACKUP"
 }
 
 say "Renaming the control script"
-mv "$ROOT/$CONTROL" "$ROOT/vxost" || { rollback; exit 1; }
+# ⚠️ Il file puo' gia' chiamarsi vxost e contenere ancora l'originale: e' lo
+# stato in cui lascia un ripristino andato a meta'. In quel caso non c'e'
+# niente da rinominare, solo il contenuto da riscrivere, e un `mv` di un file
+# su se stesso fallirebbe.
+LEGACY="xampp"
+if [ "$CONTROL" != "vxost" ]; then
+    mv "$ROOT/$CONTROL" "$ROOT/vxost" || { rollback; exit 1; }
+    LEGACY="$CONTROL"
+    ok "$CONTROL -> vxost"
+else
+    ok "already named vxost, only the contents need rewriting"
+fi
 chmod 755 "$ROOT/vxost"
-ok "$CONTROL -> vxost"
+
+# Un eventuale symlink al vecchio nome va tolto ora: piu' avanti va ricreato,
+# e nel frattempo un `cp` che lo seguisse scriverebbe dentro vxost.
+[ -L "$ROOT/$LEGACY" ] && rm -f "$ROOT/$LEGACY"
 
 say "Renaming the scripts it talks to"
 if ! python3 "$HERE/tools/brand-stack.py" "$ROOT"; then
@@ -126,29 +150,52 @@ fi
 say "Leaving the old name reachable, hidden"
 # Dieci anni di abitudini, e ogni guida in rete, dicono `xampp start`. Romperlo
 # per principio costa piu' di quanto renda.
-ln -s "vxost" "$ROOT/$CONTROL" 2>/dev/null
-chflags -h hidden "$ROOT/$CONTROL" 2>/dev/null
-ok "$CONTROL -> vxost, hidden"
+ln -s "vxost" "$ROOT/$LEGACY" 2>/dev/null
+chflags -h hidden "$ROOT/$LEGACY" 2>/dev/null
+ok "$LEGACY -> vxost, hidden"
 
 say "Checking it actually works"
 # ⚠️ Non basta che il file esista: deve rispondere. Un rinominatore che
 # sbaglia una variabile lascia uno script che parte e non fa niente, e ce ne
 # si accorgerebbe solo al primo avvio dei servizi.
-if "$ROOT/vxost" 2>&1 | grep -qi "usage"; then
+# ⚠️ L'uscita si cattura, non si mette in pipe.
+#
+# Con `set -o pipefail` una pipe vale quanto il comando piu' a sinistra che
+# fallisce, quindi `script | grep -q parola` risulta fallito anche quando la
+# parola c'e', se lo script esce con codice diverso da zero. E questo script
+# esce diverso da zero: lanciato da root fa un controllo dei permessi su file
+# che non esistono piu' e se ne lamenta. La rinomina era riuscita ed e' stata
+# annullata da questo, non da un problema vero.
+#
+# Si usa un'azione inesistente e non nessuna azione: il risultato e' lo stesso
+# elenco di comandi, ma e' esplicito che non si vuole eseguire niente.
+answer="$("$ROOT/vxost" --vxost-selfcheck 2>&1 || true)"
+if printf '%s' "$answer" | grep -qi "usage"; then
     ok "vxost answers"
 else
     fail "the renamed script does not answer as expected"
-    "$ROOT/vxost" 2>&1 | head -5 | sed 's/^/      /'
+    printf '%s' "$answer" | head -8 | sed 's/^/      /'
     rollback
     exit 1
 fi
 
-if "$ROOT/bin/httpd" -t -d "$ROOT" -f "$ROOT/etc/httpd.conf" 2>&1 | grep -qi "Syntax OK"; then
+configtest="$("$ROOT/bin/httpd" -t -d "$ROOT" -f "$ROOT/etc/httpd.conf" 2>&1 || true)"
+if printf '%s' "$configtest" | grep -qi "Syntax OK"; then
     ok "Apache configuration still parses"
 else
     fail "the Apache configuration no longer parses"
+    printf '%s' "$configtest" | head -5 | sed 's/^/      /'
     rollback
     exit 1
+fi
+
+leftover=$(grep -rli "xampp" "$ROOT/vxost" "$ROOT/share/vxost" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$leftover" -eq 0 ]; then
+    ok "no script carries the old name any more"
+else
+    echo "  $leftover files still mention it, not fatal:"
+    grep -rli "xampp" "$ROOT/vxost" "$ROOT/share/vxost" 2>/dev/null \
+        | sed "s|$ROOT/|      |"
 fi
 
 say "Done"
