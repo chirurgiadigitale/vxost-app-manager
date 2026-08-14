@@ -98,6 +98,22 @@ def main():
         os.rename(share_old, share_new)
         print("    share/xampp -> share/vxost")
 
+    # ⚠️ etc/xampp e' una CARTELLA DI STATO, non documentazione. Dentro ci sono
+    # startssl, che dice ad Apache di partire con -DSSL, e rights_fixed, che
+    # evita di rifare il controllo dei permessi a ogni avvio.
+    #
+    # Riscrivere il riferimento dentro lo script senza rinominare la cartella
+    # e' peggio che non toccare niente: lo script cerca in etc/vxost, non trova
+    # startssl, e Apache parte senza SSL. La porta 443 resta chiusa e https
+    # smette di rispondere, senza un errore che lo dica. E' successo il 14/08.
+    state_old = os.path.join(payload, "etc", "xampp")
+    state_new = os.path.join(payload, "etc", "vxost")
+    if os.path.isdir(state_old):
+        if os.path.isdir(state_new):
+            shutil.rmtree(state_new)
+        os.rename(state_old, state_new)
+        print("    etc/xampp -> etc/vxost  (startssl, rights_fixed)")
+
     lib_old = os.path.join(share_new, "xampplib")
     if os.path.isfile(lib_old):
         os.rename(lib_old, os.path.join(share_new, "vxostlib"))
@@ -145,6 +161,19 @@ def main():
             print(f"      {where}: {why}")
         return 1
     print(f"    {checked} scripts checked, all parse")
+
+    # Ogni cartella che lo script si aspetta deve esistere davvero. Un
+    # riferimento riscritto che punta nel vuoto non da' errore, cambia solo il
+    # comportamento in silenzio.
+    control_text = ""
+    if os.path.isfile(control):
+        with open(control, encoding="utf-8", errors="surrogateescape") as handle:
+            control_text = handle.read()
+    for expected in re.findall(r'\$VXOST_ROOT/([A-Za-z0-9_/.-]+)"', control_text):
+        target = os.path.join(payload, expected)
+        parent = os.path.dirname(target)
+        if expected.count("/") <= 1 and not os.path.exists(target) and not os.path.exists(parent):
+            print(f"    ⚠ the script points at {expected}, which is not there")
 
     leftovers = []
     for path in targets:
