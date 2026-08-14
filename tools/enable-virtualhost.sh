@@ -75,8 +75,10 @@ else
     HOSTS_DONE=0
 fi
 
-aliases=$(grep -c "ServerAlias.*$NAME" "$VHOSTS" 2>/dev/null || echo 0)
-blocks=$(grep -c "^<VirtualHost" "$VHOSTS" 2>/dev/null || echo 0)
+# grep -c stampa gia' 0 quando non trova niente, ed esce con 1: senza il
+# `|| true` il ripiego aggiungeva un secondo zero e l'output diceva "0\n0".
+aliases=$(grep -c "ServerAlias.*$NAME" "$VHOSTS" 2>/dev/null || true)
+blocks=$(grep -c "^<VirtualHost" "$VHOSTS" 2>/dev/null || true)
 echo "  $blocks virtual hosts, $aliases already carry the alias"
 
 if openssl x509 -noout -ext subjectAltName -in "$CRT" 2>/dev/null | grep -q "DNS:$NAME"; then
