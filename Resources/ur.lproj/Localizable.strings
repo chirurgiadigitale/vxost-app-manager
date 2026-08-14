@@ -72,6 +72,18 @@
 
 "config.none" = "کوئی کنفیگریشن فائل نہیں ملی";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "ڈیٹابیس کو نام دیں۔";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "ڈیٹابیس نہیں بن سکا۔";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "پہلے ایک حرف، پھر چھوٹے حروف، ہندسے اور انڈر سکور۔";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "زیادہ سے زیادہ 32 حروف۔";
+
 "history.byProject" = "پروجیکٹ کے لحاظ سے";
 
 "history.empty" = "ابھی کوئی سیشن ریکارڈ نہیں";

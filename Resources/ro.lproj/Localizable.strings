@@ -72,6 +72,18 @@
 
 "config.none" = "Nu s-a găsit niciun fișier de configurare";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "Dați un nume bazei de date.";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "Baza de date nu a putut fi creată.";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "Întâi o literă, apoi litere mici, cifre și liniuțe de subliniere.";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "Cel mult 32 de caractere.";
+
 "history.byProject" = "Pe proiect";
 
 "history.empty" = "Nicio sesiune înregistrată";

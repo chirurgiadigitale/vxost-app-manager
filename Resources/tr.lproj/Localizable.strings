@@ -72,6 +72,18 @@
 
 "config.none" = "Yapılandırma dosyası bulunamadı";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "Veritabanına bir ad verin.";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "Veritabanı oluşturulamadı.";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "Önce bir harf, sonra küçük harf, rakam ve alt çizgi.";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "En fazla 32 karakter.";
+
 "history.byProject" = "Projeye göre";
 
 "history.empty" = "Henüz kayıtlı oturum yok";

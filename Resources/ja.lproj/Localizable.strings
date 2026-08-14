@@ -72,6 +72,18 @@
 
 "config.none" = "設定ファイルが見つかりません";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "データベースに名前を付けてください。";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "データベースを作成できませんでした。";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "先頭は英字、そのあとは小文字、数字、アンダースコアが使えます。";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "32 文字までです。";
+
 "history.byProject" = "プロジェクト別";
 
 "history.empty" = "まだ記録がありません";

@@ -26,7 +26,9 @@ ICON    := Resources/AppIcon.icns
 # before 2020.
 ARCHS   := -arch arm64 -arch x86_64
 CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS)
-LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers
+# Security serve al portachiavi, dove sta la password di root di MySQL:
+# tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
+LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security
 
 .PHONY: all icon strings run install clean uninstall dist
 

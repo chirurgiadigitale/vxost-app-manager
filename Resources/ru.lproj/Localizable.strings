@@ -72,6 +72,18 @@
 
 "config.none" = "Файл конфигурации не найден";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "Дайте базе данных имя.";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "Не удалось создать базу данных.";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "Сначала буква, затем строчные буквы, цифры и подчёркивания.";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "Не более 32 символов.";
+
 "history.byProject" = "По проектам";
 
 "history.empty" = "Записей пока нет";

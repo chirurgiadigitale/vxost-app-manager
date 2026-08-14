@@ -72,6 +72,18 @@
 
 "config.none" = "Nem található konfigurációs fájl";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "Adjon nevet az adatbázisnak.";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "Az adatbázist nem sikerült létrehozni.";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "Először egy betű, utána kisbetűk, számok és aláhúzások.";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "Legfeljebb 32 karakter.";
+
 "history.byProject" = "Projektenként";
 
 "history.empty" = "Még nincs rögzített munkamenet";

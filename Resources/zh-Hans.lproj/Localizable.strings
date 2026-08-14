@@ -72,6 +72,18 @@
 
 "config.none" = "未找到配置文件";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "请为数据库取一个名称。";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "无法创建数据库。";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "首位是字母，之后可用小写字母、数字和下划线。";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "最多 32 个字符。";
+
 "history.byProject" = "按项目";
 
 "history.empty" = "暂无记录";

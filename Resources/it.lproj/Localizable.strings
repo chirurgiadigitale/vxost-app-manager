@@ -72,6 +72,18 @@
 
 "config.none" = "Nessun file di configurazione trovato";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "Dai un nome al database.";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "Non è stato possibile creare il database.";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "Prima una lettera, poi lettere minuscole, numeri e trattini bassi.";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "Al massimo 32 caratteri.";
+
 "history.byProject" = "Per progetto";
 
 "history.empty" = "Nessuna sessione registrata";

@@ -72,6 +72,18 @@
 
 "config.none" = "找不到設定檔案";
 
+/* Errore: nome del database vuoto */
+"db.err.empty" = "請為資料庫取一個名稱。";
+
+/* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
+"db.err.failed" = "無法建立資料庫。";
+
+/* Errore: caratteri non ammessi nel nome del database */
+"db.err.format" = "首位是字母，之後可用小寫字母、數字和底線。";
+
+/* Errore: nome del database troppo lungo */
+"db.err.tooLong" = "最多 32 個字元。";
+
 "history.byProject" = "依專案";
 
 "history.empty" = "尚無記錄";
