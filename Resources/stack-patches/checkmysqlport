@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# Originally: "MySQL is accessable via network. Do you want me to turn it off?"
+# and, on yes, skip-networking in my.cnf.
+#
+# ⚠️ That answer is wrong for a development stack, and it broke a working
+# machine on 05/08/2026. With skip-networking MariaDB accepts Unix sockets
+# only, so every project pointing at 127.0.0.1:3306, which is every Laravel and
+# every WordPress, stops connecting at the next restart. The default answer was
+# yes, so it happened by pressing return.
+#
+# The protection that was wanted is real: MariaDB with no bind-address listens
+# on every interface, so anyone on the same network can reach the database.
+# bind-address=127.0.0.1 gives exactly that protection and costs nothing: the
+# port stays open on loopback, projects keep working, and the machine next to
+# yours cannot see it.
+#
+# So this script does two things instead of one:
+#   - undoes skip-networking if a previous run put it there
+#   - sets bind-address to 127.0.0.1 if it is missing
+#
+# Part of VXOST, GPL-licensed like the file it replaces.
+# Original copyright 2002-2003 Kai 'Oswald' Seidler, GPL v2.
+
+if test "x$VXOST_ROOT" = "x"
+then
+	echo "Dont call this script directly!"
+	exit 1
+fi
+
+. $VXOST_ROOT/share/vxost/vxostlib
+
+if test "$1" = "check"
+then
+	check="true"
+else
+	check="false"
+fi
+
+bon="[1m"
+boff="[m"
+
+f="$VXOST_ROOT/etc/my.cnf"
+
+# 1. skip-networking left behind by an older run, or by the original script.
+active_skip=$(grep -c '^[[:space:]]*skip-networking' "$f")
+
+if test "$active_skip" -gt 0
+then
+	$check && exit 1
+
+	echo "VXOST: ${bon}" $($GETTEXT 'MySQL is not reachable over TCP at all.') "${boff}"
+	echo "VXOST: " $($GETTEXT 'Every project that connects to 127.0.0.1:3306 is broken while this is on.')
+
+	if asky $($GETTEXT "Do you want me to turn TCP back on?")
+	then
+		perl -pi -e 's/^(\s*)(skip-networking)/$1#$2/' "$f"
+		echo "VXOST: " $($GETTEXT 'Turned back on.')
+	fi
+fi
+
+# 2. The real hardening: listen on loopback only.
+has_bind=$(grep -c '^[[:space:]]*bind-address' "$f")
+
+if test "$has_bind" -eq 0
+then
+	$check && exit 1
+
+	echo "VXOST: ${bon}" $($GETTEXT 'MySQL listens on every network interface.') "${boff}"
+
+	if asky $($GETTEXT "Restrict it to this computer only? Your projects keep working.")
+	then
+		# Written right after [mysqld], where the section it belongs to starts.
+		perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
+			$_ .= "\n# Added by vxost security: reachable from this computer only.\n";
+			$_ .= "# Do not replace this with skip-networking, which would cut off\n";
+			$_ .= "# every project connecting to 127.0.0.1:3306.\n";
+			$_ .= "bind-address=127.0.0.1\n";
+			$done = 1;
+		}' "$f"
+
+		echo "VXOST: " $($GETTEXT 'Restricted to 127.0.0.1.')
+		if testrun "$VXOST_ROOT/var/mysql/$(hostname).pid" mysqld
+		then
+			$VXOST_ROOT/vxost stopmysql
+			sleep 2
+			$VXOST_ROOT/vxost startmysql
+			sleep 3
+		fi
+	fi
+else
+	$check && exit 0
+
+	echo "VXOST: " $($GETTEXT 'MySQL is not reachable from the network. Good.')
+fi

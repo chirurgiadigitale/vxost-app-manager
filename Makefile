@@ -72,16 +72,24 @@ run: all
 	@pkill -x "$(APP_NAME)" 2>/dev/null || true
 	@open "$(BUNDLE)"
 
+# L'app va in /Applications, non dentro la cartella dello stack.
+#
+# Il manager originale stava in /Applications/XAMPP/, e chi non e' pratico non
+# lo trovava: non compare in Launchpad, non lo suggerisce Spotlight, e in
+# /Applications non c'e'. Messa al primo livello si comporta come qualsiasi
+# altra applicazione. La cartella dello stack resta /Applications/VXOST/ e le
+# due si distinguono a colpo d'occhio, una ha l'icona dell'app e l'altra
+# quella di una cartella.
 install: all
 	@pkill -x "$(APP_NAME)" 2>/dev/null || true
-	@rm -rf "/Applications/VXOST/$(APP_NAME).app"
-	@cp -R "$(BUNDLE)" "/Applications/VXOST/"
-	@echo "Installata in /Applications/VXOST/$(APP_NAME).app"
+	@rm -rf "/Applications/$(APP_NAME).app" "/Applications/VXOST/$(APP_NAME).app"
+	@cp -R "$(BUNDLE)" "/Applications/$(APP_NAME).app"
+	@echo "Installata in /Applications/$(APP_NAME).app"
 
 uninstall:
 	@pkill -x "$(APP_NAME)" 2>/dev/null || true
-	@rm -rf "/Applications/VXOST/$(APP_NAME).app"
-	@echo "Rimossa da /Applications/VXOST/"
+	@rm -rf "/Applications/$(APP_NAME).app" "/Applications/VXOST/$(APP_NAME).app"
+	@echo "Rimossa da /Applications/"
 
 # Pacchetti pronti da pubblicare: uno zip e un'immagine disco.
 #

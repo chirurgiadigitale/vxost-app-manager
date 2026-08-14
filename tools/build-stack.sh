@@ -113,9 +113,30 @@ for dir in bin sbin lib libexec modules share etc man licenses phpmyadmin cgi-bi
 done
 
 printf "  control scripts\n"
-for file in vxost lampp properties.ini; do
-    [ -f "$SOURCE/$file" ] && cp "$SOURCE/$file" "$PAYLOAD/"
+# ⚠️ This used to look for a file called "vxost" and, on a machine that still
+# carries the old layout, found nothing: the package shipped with no control
+# script at all and could not start a single service. Whatever the script is
+# called at the source, it ships as vxost.
+_control=""
+for _name in vxost xampp lampp; do
+    if [ -f "$SOURCE/$_name" ]; then
+        cp "$SOURCE/$_name" "$PAYLOAD/vxost"
+        chmod 755 "$PAYLOAD/vxost"
+        _control="$_name"
+        break
+    fi
 done
+if [ -z "$_control" ]; then
+    echo "  no control script found in $SOURCE" >&2
+    exit 1
+fi
+printf "    %s -> vxost\n" "$_control"
+[ -f "$SOURCE/properties.ini" ] && cp "$SOURCE/properties.ini" "$PAYLOAD/"
+
+# The nineteen scripts under share/ and the control script next to them still
+# carry the old name, inside and out. They only talk to each other, so renaming
+# the whole set is safe. This also swaps in the replacement for checkmysqlport.
+python3 "$HERE/tools/brand-stack.py" "$PAYLOAD" || exit 1
 [ -f "$SOURCE/lib/VERSION" ] && cp "$SOURCE/lib/VERSION" "$PAYLOAD/lib/VERSION"
 
 # ------------------------------------------------------------------ state ---
@@ -245,6 +266,22 @@ fi
 # every project connecting to 127.0.0.1:3306 then breaks.
 if [ -f "$PAYLOAD/etc/my.cnf" ]; then
     sed -i '' -E 's/^skip-networking/#skip-networking/' "$PAYLOAD/etc/my.cnf"
+
+    # It must listen on loopback only, though. Without bind-address MariaDB
+    # answers on every interface, so anyone on the same wifi can reach the
+    # database of a machine that was only meant to serve itself. This is the
+    # protection the old security check was reaching for when it reached for
+    # skip-networking instead and broke every project on the machine.
+    if ! grep -qE '^[[:space:]]*bind-address' "$PAYLOAD/etc/my.cnf"; then
+        perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
+            $_ .= "\n# Reachable from this computer only. Do not replace this with\n";
+            $_ .= "# skip-networking, which would cut off every project that\n";
+            $_ .= "# connects to 127.0.0.1:3306.\n";
+            $_ .= "bind-address=127.0.0.1\n";
+            $done = 1;
+        }' "$PAYLOAD/etc/my.cnf"
+        printf "  MySQL restricted to 127.0.0.1\n"
+    fi
 fi
 
 # ---------------------------------------------------------------- database ---
