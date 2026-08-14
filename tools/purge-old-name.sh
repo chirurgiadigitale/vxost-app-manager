@@ -78,18 +78,24 @@ done
 [ "$found_dead" -eq 0 ] && echo "  nothing left to remove"
 
 say "What is going to be rewritten"
-# Solo file di testo. Il filtro sull'estensione non basta: si controlla che il
-# file sia davvero testo, o un binario che per caso contiene la parola
-# finirebbe riscritto e smetterebbe di funzionare.
+# ⚠️ Il tipo si chiede a `file`, non all'estensione.
+#
+# La prima versione filtrava per estensione e il commento diceva "si controlla
+# che sia davvero testo", ma quel controllo non c'era. Risultato: 310 script
+# Perl e shell dentro bin/, senza estensione, sono rimasti col vecchio nome, e
+# il resoconto finale li chiamava binari. Ora si guarda cosa sono davvero.
 TEXT_FILES="$(mktemp)"
 grep -rli "xampp" "$ROOT" \
-     --include="*.conf" --include="*.ini" --include="*.txt" --include="*.md" \
-     --include="*.var" --include="*.html" --include="*.[0-9]" --include="*.[0-9][a-z]*" \
-     --include="*.pl" --include="*.pm" --include="*.sh" \
-     --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses --exclude-dir=backup \
-     2>/dev/null > "$TEXT_FILES" || true
+     --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
+     --exclude-dir=backup 2>/dev/null \
+| while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    case "$(file -b "$f" 2>/dev/null)" in
+        *text*|*script*|*source*) printf '%s\n' "$f" ;;
+    esac
+done > "$TEXT_FILES"
 count=$(wc -l < "$TEXT_FILES" | tr -d ' ')
-echo "  $count text files"
+echo "  $count text files, checked one by one and not by extension"
 head -8 "$TEXT_FILES" | sed "s|$ROOT/|      |"
 [ "$count" -gt 8 ] && echo "      and $((count - 8)) more"
 
@@ -198,7 +204,19 @@ fi
 say "What is left"
 left=$(grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
        --exclude-dir=backup 2>/dev/null | wc -l | tr -d ' ')
-echo "  $left files still mention it, and they are binaries or the hidden links:"
+echo "  $left files still mention it. Checking what they are:"
+still_text=0
+for f in $(grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=licenses \
+           --exclude-dir=backup 2>/dev/null | head -200); do
+    case "$(file -b "$f" 2>/dev/null)" in
+        *text*|*script*|*source*) still_text=$((still_text + 1)) ;;
+    esac
+done
+if [ "$still_text" -gt 0 ]; then
+    fail "$still_text of the first 200 are still text. Run this again."
+else
+    ok "they are compiled binaries, which only a rebuild can change"
+fi
 grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
      --exclude-dir=backup 2>/dev/null | head -6 | sed "s|$ROOT/|      |"
 
