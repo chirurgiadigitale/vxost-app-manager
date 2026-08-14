@@ -68,7 +68,29 @@ static NSString *XPDetectControlScript(NSString *root) {
 }
 
 + (NSString *)htdocs {
-    return [self root:@"htdocs"];
+    // ⚠️ Il nome della radice web si rileva, non si scrive.
+    //
+    // Sta passando da htdocs a www, e durante il passaggio le due convivono su
+    // macchine diverse. Un nome fisso qui rende l'app cieca su meta' delle
+    // installazioni, ed e' esattamente l'errore gia' fatto con il percorso di
+    // installazione in XPTaskRunner.
+    static NSString *cached = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSFileManager *fm = [NSFileManager defaultManager];
+        for (NSString *name in @[@"www", @"htdocs"]) {
+            NSString *candidate = [self root:name];
+            BOOL isDirectory = NO;
+            if ([fm fileExistsAtPath:candidate isDirectory:&isDirectory] && isDirectory) {
+                cached = candidate;
+                return;
+            }
+        }
+        // Nessuna delle due: si restituisce quella verso cui si sta andando,
+        // cosi' il messaggio d'errore nomina il percorso giusto.
+        cached = [self root:@"www"];
+    });
+    return cached;
 }
 
 + (NSString *)vxostVersion {

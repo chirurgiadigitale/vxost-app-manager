@@ -91,7 +91,7 @@ static const CGFloat XPRowH         = 52.0;
     NSArray *shortcuts = @[
         @{@"title": NSLocalizedString(@"link.dashboard", nil), @"symbol": @"safari", @"sel": @"openDashboard"},
         @{@"title": @"phpMyAdmin", @"symbol": @"cylinder.split.1x2", @"sel": @"openPhpMyAdmin"},
-        @{@"title": @"htdocs", @"symbol": @"folder", @"sel": @"openHtdocs"},
+        @{@"title": [[XPPaths htdocs] lastPathComponent], @"symbol": @"folder", @"sel": @"openHtdocs"},
         @{@"title": NSLocalizedString(@"link.viewLogs", nil), @"symbol": @"doc.text.magnifyingglass", @"sel": @"openLogs"},
     ];
 

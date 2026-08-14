@@ -123,17 +123,33 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
 
 /// Ricava un nome leggibile dal DocumentRoot.
 + (NSString *)projectNameForDocumentRoot:(NSString *)documentRoot {
-    NSString *htdocs = [XPPaths htdocs];
-    NSString *projects = [htdocs stringByAppendingPathComponent:@"progetti"];
+    // ⚠️ I percorsi si confrontano risolti, non come stringhe.
+    //
+    // Dopo la migrazione i virtual host dicono ancora /Applications/XAMPP/...,
+    // che e' un symlink verso /Applications/VXOST/..., mentre XPPaths
+    // restituisce quello nuovo. Due stringhe diverse per la stessa cartella:
+    // il confronto falliva e ogni progetto finiva chiamato con l'ultima
+    // componente del percorso, cioe' "public" per meta' di loro.
+    documentRoot = [documentRoot stringByResolvingSymlinksInPath];
+    NSString *htdocs = [[XPPaths htdocs] stringByResolvingSymlinksInPath];
+    // ⚠️ La cartella si chiama projects dal 13/08. Questa riga diceva ancora
+    // progetti, quindi il nome del progetto veniva ricavato con la regola
+    // sbagliata e usciva con "projects/" davanti.
+    NSString *projects = [htdocs stringByAppendingPathComponent:@"projects"];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:projects]) {
+        projects = [htdocs stringByAppendingPathComponent:@"progetti"];
+    }
 
-    // Sotto progetti/ il percorso relativo è già il nome più chiaro.
+    // Sotto projects/ il percorso relativo è già il nome più chiaro.
     if ([documentRoot hasPrefix:projects]) {
         NSString *relative = [documentRoot substringFromIndex:projects.length];
         return [relative stringByTrimmingCharactersInSet:
                 [NSCharacterSet characterSetWithCharactersInString:@"/"]];
     }
 
-    if ([documentRoot isEqualToString:htdocs]) return @"htdocs";
+    // Il nome vero della cartella, non la parola scritta a mano: durante il
+    // passaggio a www un'etichetta fissa direbbe una cosa e il Finder un'altra.
+    if ([documentRoot isEqualToString:htdocs]) return [htdocs lastPathComponent];
 
     if ([documentRoot hasPrefix:htdocs]) {
         NSString *relative = [documentRoot substringFromIndex:htdocs.length];
