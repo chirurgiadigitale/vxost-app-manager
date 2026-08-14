@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "新建项目";
 
+/* Pulsante di conferma */
+"btn.ok" = "好";
+
 /* Apre il progetto nel browser */
 "btn.open" = "打开";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "请为数据库取一个名称。";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "已经存在同名的数据库。";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "无法创建数据库。";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "首位是字母，之后可用小写字母、数字和下划线。";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "MySQL 没有运行。请先启动它再试。";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "最多 32 个字符。";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "此安装的 root 账户设置了密码。输入一次即可：它会保存在 macOS 钥匙串中，不再询问。";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "密码已保存到钥匙串。";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "MySQL 要求输入密码";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "这个密码进不去。请重试。";
 
 "history.byProject" = "按项目";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "创建项目";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "%1$@ 已在 http://localhost:%2$ld 上运行";
+"wizard.done" = "%1$@ 已在 http://virtualhost:%2$ld 上运行";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "数据库 %@ 已就绪。";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "请为项目取一个名称。";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Apache 拒绝了该配置。一切已还原，没有任何改动。";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "项目已就绪，但数据库未创建：%@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "创建数据库";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "名称";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "PHP 版本";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "端口";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "可选，会被克隆";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "描述";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "这个项目是做什么的";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "小写字母、数字和下划线。项目以 root 身份连接 127.0.0.1。";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "小写字母、数字和连字符。它会成为 projects/ 下的文件夹名。";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "已配置端口之后的第一个空闲端口。";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "可选。写在虚拟主机块的上方，方便以后辨认这个项目。";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "正在查找…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "未找到";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "正在克隆仓库…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "正在创建文件夹…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "正在创建数据库…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "正在写入虚拟主机并重启 Apache…";

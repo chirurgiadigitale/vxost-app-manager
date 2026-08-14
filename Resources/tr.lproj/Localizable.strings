@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "Yeni proje";
 
+/* Pulsante di conferma */
+"btn.ok" = "Tamam";
+
 /* Apre il progetto nel browser */
 "btn.open" = "Aç";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "Veritabanına bir ad verin.";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "Bu adda bir veritabanı zaten var.";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "Veritabanı oluşturulamadı.";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "Önce bir harf, sonra küçük harf, rakam ve alt çizgi.";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "MySQL çalışmıyor. Başlatıp yeniden deneyin.";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "En fazla 32 karakter.";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "Bu kurulumdaki root hesabının bir parolası var. Bir kez yazın: macOS anahtar zincirinde saklanır ve bir daha sorulmaz.";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "Parola anahtar zincirine kaydedildi.";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "MySQL parola istiyor";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "Bu parolayla girilemiyor. Yeniden deneyin.";
 
 "history.byProject" = "Projeye göre";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "Projeyi oluştur";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "%1$@ şu adreste: http://localhost:%2$ld";
+"wizard.done" = "%1$@ şu adreste: http://virtualhost:%2$ld";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "%@ veritabanı hazır.";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "Projeye bir ad verin.";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Apache yapılandırmayı reddetti. Her şey geri alındı, hiçbir şey değişmedi.";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "Proje hazır, ancak veritabanı oluşturulmadı: %@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "Veritabanı oluştur";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "Ad";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "PHP sürümü";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "Port";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "isteğe bağlı, klonlanır";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "Açıklama";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "Bu proje ne hakkında";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "Küçük harfler, rakamlar ve alt çizgi. Projeler 127.0.0.1 üzerinden root olarak bağlanır.";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "Küçük harfler, rakamlar ve tireler. projects/ altındaki klasör adı olur.";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "Zaten yapılandırılmış olanlardan sonraki ilk boş port.";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "İsteğe bağlı. Sanal sunucu bloğunun üstüne yazılır, projeyi sonradan tanımak için.";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "Aranıyor…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "Bulunamadı";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "Depo klonlanıyor…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "Klasör oluşturuluyor…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "Veritabanı oluşturuluyor…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "Sanal sunucu yazılıyor ve Apache yeniden başlatılıyor…";

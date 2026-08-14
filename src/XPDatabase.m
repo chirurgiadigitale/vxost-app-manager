@@ -106,6 +106,10 @@ static NSString *const XPKeychainService = @"VXOST MySQL root";
     return YES;
 }
 
++ (BOOL)passwordWorks:(NSString *)password {
+    return [self runSQL:@"SELECT 1" password:password].succeeded;
+}
+
 /// La password che funziona: nessuna, o quella salvata.
 + (NSString *)workingPassword {
     if ([self runSQL:@"SELECT 1" password:nil].succeeded) return nil;
@@ -154,14 +158,32 @@ static NSString *const XPKeychainService = @"VXOST MySQL root";
                         user:(NSString *)user
                     password:(NSString *)password {
 
-    NSString *problem = [self validationErrorForDatabaseName:database]
-                     ?: [self validationErrorForDatabaseName:user];
+    NSString *problem = [self validationErrorForDatabaseName:database];
+    if (problem) return problem;
+
+    // Utente vuoto vuol dire "solo il database".
+    //
+    // In locale ci si collega come root, e un utente dedicato sarebbe una
+    // credenziale in più da comunicare a chi crea il progetto e da ritrovare
+    // il giorno dopo. Resta possibile crearlo passando un nome.
+    if (user.length == 0) {
+        NSString *createOnly = [NSString stringWithFormat:
+            @"CREATE DATABASE IF NOT EXISTS `%@` "
+            @"CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", database];
+        XPTaskResult *onlyResult = [self runSQL:createOnly password:[self workingPassword]];
+        if (onlyResult.succeeded) return nil;
+        NSString *why = [onlyResult.output stringByTrimmingCharactersInSet:
+                         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        return why.length > 0 ? why : NSLocalizedString(@"db.err.failed", nil);
+    }
+
+    problem = [self validationErrorForDatabaseName:user];
     if (problem) return problem;
 
     // La password dell'utente nuovo entra fra apici in una istruzione: gli
     // apici e le barre si raddoppiano, o una password con un apice spezza
     // l'istruzione. Non è un caso di attacco, è un caso di password normale.
-    NSString *escaped = [[password stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
+    NSString *escaped = [[(password ?: @"") stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
                          stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"];
 
     NSString *sql = [NSString stringWithFormat:

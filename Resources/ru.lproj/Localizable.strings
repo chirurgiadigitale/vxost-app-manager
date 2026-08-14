@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "Новый проект";
 
+/* Pulsante di conferma */
+"btn.ok" = "ОК";
+
 /* Apre il progetto nel browser */
 "btn.open" = "Открыть";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "Дайте базе данных имя.";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "База данных с таким именем уже есть.";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "Не удалось создать базу данных.";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "Сначала буква, затем строчные буквы, цифры и подчёркивания.";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "MySQL не запущен. Запустите его и попробуйте снова.";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "Не более 32 символов.";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "У учётной записи root в этой установке есть пароль. Введите его один раз: он останется в связке ключей macOS и больше не потребуется.";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "Пароль сохранён в связке ключей.";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "MySQL запрашивает пароль";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "С этим паролем войти не удалось. Попробуйте снова.";
 
 "history.byProject" = "По проектам";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "Создать проект";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "%1$@ доступен по адресу http://localhost:%2$ld";
+"wizard.done" = "%1$@ доступен по адресу http://virtualhost:%2$ld";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "База данных %@ готова.";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "Дайте проекту имя.";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Apache отклонил конфигурацию. Всё возвращено на место, ничего не изменилось.";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "Проект готов, но база данных не создана: %@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "Создать базу данных";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "Имя";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "Версия PHP";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "Порт";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "необязательно, будет склонирован";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "Описание";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "О чём этот проект";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "Строчные буквы, цифры и подчёркивания. Проекты подключаются как root по адресу 127.0.0.1.";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "Строчные буквы, цифры и дефисы. Из этого получится папка внутри projects/.";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "Первый свободный после уже настроенных.";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "Необязательно. Записывается над блоком виртуального хоста, чтобы позже узнать проект.";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "Поиск…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "Ничего не найдено";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "Клонирование репозитория…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "Создание папки…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "Создание базы данных…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "Запись виртуального хоста и перезапуск Apache…";

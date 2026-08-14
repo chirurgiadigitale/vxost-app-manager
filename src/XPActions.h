@@ -14,6 +14,7 @@
 #import <Cocoa/Cocoa.h>
 #import "XPService.h"
 #import "XPVirtualHost.h"
+#import "XPPhpVersion.h"
 
 /// Inviata a ogni esito. userInfo: @{@"message": NSString, @"isError": NSNumber}
 extern NSString *const XPActionMessageNotification;
@@ -78,8 +79,11 @@ extern NSString *const XPActionMessageNotification;
 /// backup se la validazione fallisce: un httpd.conf malformato lascerebbe giù
 /// tutti i progetti locali, non solo quello nuovo.
 - (void)createProjectNamed:(NSString *)name
+                   summary:(NSString *)summary
                 repository:(NSString *)repositoryURL
                       port:(NSInteger)port
+               phpVersion:(XPPhpVersion *)phpVersion
+                  database:(NSString *)database
                 completion:(void (^)(BOOL ok))completion;
 
 #pragma mark - Utilità

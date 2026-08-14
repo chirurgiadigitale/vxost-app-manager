@@ -6,6 +6,8 @@
 #import "XPPaths.h"
 #import "XPServiceMonitor.h"
 #import "XPTaskRunner.h"
+#import "XPDatabase.h"
+#import "XPPhpVersion.h"
 
 NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
@@ -351,8 +353,11 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 }
 
 - (void)createProjectNamed:(NSString *)name
+                   summary:(NSString *)summary
                 repository:(NSString *)repositoryURL
                       port:(NSInteger)port
+                phpVersion:(XPPhpVersion *)phpVersion
+                  database:(NSString *)database
                 completion:(void (^)(BOOL ok))completion {
 
     NSCharacterSet *spaces = [NSCharacterSet whitespaceAndNewlineCharacterSet];
@@ -390,8 +395,11 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
                 return;
             }
             [self installVirtualHostForProject:project
+                                       summary:summary
                                         folder:folder
                                           port:port
+                                    phpVersion:phpVersion
+                                      database:database
                                     completion:completion];
         });
     });
@@ -439,8 +447,11 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 
 /// Scrive il virtual host e apre la porta, come amministratore.
 - (void)installVirtualHostForProject:(NSString *)project
+                             summary:(NSString *)summary
                               folder:(NSString *)folder
                                 port:(NSInteger)port
+                          phpVersion:(XPPhpVersion *)phpVersion
+                            database:(NSString *)database
                           completion:(void (^)(BOOL ok))completion {
 
     NSFileManager *fm = [NSFileManager defaultManager];
@@ -466,7 +477,9 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         [NSString stringWithFormat:@"vxost-new-project-%@.sh", [NSUUID UUID].UUIDString]];
 
     NSError *error = nil;
-    if (![[self privilegedScriptForProject:project docroot:docroot port:port]
+    if (![[self privilegedScriptForProject:project summary:summary
+                                                docroot:docroot port:port
+                                             phpVersion:phpVersion]
             writeToFile:scriptPath atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
         [self postMessage:error.localizedDescription isError:YES];
         if (completion) completion(NO);
@@ -498,6 +511,40 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 
         [self postMessage:message isError:!ok];
         [[XPServiceMonitor shared] refreshNow];
+
+        // Il database si crea per ultimo, a virtual host installato.
+        //
+        // ⚠️ L'ordine conta. Creandolo per primo, un configtest fallito
+        // lascerebbe un database senza progetto: invisibile, e nessuno va a
+        // cercarlo in phpMyAdmin. Al contrario, un progetto senza database si
+        // vede subito e si rimedia con una riga.
+        if (ok && database.length > 0) {
+            [self postMessage:NSLocalizedString(@"wizard.progress.database", nil) isError:NO];
+            dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+                // Nessun utente dedicato: in locale ci si collega come root, e
+                // una credenziale in piu' sarebbe una credenziale in piu' da
+                // comunicare e da ricordare.
+                NSString *dbProblem = [XPDatabase createDatabase:database
+                                                            user:nil
+                                                        password:nil];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (dbProblem) {
+                        // Il progetto c'e' e funziona: il database mancante e'
+                        // un avviso, non un fallimento della creazione.
+                        [self postMessage:[NSString stringWithFormat:
+                                           NSLocalizedString(@"wizard.failed.database", nil),
+                                           dbProblem] isError:YES];
+                    } else {
+                        [self postMessage:[NSString stringWithFormat:
+                                           NSLocalizedString(@"wizard.done.database", nil),
+                                           database] isError:NO];
+                    }
+                    if (completion) completion(YES);
+                });
+            });
+            return;
+        }
+
         if (completion) completion(ok);
     }];
 }
@@ -508,11 +555,33 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 /// `do shell script` di AppleScript trasforma un'uscita diversa da zero in un
 /// errore proprio, e il codice vero non arriverebbe mai fin qui.
 - (NSString *)privilegedScriptForProject:(NSString *)project
+                                 summary:(NSString *)summary
                                  docroot:(NSString *)docroot
-                                    port:(NSInteger)port {
+                                    port:(NSInteger)port
+                              phpVersion:(XPPhpVersion *)phpVersion {
 
     NSString *root = [XPPaths installRoot];
     NSString *control = [XPPaths controlScript];
+
+    // La descrizione finisce come commento sopra il blocco: e' il posto in cui
+    // la si cerca quando si apre il file per capire di chi e' una porta, ed e'
+    // l'unico che sopravvive a un backup del solo httpd-vhosts.conf.
+    //
+    // ⚠️ A capo e cancelletti si tolgono. Una descrizione su due righe
+    // spezzerebbe il commento e lascerebbe mezza frase come direttiva, e
+    // Apache non ripartirebbe piu'.
+    NSString *comment = @"";
+    NSString *clean = [(summary ?: @"") stringByTrimmingCharactersInSet:
+                       [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (clean.length > 0) {
+        for (NSString *bad in @[@"\n", @"\r", @"#"]) {
+            clean = [clean stringByReplacingOccurrencesOfString:bad withString:@" "];
+        }
+        if (clean.length > 200) clean = [clean substringToIndex:200];
+        comment = [NSString stringWithFormat:@"# %@\n", clean];
+    }
+
+    NSString *phpBlock = phpVersion ? [phpVersion virtualHostDirective] : @"";
 
     return [NSString stringWithFormat:
         @"#!/bin/sh\n"
@@ -539,10 +608,10 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"cat >> \"$VHOSTS\" <<'VXOST_EOF_VHOST'\n"
         @"\n"
         @"# VXOST wizard: %1$@\n"
+        @"%7$@"
         @"<VirtualHost *:%4$ld>\n"
         @"    DocumentRoot \"%5$@\"\n"
         @"    ServerName %6$@\n"
-        @"    ServerAlias localhost\n"
         @"    <Directory \"%5$@\">\n"
         @"        Options Indexes FollowSymLinks\n"
         @"        AllowOverride All\n"
@@ -550,6 +619,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"    </Directory>\n"
         @"    ErrorLog \"logs/%1$@-error_log\"\n"
         @"    CustomLog \"logs/%1$@-access_log\" common\n"
+        @"%8$@"
         @"</VirtualHost>\n"
         @"VXOST_EOF_VHOST\n"
         @"\n"
@@ -568,7 +638,8 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"    echo VXOST_CONFIGTEST_FAILED\n"
         @"fi\n"
         @"exit 0\n",
-        project, root, control, (long)port, docroot, [XPPaths localHostname]];
+        project, root, control, (long)port, docroot, [XPPaths localHostname],
+        comment, phpBlock];
 }
 
 #pragma mark - Messaggi

@@ -3,6 +3,7 @@
 #   make          compila e crea build/VXOST.app
 #   make icon     rigenera Resources/AppIcon.icns dal logo ufficiale
 #   make run      compila e avvia
+#   make wizardtest  prova il wizard senza aprire interfacce
 #   make install  copia l'app in /Applications/VXOST/
 #   make clean    rimuove build/
 
@@ -30,7 +31,7 @@ CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS)
 # tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security
 
-.PHONY: all icon strings run install clean uninstall dist
+.PHONY: all icon strings run install clean uninstall dist wizardtest
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
@@ -73,6 +74,18 @@ strings:
 run: all
 	@pkill -x "$(APP_NAME)" 2>/dev/null || true
 	@open "$(BUNDLE)"
+
+# Prova il wizard senza aprire una sola finestra: nomi di database, versioni
+# di PHP e lo script privilegiato, a cui si passa `sh -n` invece di eseguirlo.
+#
+# ⚠️ Non tocca httpd-vhosts.conf e non scrive niente su MySQL. E va lanciato
+# senza sudo: come root leggerebbe un portachiavi diverso da quello
+# dell'utente e direbbe che la password non c'è.
+wizardtest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/wizardtest \
+		tests/wizardtest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/wizardtest
 
 # L'app va in /Applications, non dentro la cartella dello stack.
 #

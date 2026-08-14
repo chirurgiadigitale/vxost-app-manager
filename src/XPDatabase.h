@@ -22,6 +22,10 @@
 /// Serve una password per entrare come root?
 + (BOOL)needsPassword;
 
+/// Questa password fa entrare come root?
+/// Da chiamare fuori dal main thread: parla con il server.
++ (BOOL)passwordWorks:(NSString *)password;
+
 /// La password salvata nel portachiavi, nil se non ce n'è una.
 + (NSString *)storedPassword;
 
@@ -35,7 +39,10 @@
 /// Esiste già un database con questo nome?
 + (BOOL)databaseExists:(NSString *)name;
 
-/// Crea il database e un utente che ci lavora sopra.
+/// Crea il database, e un utente che ci lavora sopra se ne viene chiesto uno.
+///
+/// Passando nil come utente si crea il solo database: in locale ci si collega
+/// come root, e una credenziale in più è una cosa in più da ricordare.
 ///
 /// Restituisce il motivo del fallimento, nil se è andata. Da chiamare fuori
 /// dal main thread: parla con il server e può metterci un istante.

@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "Nuevo proyecto";
 
+/* Pulsante di conferma */
+"btn.ok" = "Aceptar";
+
 /* Apre il progetto nel browser */
 "btn.open" = "Abrir";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "Ponle un nombre a la base de datos.";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "Ya existe una base de datos con este nombre.";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "No se pudo crear la base de datos.";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "Primero una letra, luego minúsculas, números y guiones bajos.";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "MySQL no está en ejecución. Inícialo y vuelve a intentarlo.";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "Como máximo 32 caracteres.";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "La cuenta root de esta instalación tiene contraseña. Escríbela una vez: se guarda en el llavero de macOS y no se vuelve a pedir.";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "Contraseña guardada en el llavero.";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "MySQL pide una contraseña";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "Con esa contraseña no se entra. Inténtalo otra vez.";
 
 "history.byProject" = "Por proyecto";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "Crear proyecto";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "%1$@ está en http://localhost:%2$ld";
+"wizard.done" = "%1$@ está en http://virtualhost:%2$ld";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "La base de datos %@ está lista.";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "Ponle un nombre al proyecto.";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Apache rechazó la configuración. Se restauró todo, no cambió nada.";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "El proyecto está listo, pero la base de datos no se creó: %@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "Crear una base de datos";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "Nombre";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "Versión de PHP";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "Puerto";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "opcional, se clona";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "Descripción";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "De qué trata este proyecto";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "Letras minúsculas, dígitos y guiones bajos. Los proyectos se conectan como root en 127.0.0.1.";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "Minúsculas, números y guiones. Se convierte en la carpeta dentro de projects/.";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "El primero libre después de los ya configurados.";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "Opcional. Se escribe encima del bloque del host virtual, para reconocer el proyecto más adelante.";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "Buscando…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "No se encontró ninguna";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "Clonando el repositorio…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "Creando la carpeta…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "Creando la base de datos…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "Escribiendo el virtual host y reiniciando Apache…";

@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "نیا پروجیکٹ";
 
+/* Pulsante di conferma */
+"btn.ok" = "ٹھیک ہے";
+
 /* Apre il progetto nel browser */
 "btn.open" = "کھولیں";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "ڈیٹابیس کو نام دیں۔";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "اس نام کا ڈیٹابیس پہلے سے موجود ہے۔";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "ڈیٹابیس نہیں بن سکا۔";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "پہلے ایک حرف، پھر چھوٹے حروف، ہندسے اور انڈر سکور۔";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "MySQL چل نہیں رہا۔ اسے شروع کریں اور دوبارہ کوشش کریں۔";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "زیادہ سے زیادہ 32 حروف۔";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "اس تنصیب کے root اکاؤنٹ کا پاس ورڈ ہے۔ ایک بار لکھیں: یہ macOS کی چابی کے گچھے میں محفوظ رہتا ہے اور دوبارہ نہیں پوچھا جاتا۔";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "پاس ورڈ چابی کے گچھے میں محفوظ ہو گیا۔";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "MySQL پاس ورڈ مانگ رہا ہے";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "اس پاس ورڈ سے داخل نہیں ہو سکتے۔ دوبارہ کوشش کریں۔";
 
 "history.byProject" = "پروجیکٹ کے لحاظ سے";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "پروجیکٹ بنائیں";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "%1$@ اب http://localhost:%2$ld پر ہے";
+"wizard.done" = "%1$@ اب http://virtualhost:%2$ld پر ہے";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "ڈیٹابیس %@ تیار ہے۔";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "پروجیکٹ کو نام دیں۔";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Apache نے کنفیگریشن مسترد کر دی۔ سب کچھ واپس بحال کر دیا گیا، کچھ تبدیل نہیں ہوا۔";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "پروجیکٹ تیار ہے، مگر ڈیٹابیس نہیں بنایا جا سکا: %@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "ڈیٹابیس بنائیں";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "نام";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "PHP ورژن";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "پورٹ";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "اختیاری، یہ کلون ہو جائے گا";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "تفصیل";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "یہ پروجیکٹ کس بارے میں ہے";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "چھوٹے حروف، ہندسے اور انڈر اسکور۔ پروجیکٹ 127.0.0.1 پر root کے طور پر جڑتے ہیں۔";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "چھوٹے حروف، ہندسے اور ڈیش۔ یہ projects/ کے اندر فولڈر بن جاتا ہے۔";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "پہلے سے ترتیب شدہ پورٹس کے بعد پہلا خالی پورٹ۔";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "اختیاری۔ یہ ورچوئل ہوسٹ بلاک کے اوپر لکھی جاتی ہے، تاکہ بعد میں پروجیکٹ پہچانا جا سکے۔";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "تلاش جاری ہے…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "کوئی نہیں ملی";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "ریپوزٹری کلون کی جا رہی ہے…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "فولڈر بنایا جا رہا ہے…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "ڈیٹابیس بنایا جا رہا ہے…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "ورچوئل ہوسٹ لکھا جا رہا ہے اور Apache دوبارہ شروع ہو رہا ہے…";

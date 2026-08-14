@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "Új projekt";
 
+/* Pulsante di conferma */
+"btn.ok" = "OK";
+
 /* Apre il progetto nel browser */
 "btn.open" = "Megnyitás";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "Adjon nevet az adatbázisnak.";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "Ilyen nevű adatbázis már létezik.";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "Az adatbázist nem sikerült létrehozni.";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "Először egy betű, utána kisbetűk, számok és aláhúzások.";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "A MySQL nem fut. Indítsd el, és próbáld újra.";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "Legfeljebb 32 karakter.";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "Ezen a telepítésen a root fióknak van jelszava. Írd be egyszer: a macOS kulcskarikán marad, és többé nem kérdezi meg.";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "A jelszó a kulcskarikára került.";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "A MySQL jelszót kér";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "Ezzel a jelszóval nem enged be. Próbáld újra.";
 
 "history.byProject" = "Projektenként";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "Projekt létrehozása";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "A(z) %1$@ itt érhető el: http://localhost:%2$ld";
+"wizard.done" = "A(z) %1$@ itt érhető el: http://virtualhost:%2$ld";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "A(z) %@ adatbázis kész.";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "Adjon nevet a projektnek.";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Az Apache elutasította a beállítást. Minden visszaállt, semmi sem változott.";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "A projekt kész, az adatbázis viszont nem jött létre: %@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "Adatbázis létrehozása";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "Név";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "PHP-verzió";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "Port";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "nem kötelező, klónozásra kerül";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "Leírás";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "Miről szól ez a projekt";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "Kisbetűk, számjegyek és alulvonás. A projektek root felhasználóként kapcsolódnak a 127.0.0.1 címen.";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "Kisbetűk, számok és kötőjelek. Ebből lesz a mappa a projects/ alatt.";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "Az első szabad a már beállítottak után.";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "Nem kötelező. A virtuális gazdagép blokkja fölé kerül, hogy később felismerhető legyen a projekt.";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "Keresés…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "Nem található";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "Tároló klónozása…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "Mappa létrehozása…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "Adatbázis létrehozása…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "Virtuális hoszt írása és az Apache újraindítása…";

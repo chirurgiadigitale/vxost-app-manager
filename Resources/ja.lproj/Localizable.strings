@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "新規プロジェクト";
 
+/* Pulsante di conferma */
+"btn.ok" = "OK";
+
 /* Apre il progetto nel browser */
 "btn.open" = "開く";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "データベースに名前を付けてください。";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "同じ名前のデータベースがすでにあります。";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "データベースを作成できませんでした。";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "先頭は英字、そのあとは小文字、数字、アンダースコアが使えます。";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "MySQL が動いていません。起動してからやり直してください。";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "32 文字までです。";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "このインストールの root アカウントにはパスワードがあります。一度入力すれば macOS のキーチェーンに保存され、次からは聞かれません。";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "パスワードをキーチェーンに保存しました。";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "MySQL がパスワードを求めています";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "そのパスワードでは入れません。もう一度お試しください。";
 
 "history.byProject" = "プロジェクト別";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "プロジェクトを作成";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "%1$@ は http://localhost:%2$ld で動いています";
+"wizard.done" = "%1$@ は http://virtualhost:%2$ld で動いています";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "データベース %@ ができました。";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "プロジェクトに名前を付けてください。";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Apache が設定を受け付けませんでした。すべて元に戻され、何も変更されていません。";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "プロジェクトはできましたが、データベースは作成されませんでした: %@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "データベースを作成";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "名前";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "PHP のバージョン";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "ポート";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "任意、クローンされます";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "説明";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "このプロジェクトの内容";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "英小文字、数字、アンダースコアが使えます。プロジェクトは 127.0.0.1 に root で接続します。";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "小文字、数字、ハイフンが使えます。projects/ の下のフォルダ名になります。";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "設定済みのポートの次に空いている番号です。";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "省略できます。バーチャルホストのブロックの上に書かれ、後から見分けるのに使います。";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "検索中…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "見つかりません";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "リポジトリをクローンしています…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "フォルダを作成しています…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "データベースを作成しています…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "バーチャルホストを書き込み、Apache を再起動しています…";

@@ -45,6 +45,9 @@
 /* Pulsante della sezione Progetti che apre il wizard */
 "btn.newProject" = "Nowy projekt";
 
+/* Pulsante di conferma */
+"btn.ok" = "OK";
+
 /* Apre il progetto nel browser */
 "btn.open" = "Otwórz";
 
@@ -75,14 +78,32 @@
 /* Errore: nome del database vuoto */
 "db.err.empty" = "Nadaj bazie danych nazwę.";
 
+/* Errore: il database esiste già */
+"db.err.exists" = "Baza danych o tej nazwie już istnieje.";
+
 /* Errore: la creazione del database non e' riuscita, senza messaggio dal server */
 "db.err.failed" = "Nie udało się utworzyć bazy danych.";
 
 /* Errore: caratteri non ammessi nel nome del database */
 "db.err.format" = "Najpierw litera, potem małe litery, cyfry i podkreślenia.";
 
+/* Errore: MySQL non risponde */
+"db.err.offline" = "MySQL nie działa. Uruchom go i spróbuj ponownie.";
+
 /* Errore: nome del database troppo lungo */
 "db.err.tooLong" = "Najwyżej 32 znaki.";
+
+/* Spiegazione sotto il titolo della password */
+"db.password.body" = "Konto root w tej instalacji ma hasło. Wpisz je raz: zostanie w pęku kluczy macOS i nie będzie już potrzebne.";
+
+/* Esito: la password è stata salvata nel portachiavi */
+"db.password.saved" = "Hasło zapisane w pęku kluczy.";
+
+/* Titolo: si chiede la password di root di MySQL */
+"db.password.title" = "MySQL prosi o hasło";
+
+/* Errore: la password non fa entrare */
+"db.password.wrong" = "To hasło nie działa. Spróbuj ponownie.";
 
 "history.byProject" = "Wg projektu";
 
@@ -338,7 +359,10 @@
 "wizard.btn.create" = "Utwórz projekt";
 
 /* Esito positivo: %1$@ nome del progetto, %2$ld porta */
-"wizard.done" = "%1$@ działa pod http://localhost:%2$ld";
+"wizard.done" = "%1$@ działa pod http://virtualhost:%2$ld";
+
+/* Esito: database creato. %@ è il nome */
+"wizard.done.database" = "Baza danych %@ jest gotowa.";
 
 /* Errore: campo nome vuoto */
 "wizard.err.nameEmpty" = "Nadaj projektowi nazwę.";
@@ -364,8 +388,17 @@
 /* Errore: httpd -t ha rifiutato la configurazione, ripristinata */
 "wizard.failed.configtest" = "Apache odrzucił konfigurację. Wszystko przywrócono, nic się nie zmieniło.";
 
+/* Errore: progetto creato ma database no. %@ è il motivo */
+"wizard.failed.database" = "Projekt jest gotowy, ale baza danych nie została utworzona: %@";
+
+/* Casella di spunta: creare anche il database */
+"wizard.field.db" = "Utwórz bazę danych";
+
 /* Etichetta del campo nome */
 "wizard.field.name" = "Nazwa";
+
+/* Etichetta: versione di PHP del progetto */
+"wizard.field.php" = "Wersja PHP";
 
 /* Etichetta del campo porta */
 "wizard.field.port" = "Port";
@@ -376,17 +409,38 @@
 /* Testo grigio dentro il campo repository */
 "wizard.field.repo.placeholder" = "opcjonalne, zostanie sklonowane";
 
+/* Etichetta: descrizione del progetto */
+"wizard.field.summary" = "Opis";
+
+/* Segnaposto del campo descrizione */
+"wizard.field.summary.placeholder" = "Czego dotyczy ten projekt";
+
+/* Nota sotto il campo del nome del database */
+"wizard.hint.db" = "Małe litery, cyfry i podkreślenia. Projekty łączą się jako root na 127.0.0.1.";
+
 /* Nota sotto il campo nome */
 "wizard.hint.name" = "Małe litery, cyfry i myślniki. To będzie nazwa folderu w projects/.";
 
 /* Nota sotto il campo porta */
 "wizard.hint.port" = "Pierwszy wolny po tych już skonfigurowanych.";
 
+/* Nota sotto il campo descrizione */
+"wizard.hint.summary" = "Opcjonalny. Trafia nad blok hosta wirtualnego, żeby później rozpoznać projekt.";
+
+/* Voce del menu mentre si cercano le versioni */
+"wizard.php.loading" = "Szukanie…";
+
+/* Voce del menu quando non ci sono versioni utilizzabili */
+"wizard.php.none" = "Nie znaleziono żadnej";
+
 /* Avanzamento: clone del repository */
 "wizard.progress.cloning" = "Klonowanie repozytorium…";
 
 /* Avanzamento: creazione della cartella */
 "wizard.progress.creating" = "Tworzenie folderu…";
+
+/* Avanzamento: creazione del database */
+"wizard.progress.database" = "Tworzenie bazy danych…";
 
 /* Avanzamento: scrittura del virtual host */
 "wizard.progress.vhost" = "Zapisywanie virtual hosta i ponowne uruchamianie Apache…";
