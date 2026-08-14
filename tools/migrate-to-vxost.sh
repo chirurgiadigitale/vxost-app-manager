@@ -186,6 +186,57 @@ else
     echo "  my.cnf already has a bind-address, left alone"
 fi
 
+say "Starting the services at boot"
+# ⛔ RunAtLoad e basta, NIENTE KeepAlive.
+#
+# Un guardiano che riaccende qualsiasi servizio sparisca sembra la risposta a
+# "non deve cadere", e invece ricrea di sana pianta il problema del 13/08:
+# Apache che non si riusciva a spegnere perche' qualcosa lo faceva ripartire.
+# Un arresto voluto e un guasto, visti da fuori, sono la stessa cosa: un
+# processo che non c'e' piu'.
+#
+# Perche' un guardiano sia corretto deve saper distinguere i due casi, cioe'
+# servono un marcatore scritto da chi ferma di proposito e il rispetto di quel
+# marcatore. E' un lavoro a se', e va fatto dopo, non di nascosto dentro una
+# migrazione.
+#
+# Quello che si puo' fare oggi senza rischi e' che all'avvio del Mac i servizi
+# ci siano. Fermarli resta una decisione dell'utente, e resta rispettata.
+PLIST="/Library/LaunchDaemons/com.equipedigitale.vxost.plist"
+cat > "$PLIST" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.equipedigitale.vxost</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$ROOT/vxost</string>
+        <string>start</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>$ROOT/logs/autostart.log</string>
+    <key>StandardErrorPath</key>
+    <string>$ROOT/logs/autostart.log</string>
+</dict>
+</plist>
+PLISTEOF
+chown root:wheel "$PLIST"
+chmod 644 "$PLIST"
+
+if plutil -lint "$PLIST" >/dev/null 2>&1; then
+    ok "$PLIST"
+    launchctl load -w "$PLIST" 2>/dev/null
+    ok "loaded, the services will be up after a restart"
+    echo "      to turn it off:  sudo launchctl unload -w $PLIST"
+else
+    fail "the property list is malformed, removed"
+    rm -f "$PLIST"
+fi
+
 say "Done"
 echo "  Start the services and open a couple of projects before trusting it:"
 echo "      sudo $ROOT/xampp start"

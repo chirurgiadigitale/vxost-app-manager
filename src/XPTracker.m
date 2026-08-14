@@ -360,13 +360,36 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 - (NSString *)storagePath {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,
                                                          NSUserDomainMask, YES);
-    NSString *directory = [paths.firstObject
-                           stringByAppendingPathComponent:@"it.equipedigitale.vxost"];
-    [[NSFileManager defaultManager] createDirectoryAtPath:directory
-                             withIntermediateDirectories:YES
-                                              attributes:nil
-                                                   error:NULL];
-    return [directory stringByAppendingPathComponent:@"timesheet.json"];
+    NSString *support = paths.firstObject;
+    NSString *directory = [support stringByAppendingPathComponent:@"it.equipedigitale.vxost"];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    [fm createDirectoryAtPath:directory withIntermediateDirectories:YES
+                   attributes:nil error:NULL];
+
+    NSString *path = [directory stringByAppendingPathComponent:@"timesheet.json"];
+
+    // ⚠️ Le ore registrate prima della rinomina stanno sotto il vecchio
+    // identificatore del bundle, e senza questo passaggio l'app parte con lo
+    // storico vuoto: i dati non sono persi, semplicemente sono in una cartella
+    // che nessuno guarda piu'. Succede a chiunque aggiorni da una versione
+    // precedente, non solo qui.
+    //
+    // Si copia, non si sposta: se qualcosa va storto l'originale e' ancora al
+    // suo posto, e sono ore di lavoro vero.
+    if (![fm fileExistsAtPath:path]) {
+        NSString *legacy = [[support stringByAppendingPathComponent:@"it.chirurgiadigitale.xampp"]
+                            stringByAppendingPathComponent:@"timesheet.json"];
+        if ([fm fileExistsAtPath:legacy]) {
+            NSError *error = nil;
+            if ([fm copyItemAtPath:legacy toPath:path error:&error]) {
+                NSLog(@"VXOST: storico del time tracking recuperato da %@", legacy);
+            } else {
+                NSLog(@"VXOST: impossibile recuperare lo storico da %@: %@",
+                      legacy, error.localizedDescription);
+            }
+        }
+    }
+    return path;
 }
 
 - (void)load {
