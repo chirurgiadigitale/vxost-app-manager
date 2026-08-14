@@ -1,6 +1,15 @@
 /* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
+/* Chi pubblica VXOST, nel pannello Informazioni */
+"about.author" = "Equipe Digitale, HARDCODE bölümü tarafından geliştirildi";
+
+/* Licenza, in fondo al pannello Informazioni */
+"about.licence" = "GNU GPL v2 kapsamında özgür yazılım";
+
+/* Riga della release nel pannello Informazioni */
+"about.release" = "Ağustos 2026 sürümü";
+
 "alert.confirm.title" = "İşlemi onaylıyor musunuz?";
 
 "alert.disableSSL" = "Apache SSL desteği devre dışı bırakılsın mı? Apache yeniden başlatılacak.";

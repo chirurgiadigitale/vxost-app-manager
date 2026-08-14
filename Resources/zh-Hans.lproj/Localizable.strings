@@ -1,6 +1,15 @@
 /* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
+/* Chi pubblica VXOST, nel pannello Informazioni */
+"about.author" = "由 Equipe Digitale HARDCODE 部门开发";
+
+/* Licenza, in fondo al pannello Informazioni */
+"about.licence" = "基于 GNU GPL v2 的自由软件";
+
+/* Riga della release nel pannello Informazioni */
+"about.release" = "2026 年 8 月发布";
+
 "alert.confirm.title" = "确认执行此操作？";
 
 "alert.disableSSL" = "停用 Apache 的 SSL 支持？Apache 将会重启。";

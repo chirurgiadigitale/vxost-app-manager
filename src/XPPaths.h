@@ -44,6 +44,13 @@
 /// Document root di Apache.
 + (NSString *)htdocs;
 
+/// Il nome con cui la macchina raggiunge lo stack.
+///
+/// virtualhost se /etc/hosts lo risolve, altrimenti localhost. Si rileva
+/// invece di scriverlo: chi non ha ancora lanciato enable-virtualhost.sh
+/// aprirebbe un indirizzo che non esiste.
++ (NSString *)localHostname;
+
 /// Versione di VXOST installata, letta da lib/VERSION (es. "8.2.4").
 /// Nil se il file manca.
 + (NSString *)vxostVersion;

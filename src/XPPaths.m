@@ -93,6 +93,38 @@ static NSString *XPDetectControlScript(NSString *root) {
     return cached;
 }
 
++ (NSString *)localHostname {
+    static NSString *name = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        name = @"localhost";
+
+        // /etc/hosts e' leggibile da chiunque e dice la verita' senza costare
+        // il timeout di una risoluzione DNS su un nome che non esiste.
+        //
+        // Si legge riga per riga invece che con una espressione regolare: il
+        // primo tentativo la usava e sbagliava a causa delle sequenze di
+        // escape, restituendo localhost su una macchina dove virtualhost c'era.
+        NSString *hosts = [NSString stringWithContentsOfFile:@"/etc/hosts"
+                                                    encoding:NSUTF8StringEncoding
+                                                       error:NULL];
+        for (NSString *line in [hosts componentsSeparatedByString:@"\n"]) {
+            NSString *clean = [line stringByTrimmingCharactersInSet:
+                               [NSCharacterSet whitespaceCharacterSet]];
+            if (clean.length == 0 || [clean hasPrefix:@"#"]) continue;
+
+            for (NSString *field in [clean componentsSeparatedByCharactersInSet:
+                                     [NSCharacterSet whitespaceCharacterSet]]) {
+                if ([field isEqualToString:@"virtualhost"]) {
+                    name = @"virtualhost";
+                    return;
+                }
+            }
+        }
+    });
+    return name;
+}
+
 + (NSString *)vxostVersion {
     // Stessa fonte usata dallo script di controllo: `cat $VXOST_ROOT/lib/VERSION`.
     NSString *raw = [NSString stringWithContentsOfFile:[self root:@"lib/VERSION"]

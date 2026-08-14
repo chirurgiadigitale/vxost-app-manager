@@ -1,6 +1,15 @@
 /* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
+/* Chi pubblica VXOST, nel pannello Informazioni */
+"about.author" = "Equipe Digitale، HARDCODE ڈویژن کی جانب سے تیار کردہ";
+
+/* Licenza, in fondo al pannello Informazioni */
+"about.licence" = "GNU GPL v2 کے تحت آزاد سافٹ ویئر";
+
+/* Riga della release nel pannello Informazioni */
+"about.release" = "ریلیز اگست 2026";
+
 "alert.confirm.title" = "کیا آپ اس عمل کی تصدیق کرتے ہیں؟";
 
 "alert.disableSSL" = "Apache کی SSL سپورٹ غیر فعال کریں؟ Apache دوبارہ شروع ہوگا۔";

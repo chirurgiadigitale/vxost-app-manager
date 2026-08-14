@@ -164,7 +164,7 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
 #pragma mark - Presentazione
 
 - (NSURL *)url {
-    NSString *host = (self.serverName.length > 0) ? self.serverName : @"localhost";
+    NSString *host = (self.serverName.length > 0) ? self.serverName : [XPPaths localHostname];
     // ServerName è quasi sempre "localhost": ciò che distingue i progetti è la
     // porta, quindi l'URL si costruisce su quella.
     return [NSURL URLWithString:[NSString stringWithFormat:@"http://%@:%ld/",

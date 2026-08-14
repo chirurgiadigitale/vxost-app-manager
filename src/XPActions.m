@@ -104,11 +104,11 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 #pragma mark - Collegamenti
 
 - (void)openDashboard {
-    [self openURLString:@"http://localhost/dashboard/"];
+    [self openURLString:[NSString stringWithFormat:@"http://%@/dashboard/", [XPPaths localHostname]]];
 }
 
 - (void)openPhpMyAdmin {
-    [self openURLString:@"http://localhost/phpmyadmin/"];
+    [self openURLString:[NSString stringWithFormat:@"http://%@/phpmyadmin/", [XPPaths localHostname]]];
 }
 
 - (void)openURLString:(NSString *)urlString {
@@ -214,6 +214,44 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
     } else {
         [self postMessage:NSLocalizedString(@"msg.terminalOpened", nil) isError:NO];
     }
+}
+
+#pragma mark - Informazioni
+
+- (void)showAbout {
+    NSString *appVersion = [[NSBundle mainBundle]
+                            objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"";
+    NSString *stackVersion = [XPPaths vxostVersion];
+
+    // Il pannello standard di macOS mostra quello che gli si passa, e i campi
+    // liberi sono due: Version e Credits. Ci stanno release e autore, che nel
+    // plist non hanno un posto che il pannello legga.
+    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+    paragraph.alignment = NSTextAlignmentCenter;
+    paragraph.paragraphSpacing = 4;
+
+    NSString *credits = [NSString stringWithFormat:
+        @"%@\n\n%@\nwww.chirurgiadigitale.it\n\n%@",
+        NSLocalizedString(@"about.release", nil),
+        NSLocalizedString(@"about.author", nil),
+        NSLocalizedString(@"about.licence", nil)];
+
+    NSDictionary *attributes = @{
+        NSFontAttributeName: [NSFont systemFontOfSize:11],
+        NSForegroundColorAttributeName: [NSColor secondaryLabelColor],
+        NSParagraphStyleAttributeName: paragraph,
+    };
+
+    NSString *versionLine = stackVersion.length > 0
+        ? [NSString stringWithFormat:@"%@ · stack %@", appVersion, stackVersion]
+        : appVersion;
+
+    [NSApp activateIgnoringOtherApps:YES];
+    [NSApp orderFrontStandardAboutPanelWithOptions:@{
+        @"ApplicationName": @"VXOST",
+        @"Version": versionLine,
+        @"Credits": [[NSAttributedString alloc] initWithString:credits attributes:attributes],
+    }];
 }
 
 #pragma mark - Nuovo progetto
@@ -503,7 +541,8 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"# VXOST wizard: %1$@\n"
         @"<VirtualHost *:%4$ld>\n"
         @"    DocumentRoot \"%5$@\"\n"
-        @"    ServerName localhost\n"
+        @"    ServerName %6$@\n"
+        @"    ServerAlias localhost\n"
         @"    <Directory \"%5$@\">\n"
         @"        Options Indexes FollowSymLinks\n"
         @"        AllowOverride All\n"
@@ -529,7 +568,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"    echo VXOST_CONFIGTEST_FAILED\n"
         @"fi\n"
         @"exit 0\n",
-        project, root, control, (long)port, docroot];
+        project, root, control, (long)port, docroot, [XPPaths localHostname]];
 }
 
 #pragma mark - Messaggi

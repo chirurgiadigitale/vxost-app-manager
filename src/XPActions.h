@@ -52,6 +52,9 @@ extern NSString *const XPActionMessageNotification;
 /// Esegue il backup nel Terminale: è interattivo.
 - (void)runBackup;
 
+/// Il pannello Informazioni, con release e autore.
+- (void)showAbout;
+
 #pragma mark - Nuovo progetto
 
 /// Prima porta libera dopo quelle già dichiarate in httpd.conf.

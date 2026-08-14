@@ -1,6 +1,15 @@
 /* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
+/* Chi pubblica VXOST, nel pannello Informazioni */
+"about.author" = "Développé par Equipe Digitale, division HARDCODE";
+
+/* Licenza, in fondo al pannello Informazioni */
+"about.licence" = "Logiciel libre sous licence GNU GPL v2";
+
+/* Riga della release nel pannello Informazioni */
+"about.release" = "Version d'août 2026";
+
 "alert.confirm.title" = "Confirmer l'opération ?";
 
 "alert.disableSSL" = "Désactiver la prise en charge SSL d'Apache ? Apache sera redémarré.";

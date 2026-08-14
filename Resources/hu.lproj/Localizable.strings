@@ -1,6 +1,15 @@
 /* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
+/* Chi pubblica VXOST, nel pannello Informazioni */
+"about.author" = "Fejlesztette az Equipe Digitale, HARDCODE részleg";
+
+/* Licenza, in fondo al pannello Informazioni */
+"about.licence" = "Szabad szoftver a GNU GPL v2 alatt";
+
+/* Riga della release nel pannello Informazioni */
+"about.release" = "2026. augusztusi kiadás";
+
 "alert.confirm.title" = "Megerősíti a műveletet?";
 
 "alert.disableSSL" = "Letiltja az Apache SSL-támogatását? Az Apache újraindul.";

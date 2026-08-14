@@ -73,9 +73,13 @@
     [mainMenu addItem:appItem];
     NSMenu *appMenu = [[NSMenu alloc] init];
 
+    // ⚠️ Il pannello standard prende i dati da Info.plist, ma release e autore
+    // li vuole Davide scritti, e il plist non ha un campo per "chi l'ha fatto"
+    // che il pannello mostri. Si passano a mano con orderFrontStandardAboutPanel:
+    // via XPActions, che e' dove vivono le operazioni.
     [appMenu addItemWithTitle:NSLocalizedString(@"menu.about", nil)
-                       action:@selector(orderFrontStandardAboutPanel:)
-                keyEquivalent:@""];
+                       action:@selector(showAbout)
+                keyEquivalent:@""].target = [XPActions shared];
     [appMenu addItem:[NSMenuItem separatorItem]];
 
     NSMenuItem *dashboard = [appMenu addItemWithTitle:NSLocalizedString(@"menu.openDashboard", nil)
