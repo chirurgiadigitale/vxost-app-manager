@@ -138,18 +138,75 @@ if [ "$CERT_DONE" -eq 0 ]; then
     say "Issuing a certificate that covers both names"
     TMP="$(mktemp -d)"
     chown "$REAL_USER" "$TMP"
+
+    # ⚠️ -H e CAROOT sono entrambi necessari, e la prima versione non li aveva.
+    #
+    # Questo script gira come root. Un `sudo -u utente` lanciato da root NON
+    # riporta HOME a quella dell'utente, quindi mkcert cercava la propria
+    # autorita' di certificazione in /var/root/Library e non la trovava; a quel
+    # punto provava a crearne una nuova la' dentro, senza averne il permesso, e
+    # falliva. Il controllo piu' sopra invece funzionava perche' usa `bash -lc`,
+    # cioe' una shell di login, che HOME la imposta.
+    #
+    # -H la sistema, e CAROOT esplicito rende la cosa indipendente da come e'
+    # configurato sudo su questa macchina.
+    CAROOT="$(sudo -u "$REAL_USER" -H "$MKCERT" -CAROOT 2>/dev/null)"
+    if [ -z "$CAROOT" ] || [ ! -d "$CAROOT" ]; then
+        fail "cannot find the mkcert certificate authority for $REAL_USER"
+        echo "      run 'mkcert -install' as $REAL_USER first"
+        rm -rf "$TMP"
+        rollback
+        exit 1
+    fi
+    ok "certificate authority at $CAROOT"
+
     # localhost stays on the certificate: dropping it would break every link
     # that has not been switched yet, which at this point is all of them.
-    if sudo -u "$REAL_USER" "$MKCERT" -cert-file "$TMP/c.pem" -key-file "$TMP/k.pem" \
-            "$NAME" localhost 127.0.0.1 ::1 >/dev/null 2>&1; then
+    #
+    # ⚠️ The output is kept. The first version sent it to /dev/null and all the
+    # failure said was "mkcert failed", which is the one thing that was already
+    # obvious.
+    if sudo -u "$REAL_USER" -H env CAROOT="$CAROOT" \
+            "$MKCERT" -cert-file "$TMP/c.pem" -key-file "$TMP/k.pem" \
+            "$NAME" localhost 127.0.0.1 ::1 > "$TMP/log" 2>&1; then
+        # ⚠️ Il certificato si controlla PRIMA di installarlo.
+        #
+        # Con CAROOT sbagliato mkcert non fallisce: si stampa "Created a new
+        # local CA" e continua. Il file esce, lo script direbbe che e' andata,
+        # e il browser rifiuterebbe la pagina perche' quella nuova autorita'
+        # non e' nel portachiavi. Un fallimento silenzioso e' peggio di un
+        # errore, quindi qui si guarda cosa e' uscito davvero.
+        if ! openssl x509 -noout -ext subjectAltName -in "$TMP/c.pem" 2>/dev/null \
+             | grep -q "DNS:$NAME"; then
+            fail "the certificate that came out does not cover $NAME"
+            rm -rf "$TMP"
+            rollback
+            exit 1
+        fi
+        # ⚠️ Guardare il NOME dell'emittente non basta, ed e' stato provato:
+        # una CA appena creata prende lo stesso nome di quella vera, perche'
+        # mkcert lo compone da utente e macchina. Le due sono indistinguibili a
+        # leggerle. L'unica prova che vale e' matematica: il certificato deve
+        # verificarsi contro la radice che sta gia' nel portachiavi.
+        if ! openssl verify -CAfile "$CAROOT/rootCA.pem" "$TMP/c.pem" >/dev/null 2>&1; then
+            fail "the certificate does not verify against the authority in your keychain"
+            echo "      it was signed by a different one, and the browser would refuse it"
+            echo "      authority checked: $CAROOT/rootCA.pem"
+            rm -rf "$TMP"
+            rollback
+            exit 1
+        fi
+
         cp "$TMP/c.pem" "$CRT"
         cp "$TMP/k.pem" "$KEY"
         chmod 644 "$CRT"; chmod 600 "$KEY"
         rm -rf "$TMP"
         ok "$NAME, localhost, 127.0.0.1, ::1"
+        ok "signed by the authority already in your keychain"
     else
+        fail "mkcert failed, this is what it said:"
+        sed 's/^/      /' "$TMP/log"
         rm -rf "$TMP"
-        fail "mkcert failed"
         rollback
         exit 1
     fi
