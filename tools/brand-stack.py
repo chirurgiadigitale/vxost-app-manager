@@ -154,6 +154,64 @@ def main():
                 handle.write(text.replace(marker, addition, 1))
             print("    fix_rights patched, it no longer takes temp/mysql from MySQL")
 
+    # ⚠️ La radice web nel pacchetto si chiama www, e gli script che la
+    # nominano vanno con lei.
+    #
+    # fix_rights e' quello che conta: gira al primo avvio e assegna i permessi
+    # partendo da ${BASEX}/htdocs, che nel pacchetto non esiste piu'. Non
+    # rompe niente, ma stampa nove errori nel log di avvio automatico, e nove
+    # errori all'avvio sono nove motivi per credere che qualcosa non vada.
+    webroot_fixed = 0
+    for folder in ("bin", "share"):
+        base = os.path.join(payload, folder)
+        for root, _dirs, files in os.walk(base):
+            for name in files:
+                path = os.path.join(root, name)
+                if not checker_for(path) and not path.endswith("fix_rights"):
+                    continue
+                with open(path, encoding="utf-8", errors="surrogateescape") as handle:
+                    text = handle.read()
+                if "/htdocs" not in text:
+                    continue
+                with open(path, "w", encoding="utf-8", errors="surrogateescape") as handle:
+                    handle.write(text.replace("/htdocs", "/www"))
+                webroot_fixed += 1
+    if webroot_fixed:
+        print(f"    {webroot_fixed} files now point at www, not at the folder that no longer exists")
+
+    # ⚠️ Dove mandare chi ha un problema.
+    #
+    # Due righe indicano ancora il forum e l'email di Apache Friends, e a chi
+    # scrive da un prodotto che non e' il loro rispondono giustamente che non
+    # e' roba loro. Sono istruzioni rivolte all'utente, non note di copyright:
+    # queste si cambiano, quelle no.
+    #
+    # ⛔ Le righe "Copyright ... oswald@apachefriends.org" restano dove sono.
+    # Sono l'attribuzione degli autori di codice GPL, e toglierla non e' una
+    # ripulitura del marchio, e' una violazione della licenza.
+    support = {
+        os.path.join(share_new, "diagnose"): [
+            ("http://www.apachefriends.org/f/", "https://vxost.com/faq/"),
+            ("Please contact our forum", "See"),
+        ],
+        os.path.join(share_new, "backup.head"): [
+            ("Please email to oswald@apachefriends.org for help.",
+             "See https://vxost.com/faq/ for help."),
+        ],
+    }
+    for path, pairs in support.items():
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8", errors="surrogateescape") as handle:
+            text = handle.read()
+        changed = text
+        for old_text, new_text in pairs:
+            changed = changed.replace(old_text, new_text)
+        if changed != text:
+            with open(path, "w", encoding="utf-8", errors="surrogateescape") as handle:
+                handle.write(changed)
+            print(f"    {os.path.basename(path)}: chi ha un problema ora viene mandato su vxost.com")
+
     # The replacement goes in after the rewrite: it is already written in the
     # new names and a second pass over it would do nothing but could only hurt.
     patch = os.path.join(PATCHES, "checkmysqlport")

@@ -18,7 +18,15 @@
 # ⚠️ MySQL gets SIGTERM, never SIGKILL: SIGTERM is a clean shutdown that
 # flushes InnoDB, SIGKILL leaves the next start to recover from a crash.
 #
-# Usage: sudo bash stop-services.sh
+# Usage:
+#   sudo bash stop-services.sh          ferma tutto e sospende l'avvio automatico
+#   sudo bash stop-services.sh resume   rimette l'avvio automatico e riaccende
+#
+# ⚠️ Il secondo modo esiste perche' il primo lascia la macchina in uno stato
+# che non si annulla da se': l'avvio automatico resta sospeso anche dopo un
+# riavvio, e chi non se lo ricorda trova i servizi giu' e nessuna spiegazione.
+# Dire "per riaccendere lancia questo comando" in fondo a settanta righe di
+# output non e' una via di ritorno, e' una nota che si perde.
 #
 set -uo pipefail
 
@@ -37,6 +45,54 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+PLIST="/Library/LaunchDaemons/com.equipedigitale.vxost.plist"
+
+# ---------------------------------------------------------------- resume
+#
+# Il contrario esatto della sospensione. Il plist ha RunAtLoad, quindi
+# caricarlo riaccende anche i servizi: non serve un secondo comando.
+if [ "${1:-}" = "resume" ]; then
+    say "Autostart"
+    if [ ! -f "$PLIST" ]; then
+        fail "$PLIST non c'e': l'avvio automatico non e' installato"
+        exit 1
+    fi
+    if launchctl list 2>/dev/null | grep -q "com.equipedigitale.vxost"; then
+        ok "era gia' attivo"
+    else
+        output="$(launchctl load -w "$PLIST" 2>&1)" || {
+            # ⛔ L'output del passo che puo' fallire non si butta via. E' la
+            # regola che e' costata due giorni su mkcert.
+            fail "launchctl ha rifiutato:"
+            printf '%s\n' "$output" | head -5 | sed 's/^/      /'
+            exit 1
+        }
+        ok "ricaricato, i servizi ripartono da soli"
+    fi
+
+    say "Verifica, dalla tabella dei processi"
+    i=0
+    while [ $i -lt 20 ]; do
+        pgrep -x httpd >/dev/null 2>&1 && pgrep -x mysqld >/dev/null 2>&1 && break
+        sleep 1
+        i=$((i + 1))
+    done
+    for p in httpd mysqld; do
+        pgrep -x "$p" >/dev/null 2>&1 && ok "$p gira" || fail "$p non e' partito"
+    done
+    # ⚠️ ProFTPD non parte con gli altri, ed e' voluto: lo stack lo avvia solo
+    # se esiste etc/vxost/startftp, che si crea premendo Avvia sull'app o con
+    # `vxost startftp`. Fuori da quel caso non e' un guasto, e' spento.
+    if pgrep -x proftpd >/dev/null 2>&1; then
+        ok "proftpd gira"
+    elif [ -f "$ROOT/etc/vxost/startftp" ]; then
+        fail "proftpd doveva partire e non e' partito"
+    else
+        echo "      proftpd e' spento per scelta: si accende dall'app, una volta sola"
+    fi
+    exit 0
+fi
+
 # Aspetta che un processo sparisca davvero, invece di fidarsi di un messaggio.
 wait_gone() {
     local pattern="$1" label="$2" seconds="${3:-20}" i=0
@@ -51,12 +107,11 @@ wait_gone() {
 # ⚠️ Prima di tutto si toglie di mezzo l'avvio automatico. Uno stop che viene
 # annullato da launchd un istante dopo non e' uno stop, ed e' quello che e'
 # successo il 14/08 durante la rinomina.
-PLIST="/Library/LaunchDaemons/com.equipedigitale.vxost.plist"
 if [ -f "$PLIST" ] && launchctl list 2>/dev/null | grep -q "com.equipedigitale.vxost"; then
     say "Autostart"
     launchctl unload -w "$PLIST" 2>/dev/null
     ok "suspended, nothing will bring the services back on its own"
-    echo "      to turn it on again: sudo launchctl load -w $PLIST"
+    echo "      per riaccendere: sudo bash $0 resume"
 fi
 
 say "Apache"
@@ -190,3 +245,6 @@ if [ -n "$still" ]; then
     exit 1
 fi
 ok "everything is down"
+echo
+echo "  L'avvio automatico resta sospeso finche' non si lancia:"
+echo "      sudo bash $0 resume"

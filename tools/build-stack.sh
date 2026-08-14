@@ -36,7 +36,26 @@ if [ -z "$SOURCE" ]; then
     echo "No installation found under /Applications. Nothing to build from." >&2
     exit 1
 fi
-DASHBOARD_REPO="$SOURCE/htdocs"
+# La radice web si rileva come tutto il resto, e per lo stesso motivo: dopo la
+# rinomina si chiama www, prima si chiamava htdocs, e le due convivono su
+# macchine diverse.
+#
+# ⚠️ E se non si trova, si ferma. Un ciclo di copia che non trova niente e
+# tira dritto e' esattamente il difetto che ha fatto uscire un pacchetto da
+# 327 MB senza lo script di controllo: sembrava completo e non avviava un solo
+# servizio.
+DASHBOARD_REPO=""
+for _name in "www" "htdocs"; do
+    [ -d "$SOURCE/$_name" ] && { DASHBOARD_REPO="$SOURCE/$_name"; break; }
+done
+if [ -z "$DASHBOARD_REPO" ]; then
+    echo "No web root under $SOURCE: neither www nor htdocs. Nothing to copy." >&2
+    exit 1
+fi
+
+# Nel pacchetto si chiama sempre www: e' il nome scelto, e un pacchetto che
+# uscisse con htdocs rimetterebbe in circolo il nome vecchio.
+WEBROOT="www"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="$HERE/build/stack"
 PAYLOAD="$STAGE/vxostfiles"
@@ -146,19 +165,27 @@ step "Creating empty runtime folders"
 mkdir -p "$PAYLOAD/logs" "$PAYLOAD/var" "$PAYLOAD/temp" "$PAYLOAD/backup"
 touch "$PAYLOAD/logs/.gitkeep"
 
-# ------------------------------------------------------------------ htdocs ---
+# --------------------------------------------------------------- web root ---
 
 step "Installing a clean web root"
-mkdir -p "$PAYLOAD/htdocs"
+mkdir -p "$PAYLOAD/$WEBROOT"
 # Only the redesigned dashboard, never the projects sitting next to it.
+copied=0
 for item in dashboard index.html favicon.ico README.md; do
-    [ -e "$DASHBOARD_REPO/$item" ] && cp -R "$DASHBOARD_REPO/$item" "$PAYLOAD/htdocs/"
+    if [ -e "$DASHBOARD_REPO/$item" ]; then
+        cp -R "$DASHBOARD_REPO/$item" "$PAYLOAD/$WEBROOT/"
+        copied=$((copied + 1))
+    fi
 done
+if [ "$copied" -eq 0 ]; then
+    echo "Nothing copied from $DASHBOARD_REPO: the package would ship an empty web root." >&2
+    exit 1
+fi
 # The upstream dashboard ships backups of the framework it used to use.
-find "$PAYLOAD/htdocs" \( -name "*.bak.*" -o -name "*.bak" -o -name "*-old.*" \) -delete 2>/dev/null || true
+find "$PAYLOAD/$WEBROOT" \( -name "*.bak.*" -o -name "*.bak" -o -name "*-old.*" \) -delete 2>/dev/null || true
 
-mkdir -p "$PAYLOAD/htdocs/projects"
-cat > "$PAYLOAD/htdocs/projects/index.html" <<'HTML'
+mkdir -p "$PAYLOAD/$WEBROOT/projects"
+cat > "$PAYLOAD/$WEBROOT/projects/index.html" <<'HTML'
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>Projects</title>
@@ -187,9 +214,9 @@ if [ -f "$VHOSTS" ]; then
 # project with the port it answers on.
 #
 # <VirtualHost *:4000>
-#     DocumentRoot "/Applications/VXOST/vxostfiles/htdocs/projects/my-site"
-#     ServerName localhost
-#     <Directory "/Applications/VXOST/vxostfiles/htdocs/projects/my-site">
+#     DocumentRoot "/Applications/VXOST/vxostfiles/www/projects/my-site"
+#     ServerName virtualhost
+#     <Directory "/Applications/VXOST/vxostfiles/www/projects/my-site">
 #         Options Indexes FollowSymLinks
 #         AllowOverride All
 #         Require all granted
