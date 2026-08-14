@@ -127,8 +127,20 @@ if pgrep -x mysqld >/dev/null 2>&1 || pgrep -f "bin/mysqld_safe" >/dev/null 2>&1
     # ne parte subito un altro e sembra che MySQL non si fermi mai.
     if pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
         pkill -f "bin/mysqld_safe" 2>/dev/null
-        sleep 1
-        ok "mysqld_safe stopped, nothing will restart it now"
+        # ⚠️ Non basta dormire un secondo. mysqld_safe resta in giro finche' il
+        # figlio non ha finito di chiudere, e il controllo finale lo trovava
+        # ancora vivo: lo script diceva di aver fallito quando aveva funzionato,
+        # e bisognava rilanciarlo per sentirsi dire che era tutto a posto.
+        i=0
+        while [ $i -lt 30 ] && pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; do
+            sleep 1
+            i=$((i + 1))
+        done
+        if pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
+            fail "mysqld_safe is still there after 30s"
+        else
+            ok "mysqld_safe stopped, nothing will restart it now"
+        fi
     fi
 
     if pgrep -x mysqld >/dev/null 2>&1; then
