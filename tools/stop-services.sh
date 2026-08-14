@@ -48,6 +48,17 @@ wait_gone() {
     return 1
 }
 
+# ⚠️ Prima di tutto si toglie di mezzo l'avvio automatico. Uno stop che viene
+# annullato da launchd un istante dopo non e' uno stop, ed e' quello che e'
+# successo il 14/08 durante la rinomina.
+PLIST="/Library/LaunchDaemons/com.equipedigitale.vxost.plist"
+if [ -f "$PLIST" ] && launchctl list 2>/dev/null | grep -q "com.equipedigitale.vxost"; then
+    say "Autostart"
+    launchctl unload -w "$PLIST" 2>/dev/null
+    ok "suspended, nothing will bring the services back on its own"
+    echo "      to turn it on again: sudo launchctl load -w $PLIST"
+fi
+
 say "Apache"
 if pgrep -x httpd >/dev/null 2>&1; then
     # ⚠️ Il segnale va al processo PADRE, letto dal suo file pid, non ad

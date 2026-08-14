@@ -87,7 +87,38 @@ if [ "$MODE" != "apply" ]; then
     exit 0
 fi
 
+# --- l'avvio automatico va sospeso mentre si lavora ------------------------
+#
+# ⚠️ Il LaunchDaemon installato dalla migrazione ha RunAtLoad, e launchd
+# rilancia un lavoro che esce male. Il 14/08 ha acceso i servizi nel mezzo
+# della rinomina, mentre lo script stava spostando file: lo stop diceva di
+# aver funzionato e un istante dopo Apache era di nuovo su.
+#
+# Un lavoro di manutenzione lo sospende all'inizio e lo rimette alla fine.
+PLIST="/Library/LaunchDaemons/com.equipedigitale.vxost.plist"
+
+suspend_autostart() {
+    [ -f "$PLIST" ] || return 0
+    if launchctl list 2>/dev/null | grep -q "com.equipedigitale.vxost"; then
+        launchctl unload -w "$PLIST" 2>/dev/null
+        ok "autostart suspended while we work"
+        AUTOSTART_WAS_ON=1
+    fi
+}
+
+resume_autostart() {
+    [ -f "$PLIST" ] || return 0
+    [ "${AUTOSTART_WAS_ON:-0}" = "1" ] || return 0
+    launchctl load -w "$PLIST" 2>/dev/null
+    ok "autostart back on"
+}
+
+AUTOSTART_WAS_ON=0
+
 # ----------------------------------------------------------------- apply ---
+
+say "Suspending the autostart"
+suspend_autostart
 
 say "Backing up what is about to change"
 mkdir -p "$BACKUP"
@@ -112,6 +143,7 @@ rollback() {
     rm -f "$ROOT/$CONTROL"
     cp "$BACKUP/$CONTROL" "$ROOT/$CONTROL"
     chmod 755 "$ROOT/$CONTROL"
+    resume_autostart
     fail "put back as it was, from $BACKUP"
 }
 
@@ -197,6 +229,8 @@ else
     grep -rli "xampp" "$ROOT/vxost" "$ROOT/share/vxost" 2>/dev/null \
         | sed "s|$ROOT/|      |"
 fi
+
+resume_autostart
 
 say "Done"
 echo "  From now on:"
