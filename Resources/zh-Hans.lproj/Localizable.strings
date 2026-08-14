@@ -1,14 +1,14 @@
 /* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
-/* Chi pubblica VXOST, nel pannello Informazioni */
-"about.author" = "由 Equipe Digitale HARDCODE 部门开发";
+/* Chi pubblica VXOST, nel pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
+"about.author" = "Developed by Equipe Digitale, HARDCODE division";
 
-/* Licenza, in fondo al pannello Informazioni */
-"about.licence" = "基于 GNU GPL v2 的自由软件";
+/* Licenza, in fondo al pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
+"about.licence" = "Free software under the GNU GPL v2";
 
-/* Riga della release nel pannello Informazioni */
-"about.release" = "2026 年 8 月发布";
+/* Riga della release nel pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
+"about.release" = "Release August 2026";
 
 "alert.confirm.title" = "确认执行此操作？";
 

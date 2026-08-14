@@ -84,8 +84,9 @@ say "What is going to be rewritten"
 TEXT_FILES="$(mktemp)"
 grep -rli "xampp" "$ROOT" \
      --include="*.conf" --include="*.ini" --include="*.txt" --include="*.md" \
-     --include="*.var" --include="*.html" \
-     --exclude-dir=htdocs --exclude-dir=licenses --exclude-dir=backup \
+     --include="*.var" --include="*.html" --include="*.[0-9]" --include="*.[0-9][a-z]*" \
+     --include="*.pl" --include="*.pm" --include="*.sh" \
+     --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses --exclude-dir=backup \
      2>/dev/null > "$TEXT_FILES" || true
 count=$(wc -l < "$TEXT_FILES" | tr -d ' ')
 echo "  $count text files"
@@ -139,11 +140,26 @@ say "Rewriting the text files"
 changed=0
 while IFS= read -r f; do
     [ -n "$f" ] || continue
-    # Il percorso vero al posto di quello che passa dal symlink, poi il nome.
-    perl -pi -e "s{\Q$OLD_PATH\E}{$NEW_PATH}g;
-                 s{XAMPP}{VXOST}g;
-                 s{Xampp}{Vxost}g;
-                 s{xampp}{vxost}g;" "$f"
+    # Alcuni file dell'elenco sono stati appena cancellati perche' morti:
+    # senza questo controllo perl stampa "Can't open" per ognuno.
+    [ -f "$f" ] || continue
+
+    case "$f" in
+        */man/*|*/licenses/*)
+            # ⚠️ Nella documentazione di terze parti si riscrive SOLO il
+            # percorso, non il nome. Il percorso lo ha messo il confezionatore
+            # dello stack, il testo intorno e' dell'autore e non si tocca.
+            # Sono oltre mille pagine di manuale, e quasi tutte nominano il
+            # vecchio nome soltanto dentro il percorso di installazione.
+            perl -pi -e "s{\\Q$OLD_PATH\\E}{$NEW_PATH}g" "$f"
+            ;;
+        *)
+            perl -pi -e "s{\\Q$OLD_PATH\\E}{$NEW_PATH}g;
+                         s{XAMPP}{VXOST}g;
+                         s{Xampp}{Vxost}g;
+                         s{xampp}{vxost}g;" "$f"
+            ;;
+    esac
     changed=$((changed + 1))
 done < "$TEXT_FILES"
 ok "$changed files"
@@ -180,10 +196,10 @@ else
 fi
 
 say "What is left"
-left=$(grep -rli "xampp" "$ROOT" --exclude-dir=htdocs --exclude-dir=licenses \
+left=$(grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
        --exclude-dir=backup 2>/dev/null | wc -l | tr -d ' ')
 echo "  $left files still mention it, and they are binaries or the hidden links:"
-grep -rli "xampp" "$ROOT" --exclude-dir=htdocs --exclude-dir=licenses \
+grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
      --exclude-dir=backup 2>/dev/null | head -6 | sed "s|$ROOT/|      |"
 
 say "Done"

@@ -1,13 +1,13 @@
 /* Generato da tools/i18n/build-strings.py, non modificare a mano.
    Le traduzioni vivono in tools/i18n/catalog.json. */
 
-/* Chi pubblica VXOST, nel pannello Informazioni */
+/* Chi pubblica VXOST, nel pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
 "about.author" = "Developed by Equipe Digitale, HARDCODE division";
 
-/* Licenza, in fondo al pannello Informazioni */
+/* Licenza, in fondo al pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
 "about.licence" = "Free software under the GNU GPL v2";
 
-/* Riga della release nel pannello Informazioni */
+/* Riga della release nel pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
 "about.release" = "Release August 2026";
 
 "alert.confirm.title" = "Confirm this operation?";
