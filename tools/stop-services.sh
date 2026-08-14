@@ -50,26 +50,58 @@ wait_gone() {
 
 say "Apache"
 if pgrep -x httpd >/dev/null 2>&1; then
-    # apachectl parla al processo padre attraverso il suo file pid, che per
-    # Apache esiste. E' la via pulita: chiude le connessioni in corso.
-    "$ROOT/bin/apachectl" -k stop >/dev/null 2>&1
+    # ⚠️ Il segnale va al processo PADRE, letto dal suo file pid, non ad
+    # apachectl.
+    #
+    # apachectl lancia `httpd -k stop` senza le opzioni con cui il server e'
+    # partito, e su questo stack quel comando puo' uscire in errore prima di
+    # segnalare alcunche'. Il 14/08 e' successo: Apache e' rimasto su e lo
+    # script diceva di aver provato. Il padre ha un pid noto, quindi gli si
+    # parla direttamente. E' quello che apachectl farebbe se funzionasse.
+    master=""
+    if [ -f "$ROOT/logs/httpd.pid" ]; then
+        candidate="$(cat "$ROOT/logs/httpd.pid" 2>/dev/null | tr -d ' \n')"
+        # Il file puo' essere vecchio e puntare a un pid riciclato da un altro
+        # programma: si controlla che quel processo sia davvero httpd.
+        case "$(ps -p "$candidate" -o comm= 2>/dev/null)" in
+            *httpd) master="$candidate" ;;
+        esac
+    fi
+    [ -n "$master" ] || master="$(pgrep -x httpd | head -1)"
+
+    if [ -n "$master" ]; then
+        echo "  parent process: $master"
+        kill -TERM "$master" 2>/dev/null
+    fi
+
     if wait_gone httpd "Apache" 15; then
         ok "stopped"
     else
-        echo "  still there after 15s, asking the remaining processes to quit"
+        echo "  still there after 15s, this is what apachectl has to say:"
+        # ⛔ L'output NON si butta via. La prima versione di questo script lo
+        # mandava in /dev/null e il fallimento diceva solo "Apache is still
+        # running", che e' la cosa gia' ovvia. Stesso errore fatto con mkcert
+        # poche ore prima.
+        "$ROOT/bin/apachectl" -k stop 2>&1 | sed 's/^/      /'
         pkill -TERM -x httpd 2>/dev/null
-        wait_gone httpd "Apache" 10 && ok "stopped" || fail "Apache is still running"
+        if wait_gone httpd "Apache" 10; then
+            ok "stopped"
+        else
+            fail "Apache is still running, these are the processes left:"
+            ps -eo pid,ppid,user,etime,command | grep httpd | grep -v grep \
+                | head -5 | sed 's/^/      /'
+        fi
     fi
 else
     ok "already stopped"
 fi
 
 say "MySQL"
-if pgrep -x mysqld >/dev/null 2>&1 || pgrep -f mysqld_safe >/dev/null 2>&1; then
+if pgrep -x mysqld >/dev/null 2>&1 || pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
     # ⚠️ Il guardiano per primo. Uccidendo mysqld mentre mysqld_safe e' vivo,
     # ne parte subito un altro e sembra che MySQL non si fermi mai.
-    if pgrep -f mysqld_safe >/dev/null 2>&1; then
-        pkill -f mysqld_safe 2>/dev/null
+    if pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
+        pkill -f "bin/mysqld_safe" 2>/dev/null
         sleep 1
         ok "mysqld_safe stopped, nothing will restart it now"
     fi
@@ -103,7 +135,7 @@ still=""
 for p in httpd mysqld proftpd; do
     pgrep -x "$p" >/dev/null 2>&1 && still="$still $p"
 done
-pgrep -f mysqld_safe >/dev/null 2>&1 && still="$still mysqld_safe"
+pgrep -f "bin/mysqld_safe" >/dev/null 2>&1 && still="$still mysqld_safe"
 
 if [ -n "$still" ]; then
     fail "still running:$still"
