@@ -136,8 +136,22 @@ fi
 
 if [ "$CERT_DONE" -eq 0 ]; then
     say "Issuing a certificate that covers both names"
-    TMP="$(mktemp -d)"
-    chown "$REAL_USER" "$TMP"
+    # ⚠️ La cartella temporanea si crea COME UTENTE, non come root.
+    #
+    # Su macOS ogni utente ha la sua area temporanea e quella di root e'
+    # drwx------ root wheel. `mktemp -d` da root la crea li' dentro, e
+    # cambiarne il proprietario non serve a niente: e' il GENITORE che l'utente
+    # non puo' attraversare. mkcert, lanciato come rigo, rispondeva
+    # "permission denied" su un file dentro una cartella che gli apparteneva.
+    #
+    # Creandola come utente finisce nella sua area, e root ci legge lo stesso
+    # perche' root legge tutto.
+    TMP="$(sudo -u "$REAL_USER" -H mktemp -d)"
+    if [ -z "$TMP" ] || [ ! -d "$TMP" ]; then
+        fail "could not create a working folder for $REAL_USER"
+        rollback
+        exit 1
+    fi
 
     # ⚠️ -H e CAROOT sono entrambi necessari, e la prima versione non li aveva.
     #
