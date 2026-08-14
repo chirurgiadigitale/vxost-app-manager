@@ -135,6 +135,25 @@ def main():
         total += rewrite(path)
     print(f"    {total} references rewritten in {len(targets)} files")
 
+    # ⚠️ fix_rights assegna tutta la cartella temp a daemon, e dentro c'e'
+    # anche temp/mysql, che mysqld usa girando come _mysql. Dopo il passaggio
+    # di fix_rights MySQL non riesce piu' a creare i file temporanei di InnoDB
+    # e si rifiuta di partire, con "Unknown/unsupported storage engine: InnoDB".
+    #
+    # E' un difetto che arriva da monte, ma si vede solo quando fix_rights
+    # gira, cioe' quando manca etc/vxost/rights_fixed. Vale la pena chiuderlo
+    # qui invece di lasciarlo in agguato.
+    rights = os.path.join(payload, "bin", "fix_rights")
+    if os.path.isfile(rights):
+        with open(rights, encoding="utf-8", errors="surrogateescape") as handle:
+            text = handle.read()
+        marker = "chown -R daemon:daemon ${BASEX}/temp"
+        addition = marker + "\n# temp/mysql appartiene a mysqld, che gira come _mysql: senza questa riga\n# InnoDB non riesce a creare i suoi file temporanei e MySQL non parte.\nchown -R _mysql:_mysql ${BASEX}/temp/mysql 2>/dev/null"
+        if marker in text and "temp/mysql" not in text:
+            with open(rights, "w", encoding="utf-8", errors="surrogateescape") as handle:
+                handle.write(text.replace(marker, addition, 1))
+            print("    fix_rights patched, it no longer takes temp/mysql from MySQL")
+
     # The replacement goes in after the rewrite: it is already written in the
     # new names and a second pass over it would do nothing but could only hurt.
     patch = os.path.join(PATCHES, "checkmysqlport")
