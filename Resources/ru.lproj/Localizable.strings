@@ -339,6 +339,27 @@
 
 "tool.security" = "Проверка безопасности";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "Проверять автоматически";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "Автоматическая проверка выключена. VXOST не делает ни одного сетевого запроса.";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "VXOST будет проверять раз в день. Больше ничего не отправляется.";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "Вышла версия %@";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "Проверить обновления";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "Проверка…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "Это последняя версия.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "отключён в конфигурации";
 

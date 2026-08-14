@@ -339,6 +339,27 @@
 
 "tool.security" = "セキュリティ確認";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "自動で確認";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "自動確認はオフです。VXOST はネットワーク接続を一切行いません。";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "VXOST は一日に一度確認します。ほかには何も送りません。";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "バージョン %@ が出ました";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "アップデートを確認";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "確認しています…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "これが最新バージョンです。";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "設定で無効";
 

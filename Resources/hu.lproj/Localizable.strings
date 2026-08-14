@@ -339,6 +339,27 @@
 
 "tool.security" = "Biztonsági ellenőrzés";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "Automatikus keresés";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "Az automatikus keresés ki van kapcsolva. A VXOST egyetlen hálózati kérést sem indít.";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "A VXOST naponta egyszer keres. Semmi más nem megy el.";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "Megjelent a(z) %@ verzió";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "Frissítések keresése";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "Ellenőrzés…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "Ez a legfrissebb verzió.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "letiltva a beállításokban";
 

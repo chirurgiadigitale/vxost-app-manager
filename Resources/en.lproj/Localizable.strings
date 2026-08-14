@@ -339,6 +339,27 @@
 
 "tool.security" = "Security check";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "Check automatically";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "Automatic checking is off. VXOST makes no network request at all.";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "VXOST will check once a day. Nothing else is sent.";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "Version %@ is out";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "Check for updates";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "Checking…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "This is the latest version.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "disabled in configuration";
 

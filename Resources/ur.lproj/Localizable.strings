@@ -339,6 +339,27 @@
 
 "tool.security" = "سیکیورٹی جانچ";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "خودکار چیک کریں";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "خودکار چیک بند ہے۔ VXOST کوئی نیٹ ورک درخواست نہیں کرتا۔";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "VXOST دن میں ایک بار چیک کرے گا۔ اس کے علاوہ کچھ نہیں بھیجا جاتا۔";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "ورژن %@ آ گیا ہے";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "اپ ڈیٹ چیک کریں";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "چیک کیا جا رہا ہے…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "یہ تازہ ترین ورژن ہے۔";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "کنفیگریشن میں غیر فعال";
 

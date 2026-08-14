@@ -339,6 +339,27 @@
 
 "tool.security" = "Güvenlik denetimi";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "Otomatik denetle";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "Otomatik denetim kapalı. VXOST hiçbir ağ isteği yapmaz.";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "VXOST günde bir kez denetleyecek. Başka hiçbir şey gönderilmez.";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "%@ sürümü çıktı";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "Güncellemeleri denetle";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "Denetleniyor…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "Bu en son sürüm.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "yapılandırmada devre dışı";
 

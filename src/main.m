@@ -9,6 +9,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "XPStatusController.h"
+#import "XPUpdateCheck.h"
 #import "XPServiceMonitor.h"
 #import "XPMainWindowController.h"
 #import "XPLogWindowController.h"
@@ -29,6 +30,11 @@
     self.statusController = [[XPStatusController alloc] init];
     [self.statusController install];
     [[XPServiceMonitor shared] start];
+
+    // L'unica richiesta di rete che l'app fa. Parte con qualche secondo di
+    // ritardo e non più di una volta al giorno; si spegne dal menu della barra
+    // di stato, e spenta non parte affatto.
+    [[XPUpdateCheck shared] start];
 
     // Chi lancia dall'icona del Dock si aspetta una finestra.
     [[XPMainWindowController shared] present];

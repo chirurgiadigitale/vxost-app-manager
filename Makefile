@@ -3,7 +3,7 @@
 #   make          compila e crea build/VXOST.app
 #   make icon     rigenera Resources/AppIcon.icns dal logo ufficiale
 #   make run      compila e avvia
-#   make wizardtest  prova il wizard senza aprire interfacce
+#   make test     esegue le prove: wizard e controllo aggiornamenti
 #   make install  copia l'app in /Applications/VXOST/
 #   make clean    rimuove build/
 
@@ -31,7 +31,7 @@ CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS)
 # tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security
 
-.PHONY: all icon strings run install clean uninstall dist wizardtest
+.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
@@ -86,6 +86,19 @@ wizardtest:
 	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/wizardtest \
 		tests/wizardtest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/wizardtest
+
+# Il confronto fra numeri di versione, dove un errore non si vede: o non
+# annuncia un aggiornamento che c'è, o ne annuncia uno che non c'è.
+#
+# L'ultima parte chiede il file delle versioni a vxost.com. Senza rete lo dice
+# e va avanti.
+updatetest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/updatetest \
+		tests/updatetest.m src/XPUpdateCheck.m
+	@./build/updatetest
+
+test: wizardtest updatetest
 
 # L'app va in /Applications, non dentro la cartella dello stack.
 #

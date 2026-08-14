@@ -9,6 +9,7 @@
 #import "XPService.h"
 #import "XPServiceMonitor.h"
 #import "XPActions.h"
+#import "XPUpdateCheck.h"
 #import "XPLogWindowController.h"
 #import "XPMainWindowController.h"
 
@@ -50,6 +51,10 @@
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(actionDidReport:)
                                                  name:XPActionMessageNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(updateCheckDidFinish:)
+                                                 name:XPUpdateCheckDidFinishNotification
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(themeDidChange:)
@@ -147,6 +152,31 @@
     [menu addItemWithTitle:NSLocalizedString(@"menu.openDashboard", nil) action:@selector(menuOpenDashboard:) keyEquivalent:@""].target = self;
     [menu addItemWithTitle:NSLocalizedString(@"menu.viewLogs", nil) action:@selector(menuOpenLogs:) keyEquivalent:@""].target = self;
     [menu addItem:[NSMenuItem separatorItem]];
+
+    // Aggiornamenti. La voce dice cosa si sa adesso, e non "cerca
+    // aggiornamenti": la ricerca la fa l'app da sé, e chiederlo a mano resta
+    // possibile ma non è più il modo normale di saperlo.
+    XPUpdateCheck *updates = [XPUpdateCheck shared];
+    if (updates.availableVersion) {
+        NSMenuItem *item = [menu addItemWithTitle:
+            [NSString stringWithFormat:NSLocalizedString(@"update.available", nil),
+             updates.availableVersion]
+                                           action:@selector(menuDownloadUpdate:)
+                                    keyEquivalent:@""];
+        item.target = self;
+    } else {
+        NSMenuItem *item = [menu addItemWithTitle:NSLocalizedString(@"update.check", nil)
+                                           action:@selector(menuCheckForUpdates:)
+                                    keyEquivalent:@""];
+        item.target = self;
+    }
+    NSMenuItem *toggle = [menu addItemWithTitle:NSLocalizedString(@"update.automatic", nil)
+                                         action:@selector(menuToggleAutomatic:)
+                                  keyEquivalent:@""];
+    toggle.target = self;
+    toggle.state = updates.automatic ? NSControlStateValueOn : NSControlStateValueOff;
+
+    [menu addItem:[NSMenuItem separatorItem]];
     [menu addItemWithTitle:NSLocalizedString(@"btn.quit", nil) action:@selector(menuQuit:) keyEquivalent:@"q"].target = self;
 
     // Assegnare il menu allo status item lo fa comparire al click successivo,
@@ -161,6 +191,25 @@
 - (void)menuOpenLogs:(id)sender      { [[XPLogWindowController shared] showWindowAndReload]; }
 - (void)menuQuit:(id)sender          { [NSApp terminate:nil]; }
 
+- (void)menuDownloadUpdate:(id)sender {
+    NSString *url = [XPUpdateCheck shared].downloadURL;
+    if (url.length > 0) [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
+- (void)menuCheckForUpdates:(id)sender {
+    [[XPActions shared] postMessage:NSLocalizedString(@"update.checking", nil) isError:NO];
+    [[XPUpdateCheck shared] checkNow];
+}
+
+- (void)menuToggleAutomatic:(id)sender {
+    XPUpdateCheck *updates = [XPUpdateCheck shared];
+    updates.automatic = !updates.automatic;
+    [[XPActions shared] postMessage:(updates.automatic
+                                     ? NSLocalizedString(@"update.automatic.on", nil)
+                                     : NSLocalizedString(@"update.automatic.off", nil))
+                            isError:NO];
+}
+
 #pragma mark - Aggiornamenti di stato
 
 - (void)servicesDidChange:(NSNotification *)note {
@@ -171,6 +220,22 @@
 - (void)actionDidReport:(NSNotification *)note {
     [self.panel showMessage:note.userInfo[@"message"]
                     isError:[note.userInfo[@"isError"] boolValue]];
+}
+
+/// L'esito del controllo si dice solo quando c'è qualcosa da dire.
+///
+/// ⚠️ Un "sei aggiornato" che compare da solo una volta al giorno è un avviso
+/// per una non-notizia. Chi lo ha chiesto dal menu invece una risposta la
+/// aspetta, e quella arriva perché il controllo manuale scrive comunque.
+- (void)updateCheckDidFinish:(NSNotification *)note {
+    if ([note.userInfo[@"available"] boolValue]) {
+        [[XPActions shared] postMessage:
+            [NSString stringWithFormat:NSLocalizedString(@"update.available", nil),
+             note.userInfo[@"version"]] isError:NO];
+    } else if ([note.userInfo[@"manual"] boolValue]) {
+        [[XPActions shared] postMessage:NSLocalizedString(@"update.current", nil)
+                                isError:NO];
+    }
 }
 
 /// Al cambio di tema il pannello viene ricostruito: i colori delle etichette

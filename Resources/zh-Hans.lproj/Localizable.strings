@@ -339,6 +339,27 @@
 
 "tool.security" = "安全检查";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "自动检查";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "自动检查已关闭。VXOST 不会发出任何网络请求。";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "VXOST 每天检查一次。不会发送其他任何内容。";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "版本 %@ 已发布";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "检查更新";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "正在检查…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "这已经是最新版本。";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "已在配置中停用";
 

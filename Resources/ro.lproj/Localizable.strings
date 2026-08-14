@@ -339,6 +339,27 @@
 
 "tool.security" = "Verificare de securitate";
 
+/* Voce di menu con spunta: controllo automatico */
+"update.automatic" = "Caută automat";
+
+/* Esito: controllo automatico spento */
+"update.automatic.off" = "Verificarea automată este oprită. VXOST nu face nicio cerere de rețea.";
+
+/* Esito: controllo automatico acceso */
+"update.automatic.on" = "VXOST va verifica o dată pe zi. Nu se trimite nimic altceva.";
+
+/* Voce di menu ed esito: c'è una versione nuova. %@ è il numero */
+"update.available" = "A apărut versiunea %@";
+
+/* Voce di menu: controlla adesso */
+"update.check" = "Caută actualizări";
+
+/* Avanzamento: si sta controllando */
+"update.checking" = "Se verifică…";
+
+/* Esito: si ha già l'ultima versione */
+"update.current" = "Aceasta este cea mai nouă versiune.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "dezactivat în configurare";
 
