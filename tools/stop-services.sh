@@ -71,7 +71,13 @@ if pgrep -x httpd >/dev/null 2>&1; then
 
     if [ -n "$master" ]; then
         echo "  parent process: $master"
-        kill -TERM "$master" 2>/dev/null
+        # L'esito del kill si guarda. Buttarlo via e' il modo per non sapere se
+        # il segnale e' stato rifiutato o accettato e ignorato.
+        if kill -TERM "$master"; then
+            echo "  SIGTERM delivered"
+        else
+            fail "SIGTERM was refused"
+        fi
     fi
 
     if wait_gone httpd "Apache" 15; then
@@ -87,9 +93,28 @@ if pgrep -x httpd >/dev/null 2>&1; then
         if wait_gone httpd "Apache" 10; then
             ok "stopped"
         else
-            fail "Apache is still running, these are the processes left:"
-            ps -eo pid,ppid,user,etime,command | grep httpd | grep -v grep \
-                | head -5 | sed 's/^/      /'
+            # ⚠️ SIGKILL, e solo per Apache.
+            #
+            # Un server web non ha niente da scaricare su disco: al massimo si
+            # perde una richiesta in corso, e qui non c'e' nessuno a farla.
+            # MySQL e' un altro paio di maniche e infatti sopra non lo tocca
+            # nessuno: li' SIGKILL lascerebbe il recupero da crash al riavvio.
+            #
+            # Serve perche' su questa macchina il padre resta vivo dopo tre
+            # SIGTERM, pur essendo in stato S e senza segnali bloccati. Il
+            # perche' e' ancora da capire, ma restare bloccati non e' una
+            # opzione: il server va giu' comunque.
+            echo "  three SIGTERMs ignored, using SIGKILL"
+            echo "  it is safe here: a web server has nothing to flush to disk"
+            pkill -KILL -x httpd 2>/dev/null
+            if wait_gone httpd "Apache" 10; then
+                ok "stopped"
+                echo "      note: it took SIGKILL. Worth looking into, but not now."
+            else
+                fail "Apache survived SIGKILL, these are the processes left:"
+                ps -eo pid,ppid,user,state,etime,command | grep httpd \
+                    | grep -v grep | head -5 | sed 's/^/      /'
+            fi
         fi
     fi
 else
