@@ -105,6 +105,27 @@
 /* Errore: la password non fa entrare */
 "db.password.wrong" = "Cu această parolă nu se intră. Încearcă din nou.";
 
+/* Avanzamento: si sta cambiando la configurazione */
+"exposure.applying" = "Se rescrie configurația…";
+
+/* Esito: cambiato. %@ è il nuovo ambito */
+"exposure.done" = "Proiectele tale sunt acum accesibile: %@";
+
+/* Ambito riservato a Gateway, non ancora disponibile */
+"exposure.internet" = "Internetul, prin Gateway";
+
+/* Ambito: la configurazione non concorda con se stessa */
+"exposure.mixed" = "Setat manual";
+
+/* Ambito: anche gli altri dispositivi in rete */
+"exposure.network" = "Acest Mac și rețeaua locală";
+
+/* Esito: era già così */
+"exposure.nochange" = "Era deja așa.";
+
+/* Ambito: solo questo Mac */
+"exposure.thisMac" = "Doar acest Mac";
+
 "history.byProject" = "Pe proiect";
 
 "history.empty" = "Nicio sesiune înregistrată";
@@ -179,6 +200,9 @@
 "menu.selectAll" = "Selectează tot";
 
 "menu.services" = "Servicii";
+
+/* Voce di menu: rifare la configurazione iniziale */
+"menu.setup" = "Configurare…";
 
 "menu.theme" = "Temă";
 
@@ -276,6 +300,105 @@
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "Reîncarcă %@";
+
+/* Avanzamento: si sta impostando la password */
+"setup.applying.password" = "Se setează parola bazei de date…";
+
+/* Pulsante: torna al passaggio precedente */
+"setup.back" = "Înapoi";
+
+/* Contatore dei passaggi. %1$ld di %2$ld */
+"setup.counter" = "Pasul %1$ld din %2$ld";
+
+/* Errore: la password non è stata impostata. %@ è il motivo */
+"setup.failed.password" = "Parola nu a fost schimbată: %@";
+
+/* Pulsante dell'ultimo passaggio */
+"setup.finish" = "Gata";
+
+/* Riga del riepilogo: la password verrà impostata */
+"setup.finish.password" = "Parolă nouă pentru baza de date";
+
+/* Titolo dell'ultimo passaggio */
+"setup.finish.title" = "Asta e tot";
+
+/* Nota: sta per chiedere la password di amministratore */
+"setup.finish.willAsk" = "Două dintre ele schimbă fișiere din afara aplicației, deci macOS îți va cere parola.";
+
+/* Testo del passaggio lingua */
+"setup.language.body" = "VXOST vorbește cincisprezece limbi. Alege-o pe cea pe care o vrei.";
+
+/* Nota: serve un riavvio dell'app */
+"setup.language.note" = "Aplicația repornește pentru a schimba limba: textele se încarcă o singură dată, la pornire.";
+
+/* Titolo del passaggio lingua */
+"setup.language.title" = "Limbă";
+
+/* Nota: adesso è già aperto, contro ogni aspettativa */
+"setup.network.already" = "Acum sunt deja deschise către rețea: stiva vine așa, și nimeni n-a ales asta.";
+
+/* Testo del passaggio rete. %@ è l'indirizzo del Mac */
+"setup.network.body" = "Acest Mac este %@ în rețeaua ta. A deschide proiectele înseamnă că oricine e pe același wi-fi vede site-urile la care lucrezi.";
+
+/* Testo quando il Mac non è in rete */
+"setup.network.body.offline" = "Acest Mac nu e într-o rețea acum, deci nu e nimănui de deschis. Alegerea se aplică oricum data viitoare.";
+
+/* Testo quando il Mac ha un indirizzo pubblico. %@ è l'indirizzo */
+"setup.network.body.public" = "Acest Mac este %@, o adresă publică: nu e în spatele unui router de casă. A deschide proiectele aici înseamnă a le deschide internetului, nu unei camere.";
+
+/* Nota: il database resta chiuso comunque */
+"setup.network.note" = "Baza de date rămâne închisă rețelei în ambele cazuri, deci un proiect deschis de pe telefon merge doar dacă nu are nevoie de MySQL.";
+
+/* Titolo del passaggio rete */
+"setup.network.title" = "Cine îți poate accesa proiectele";
+
+/* Pulsante: passaggio successivo */
+"setup.next" = "Continuă";
+
+/* Testo quando root ha già una password */
+"setup.password.body.existing" = "root are deja o parolă. Scriind una nouă o înlocuiești, iar fiecare proiect care o folosește pe cea veche nu se mai conectează. Lasă gol pentru a o păstra.";
+
+/* Testo quando root non ha password */
+"setup.password.body.none" = "Acum root nu are parolă, așa vine stiva. Setarea uneia închide baza de date pentru tot ce nu ești tu. Lasă gol pentru a sări peste.";
+
+/* Nota: dove finisce la password */
+"setup.password.note" = "Ajunge în brelocul macOS, iar VXOST o citește de acolo când are nevoie.";
+
+/* Testo quando MySQL non risponde */
+"setup.password.offline" = "MySQL nu rulează, deci nu e nimic de setat acum. Poți face asta mai târziu, din aplicație.";
+
+/* Segnaposto del campo password */
+"setup.password.placeholder" = "Lasă gol pentru a sări";
+
+/* Titolo del passaggio password di MySQL */
+"setup.password.title" = "Parola bazei de date";
+
+/* Spiegazione del riavvio */
+"setup.relaunch.body" = "VXOST își încarcă textele o singură dată, la pornire. Repornirea durează o clipă și nu se pierde nimic.";
+
+/* Pulsante: riavvia più tardi */
+"setup.relaunch.later" = "Mai târziu";
+
+/* Pulsante: riavvia adesso */
+"setup.relaunch.now" = "Repornește acum";
+
+/* Titolo: serve riavviare per la lingua */
+"setup.relaunch.title" = "Repornește pentru a schimba limba";
+
+/* Lo slogan, in chiusura. Non si traduce. */
+"setup.slogan" = "Let's build together, yeah!";
+
+/* Testo del passaggio aspetto */
+"setup.theme.body" = "Alege una și fereastra se schimbă în timp ce o privești.";
+
+/* Nota: il tema si cambia anche dopo */
+"setup.theme.note" = "Automat urmează macOS. Poți schimba oricând, din fereastră.";
+
+/* Titolo del passaggio aspetto */
+"setup.theme.title" = "Aspect";
+
+/* Titolo della finestra di primo avvio */
+"setup.title" = "Configurează VXOST";
 
 "status.allRunning" = "toate serviciile active";
 

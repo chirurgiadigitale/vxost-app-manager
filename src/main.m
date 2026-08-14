@@ -10,6 +10,7 @@
 #import <Cocoa/Cocoa.h>
 #import "XPStatusController.h"
 #import "XPUpdateCheck.h"
+#import "XPSetupWizard.h"
 #import "XPServiceMonitor.h"
 #import "XPMainWindowController.h"
 #import "XPLogWindowController.h"
@@ -38,6 +39,12 @@
 
     // Chi lancia dall'icona del Dock si aspetta una finestra.
     [[XPMainWindowController shared] present];
+
+    // ⚠️ Dopo la finestra, non prima. Il wizard del primo avvio si mette
+    // davanti a qualcosa: aprendolo per primo comparirebbe su uno schermo
+    // vuoto, e chiudendolo si troverebbe la finestra che compare dopo, come se
+    // fosse successo qualcosa.
+    [XPSetupWizard presentIfNeeded];
 }
 
 /// Clic sull'icona nel Dock ad app già avviata: la finestra torna in primo

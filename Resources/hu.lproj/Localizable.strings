@@ -105,6 +105,27 @@
 /* Errore: la password non fa entrare */
 "db.password.wrong" = "Ezzel a jelszóval nem enged be. Próbáld újra.";
 
+/* Avanzamento: si sta cambiando la configurazione */
+"exposure.applying" = "A beállítás átírása…";
+
+/* Esito: cambiato. %@ è il nuovo ambito */
+"exposure.done" = "A projektjeid mostantól elérhetők: %@";
+
+/* Ambito riservato a Gateway, non ancora disponibile */
+"exposure.internet" = "Az internet, a Gateway-en át";
+
+/* Ambito: la configurazione non concorda con se stessa */
+"exposure.mixed" = "Kézzel beállítva";
+
+/* Ambito: anche gli altri dispositivi in rete */
+"exposure.network" = "Ez a Mac és a helyi hálózat";
+
+/* Esito: era già così */
+"exposure.nochange" = "Már így volt beállítva.";
+
+/* Ambito: solo questo Mac */
+"exposure.thisMac" = "Csak ez a Mac";
+
 "history.byProject" = "Projektenként";
 
 "history.empty" = "Még nincs rögzített munkamenet";
@@ -179,6 +200,9 @@
 "menu.selectAll" = "Összes kijelölése";
 
 "menu.services" = "Szolgáltatások";
+
+/* Voce di menu: rifare la configurazione iniziale */
+"menu.setup" = "Beállítás…";
 
 "menu.theme" = "Téma";
 
@@ -276,6 +300,105 @@
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "%@ újratöltése";
+
+/* Avanzamento: si sta impostando la password */
+"setup.applying.password" = "Az adatbázis jelszavának beállítása…";
+
+/* Pulsante: torna al passaggio precedente */
+"setup.back" = "Vissza";
+
+/* Contatore dei passaggi. %1$ld di %2$ld */
+"setup.counter" = "%2$ld/%1$ld. lépés";
+
+/* Errore: la password non è stata impostata. %@ è il motivo */
+"setup.failed.password" = "A jelszó nem változott meg: %@";
+
+/* Pulsante dell'ultimo passaggio */
+"setup.finish" = "Befejezés";
+
+/* Riga del riepilogo: la password verrà impostata */
+"setup.finish.password" = "Új adatbázis-jelszó";
+
+/* Titolo dell'ultimo passaggio */
+"setup.finish.title" = "Ennyi az egész";
+
+/* Nota: sta per chiedere la password di amministratore */
+"setup.finish.willAsk" = "Kettő ezek közül az alkalmazáson kívüli fájlokat módosít, ezért a macOS kérni fogja a jelszavad.";
+
+/* Testo del passaggio lingua */
+"setup.language.body" = "A VXOST tizenöt nyelven beszél. Válaszd ki, melyiken szeretnéd.";
+
+/* Nota: serve un riavvio dell'app */
+"setup.language.note" = "Az alkalmazás újraindul a nyelvváltáshoz: a szövegek egyszer töltődnek be, indításkor.";
+
+/* Titolo del passaggio lingua */
+"setup.language.title" = "Nyelv";
+
+/* Nota: adesso è già aperto, contro ogni aspettativa */
+"setup.network.already" = "Jelenleg már nyitva vannak a hálózat felé: a csomag így érkezik, senki nem választotta.";
+
+/* Testo del passaggio rete. %@ è l'indirizzo del Mac */
+"setup.network.body" = "Ez a Mac %@ a hálózatodon. A projektek megnyitása azt jelenti, hogy bárki ugyanazon a wifin látja az oldalakat, amelyeken dolgozol.";
+
+/* Testo quando il Mac non è in rete */
+"setup.network.body.offline" = "Ez a Mac most nincs hálózaton, így nincs kinek megnyitni. A választás a következő alkalommal akkor is érvényes.";
+
+/* Testo quando il Mac ha un indirizzo pubblico. %@ è l'indirizzo */
+"setup.network.body.public" = "Ez a Mac %@, ami nyilvános cím: nincs otthoni router mögött. A projektek megnyitása itt az internetnek nyitja meg őket, nem egy szobának.";
+
+/* Nota: il database resta chiuso comunque */
+"setup.network.note" = "Az adatbázis mindkét esetben zárva marad a hálózat felé, így egy telefonról megnyitott projekt csak akkor működik, ha nincs szüksége MySQL-re.";
+
+/* Titolo del passaggio rete */
+"setup.network.title" = "Ki érheti el a projektjeidet";
+
+/* Pulsante: passaggio successivo */
+"setup.next" = "Tovább";
+
+/* Testo quando root ha già una password */
+"setup.password.body.existing" = "A root fióknak már van jelszava. Ha újat írsz, az felülírja, és minden projekt, amelyik a régit használja, nem tud többé csatlakozni. Hagyd üresen a megtartásához.";
+
+/* Testo quando root non ha password */
+"setup.password.body.none" = "A root fióknak jelenleg nincs jelszava, így érkezik a csomag. Ha beállítasz egyet, az adatbázis mindenki más elől bezárul. Hagyd üresen a kihagyáshoz.";
+
+/* Nota: dove finisce la password */
+"setup.password.note" = "A macOS kulcskarikára kerül, és a VXOST onnan olvassa, amikor kell.";
+
+/* Testo quando MySQL non risponde */
+"setup.password.offline" = "A MySQL nem fut, így most nincs mit beállítani. Ezt később is megteheted az alkalmazásból.";
+
+/* Segnaposto del campo password */
+"setup.password.placeholder" = "Hagyd üresen a kihagyáshoz";
+
+/* Titolo del passaggio password di MySQL */
+"setup.password.title" = "Az adatbázis jelszava";
+
+/* Spiegazione del riavvio */
+"setup.relaunch.body" = "A VXOST egyszer tölti be a szövegeit, induláskor. Az újraindítás egy pillanat, és semmi nem vész el.";
+
+/* Pulsante: riavvia più tardi */
+"setup.relaunch.later" = "Később";
+
+/* Pulsante: riavvia adesso */
+"setup.relaunch.now" = "Újraindítás most";
+
+/* Titolo: serve riavviare per la lingua */
+"setup.relaunch.title" = "Újraindítás a nyelvváltáshoz";
+
+/* Lo slogan, in chiusura. Non si traduce. */
+"setup.slogan" = "Let's build together, yeah!";
+
+/* Testo del passaggio aspetto */
+"setup.theme.body" = "Válassz egyet, és az ablak a szemed előtt változik.";
+
+/* Nota: il tema si cambia anche dopo */
+"setup.theme.note" = "Az automatikus a macOS-t követi. Bármikor módosíthatod az ablakból.";
+
+/* Titolo del passaggio aspetto */
+"setup.theme.title" = "Megjelenés";
+
+/* Titolo della finestra di primo avvio */
+"setup.title" = "VXOST beállítása";
 
 "status.allRunning" = "minden szolgáltatás fut";
 

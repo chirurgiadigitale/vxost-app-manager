@@ -116,6 +116,68 @@ static NSString *const XPKeychainService = @"VXOST MySQL root";
     return [self storedPassword];
 }
 
+#pragma mark - Password di root
+
++ (NSString *)setRootPassword:(NSString *)password {
+    if (password.length == 0) return NSLocalizedString(@"db.err.empty", nil);
+
+    NSString *current = [self workingPassword];
+    if (![self runSQL:@"SELECT 1" password:current].succeeded) {
+        return NSLocalizedString(@"db.password.wrong", nil);
+    }
+
+    // ⚠️ root non è un conto solo. MariaDB ne tiene uno per host: localhost,
+    // 127.0.0.1, ::1 e spesso il nome della macchina. Cambiarne uno e basta
+    // lascia gli altri con la password vecchia, e il risultato è un database
+    // che accetta la password nuova da un indirizzo e la vecchia da un altro.
+    XPTaskResult *hosts = [self runSQL:
+        @"SELECT Host FROM mysql.user WHERE User = 'root'" password:current];
+    NSMutableArray<NSString *> *targets = [NSMutableArray array];
+    if (hosts.succeeded) {
+        for (NSString *line in [hosts.output componentsSeparatedByString:@"\n"]) {
+            NSString *host = [line stringByTrimmingCharactersInSet:
+                              [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            // Il nome dell'host entra fra apici in una istruzione che gira come
+            // root: si accettano solo i caratteri che un nome di host ha.
+            NSRegularExpression *safe = [NSRegularExpression regularExpressionWithPattern:
+                                         @"^[A-Za-z0-9._:%-]+$" options:0 error:NULL];
+            if (host.length == 0) continue;
+            if ([safe numberOfMatchesInString:host options:0
+                                        range:NSMakeRange(0, host.length)] == 0) continue;
+            [targets addObject:host];
+        }
+    }
+    if (targets.count == 0) targets = [@[@"localhost", @"127.0.0.1"] mutableCopy];
+
+    NSString *escaped = [[password stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
+                         stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"];
+
+    NSMutableString *sql = [NSMutableString string];
+    for (NSString *host in targets) {
+        // SET PASSWORD e non ALTER USER: su MariaDB 10.4 funzionano
+        // entrambi, ma SET PASSWORD funziona anche sulle versioni prima della
+        // 10.2, e questo stack ne ha viste diverse.
+        [sql appendFormat:@"SET PASSWORD FOR 'root'@'%@' = PASSWORD('%@'); ", host, escaped];
+    }
+    [sql appendString:@"FLUSH PRIVILEGES;"];
+
+    XPTaskResult *result = [self runSQL:sql password:current];
+    if (!result.succeeded) {
+        NSString *message = [result.output stringByTrimmingCharactersInSet:
+                             [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        return message.length > 0 ? message : NSLocalizedString(@"db.err.failed", nil);
+    }
+
+    // Si salva solo dopo aver verificato che la nuova password entra davvero.
+    // Salvarla prima vorrebbe dire, in caso di errore a metà, un portachiavi
+    // che dice una cosa e un server che ne dice un'altra.
+    if (![self passwordWorks:password]) {
+        return NSLocalizedString(@"db.password.wrong", nil);
+    }
+    [self storePassword:password];
+    return nil;
+}
+
 #pragma mark - Nomi
 
 + (NSString *)validationErrorForDatabaseName:(NSString *)name {

@@ -105,6 +105,27 @@
 /* Errore: la password non fa entrare */
 "db.password.wrong" = "Bu parolayla girilemiyor. Yeniden deneyin.";
 
+/* Avanzamento: si sta cambiando la configurazione */
+"exposure.applying" = "Yapılandırma yeniden yazılıyor…";
+
+/* Esito: cambiato. %@ è il nuovo ambito */
+"exposure.done" = "Projeleriniz artık şuradan erişilebilir: %@";
+
+/* Ambito riservato a Gateway, non ancora disponibile */
+"exposure.internet" = "İnternet, Gateway üzerinden";
+
+/* Ambito: la configurazione non concorda con se stessa */
+"exposure.mixed" = "Elle ayarlanmış";
+
+/* Ambito: anche gli altri dispositivi in rete */
+"exposure.network" = "Bu Mac ve yerel ağ";
+
+/* Esito: era già così */
+"exposure.nochange" = "Zaten öyleydi.";
+
+/* Ambito: solo questo Mac */
+"exposure.thisMac" = "Yalnızca bu Mac";
+
 "history.byProject" = "Projeye göre";
 
 "history.empty" = "Henüz kayıtlı oturum yok";
@@ -179,6 +200,9 @@
 "menu.selectAll" = "Tümünü seç";
 
 "menu.services" = "Hizmetler";
+
+/* Voce di menu: rifare la configurazione iniziale */
+"menu.setup" = "Kurulum…";
 
 "menu.theme" = "Tema";
 
@@ -276,6 +300,105 @@
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "%@ yeniden yükle";
+
+/* Avanzamento: si sta impostando la password */
+"setup.applying.password" = "Veritabanı parolası ayarlanıyor…";
+
+/* Pulsante: torna al passaggio precedente */
+"setup.back" = "Geri";
+
+/* Contatore dei passaggi. %1$ld di %2$ld */
+"setup.counter" = "Adım %1$ld / %2$ld";
+
+/* Errore: la password non è stata impostata. %@ è il motivo */
+"setup.failed.password" = "Parola değiştirilmedi: %@";
+
+/* Pulsante dell'ultimo passaggio */
+"setup.finish" = "Bitir";
+
+/* Riga del riepilogo: la password verrà impostata */
+"setup.finish.password" = "Yeni veritabanı parolası";
+
+/* Titolo dell'ultimo passaggio */
+"setup.finish.title" = "Hepsi bu";
+
+/* Nota: sta per chiedere la password di amministratore */
+"setup.finish.willAsk" = "Bunlardan ikisi uygulama dışındaki dosyaları değiştirir, bu yüzden macOS parolanızı soracak.";
+
+/* Testo del passaggio lingua */
+"setup.language.body" = "VXOST on beş dil konuşuyor. İstediğinizi seçin.";
+
+/* Nota: serve un riavvio dell'app */
+"setup.language.note" = "Dili değiştirmek için uygulama yeniden başlar: metinler yalnızca açılışta bir kez yüklenir.";
+
+/* Titolo del passaggio lingua */
+"setup.language.title" = "Dil";
+
+/* Nota: adesso è già aperto, contro ogni aspettativa */
+"setup.network.already" = "Şu anda zaten ağa açıklar: yığın böyle geliyor ve bunu kimse seçmedi.";
+
+/* Testo del passaggio rete. %@ è l'indirizzo del Mac */
+"setup.network.body" = "Bu Mac ağınızda %@ adresinde. Projeleri açmak, aynı wi-fi'daki herkesin üzerinde çalıştığınız siteleri görmesi demektir.";
+
+/* Testo quando il Mac non è in rete */
+"setup.network.body.offline" = "Bu Mac şu anda bir ağda değil, dolayısıyla açılacak kimse yok. Seçim yine de bir sonraki sefere geçerli olur.";
+
+/* Testo quando il Mac ha un indirizzo pubblico. %@ è l'indirizzo */
+"setup.network.body.public" = "Bu Mac %@, yani genel bir adres: ev yönlendiricisinin arkasında değil. Projeleri burada açmak, onları bir odaya değil internete açmak demektir.";
+
+/* Nota: il database resta chiuso comunque */
+"setup.network.note" = "Veritabanı her iki durumda da ağa kapalı kalır; telefondan açılan bir proje ancak MySQL'e ihtiyaç duymuyorsa çalışır.";
+
+/* Titolo del passaggio rete */
+"setup.network.title" = "Projelerinize kimler erişebilir";
+
+/* Pulsante: passaggio successivo */
+"setup.next" = "Devam";
+
+/* Testo quando root ha già una password */
+"setup.password.body.existing" = "root'un zaten bir parolası var. Yenisini yazmak onu değiştirir ve eskisini kullanan her proje bağlanamaz olur. Mevcut olanı korumak için boş bırakın.";
+
+/* Testo quando root non ha password */
+"setup.password.body.none" = "Şu anda root'un parolası yok, yığın böyle geliyor. Bir parola koymak veritabanını siz olmayan her şeye kapatır. Atlamak için boş bırakın.";
+
+/* Nota: dove finisce la password */
+"setup.password.note" = "macOS anahtar zincirine gider ve VXOST gerektiğinde oradan okur.";
+
+/* Testo quando MySQL non risponde */
+"setup.password.offline" = "MySQL çalışmıyor, bu yüzden şimdi ayarlanacak bir şey yok. Bunu sonra uygulamadan yapabilirsiniz.";
+
+/* Segnaposto del campo password */
+"setup.password.placeholder" = "Atlamak için boş bırakın";
+
+/* Titolo del passaggio password di MySQL */
+"setup.password.title" = "Veritabanı parolası";
+
+/* Spiegazione del riavvio */
+"setup.relaunch.body" = "VXOST metinlerini yalnızca açılışta bir kez yükler. Yeniden başlatmak bir an sürer, hiçbir şey kaybolmaz.";
+
+/* Pulsante: riavvia più tardi */
+"setup.relaunch.later" = "Sonra";
+
+/* Pulsante: riavvia adesso */
+"setup.relaunch.now" = "Şimdi yeniden başlat";
+
+/* Titolo: serve riavviare per la lingua */
+"setup.relaunch.title" = "Dili değiştirmek için yeniden başlat";
+
+/* Lo slogan, in chiusura. Non si traduce. */
+"setup.slogan" = "Let's build together, yeah!";
+
+/* Testo del passaggio aspetto */
+"setup.theme.body" = "Birini seçin, pencere gözünüzün önünde değişsin.";
+
+/* Nota: il tema si cambia anche dopo */
+"setup.theme.note" = "Otomatik, macOS'u izler. İstediğiniz zaman pencereden değiştirebilirsiniz.";
+
+/* Titolo del passaggio aspetto */
+"setup.theme.title" = "Görünüm";
+
+/* Titolo della finestra di primo avvio */
+"setup.title" = "VXOST kurulumu";
 
 "status.allRunning" = "tüm hizmetler çalışıyor";
 

@@ -105,6 +105,27 @@
 /* Errore: la password non fa entrare */
 "db.password.wrong" = "اس پاس ورڈ سے داخل نہیں ہو سکتے۔ دوبارہ کوشش کریں۔";
 
+/* Avanzamento: si sta cambiando la configurazione */
+"exposure.applying" = "کنفیگریشن دوبارہ لکھی جا رہی ہے…";
+
+/* Esito: cambiato. %@ è il nuovo ambito */
+"exposure.done" = "آپ کے پروجیکٹ اب یہاں سے قابلِ رسائی ہیں: %@";
+
+/* Ambito riservato a Gateway, non ancora disponibile */
+"exposure.internet" = "انٹرنیٹ، Gateway کے ذریعے";
+
+/* Ambito: la configurazione non concorda con se stessa */
+"exposure.mixed" = "ہاتھ سے مقرر";
+
+/* Ambito: anche gli altri dispositivi in rete */
+"exposure.network" = "یہ Mac اور مقامی نیٹ ورک";
+
+/* Esito: era già così */
+"exposure.nochange" = "یہ پہلے ہی ایسے ہی تھا۔";
+
+/* Ambito: solo questo Mac */
+"exposure.thisMac" = "صرف یہ Mac";
+
 "history.byProject" = "پروجیکٹ کے لحاظ سے";
 
 "history.empty" = "ابھی کوئی سیشن ریکارڈ نہیں";
@@ -179,6 +200,9 @@
 "menu.selectAll" = "سب منتخب کریں";
 
 "menu.services" = "سروسز";
+
+/* Voce di menu: rifare la configurazione iniziale */
+"menu.setup" = "سیٹ اپ…";
 
 "menu.theme" = "تھیم";
 
@@ -276,6 +300,105 @@
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "%@ دوبارہ لوڈ کریں";
+
+/* Avanzamento: si sta impostando la password */
+"setup.applying.password" = "ڈیٹابیس کا پاس ورڈ مقرر کیا جا رہا ہے…";
+
+/* Pulsante: torna al passaggio precedente */
+"setup.back" = "واپس";
+
+/* Contatore dei passaggi. %1$ld di %2$ld */
+"setup.counter" = "مرحلہ %1$ld از %2$ld";
+
+/* Errore: la password non è stata impostata. %@ è il motivo */
+"setup.failed.password" = "پاس ورڈ تبدیل نہیں ہوا: %@";
+
+/* Pulsante dell'ultimo passaggio */
+"setup.finish" = "ختم";
+
+/* Riga del riepilogo: la password verrà impostata */
+"setup.finish.password" = "نیا ڈیٹابیس پاس ورڈ";
+
+/* Titolo dell'ultimo passaggio */
+"setup.finish.title" = "بس اتنا ہی";
+
+/* Nota: sta per chiedere la password di amministratore */
+"setup.finish.willAsk" = "ان میں سے دو ایپ کے باہر فائلیں بدلتی ہیں، اس لیے macOS آپ کا پاس ورڈ مانگے گا۔";
+
+/* Testo del passaggio lingua */
+"setup.language.body" = "VXOST پندرہ زبانیں بولتا ہے۔ جس میں چاہتے ہیں وہ چنیں۔";
+
+/* Nota: serve un riavvio dell'app */
+"setup.language.note" = "زبان بدلنے کے لیے ایپ دوبارہ شروع ہوتی ہے: عبارتیں صرف شروع میں ایک بار لوڈ ہوتی ہیں۔";
+
+/* Titolo del passaggio lingua */
+"setup.language.title" = "زبان";
+
+/* Nota: adesso è già aperto, contro ogni aspettativa */
+"setup.network.already" = "ابھی وہ پہلے ہی نیٹ ورک کے لیے کھلے ہیں: اسٹیک ایسے ہی آتا ہے، یہ کسی نے چنا نہیں تھا۔";
+
+/* Testo del passaggio rete. %@ è l'indirizzo del Mac */
+"setup.network.body" = "یہ Mac آپ کے نیٹ ورک پر %@ ہے۔ پروجیکٹ کھولنے کا مطلب ہے کہ اسی وائی فائی پر موجود ہر شخص وہ سائٹس دیکھ سکے گا جن پر آپ کام کر رہے ہیں۔";
+
+/* Testo quando il Mac non è in rete */
+"setup.network.body.offline" = "یہ Mac ابھی نیٹ ورک پر نہیں، اس لیے کھولنے کو کوئی نہیں۔ انتخاب اگلی بار بھی لاگو رہے گا۔";
+
+/* Testo quando il Mac ha un indirizzo pubblico. %@ è l'indirizzo */
+"setup.network.body.public" = "یہ Mac %@ ہے، جو ایک عوامی پتہ ہے: یہ گھریلو راؤٹر کے پیچھے نہیں۔ یہاں پروجیکٹ کھولنے کا مطلب انہیں انٹرنیٹ پر کھولنا ہے، کسی کمرے پر نہیں۔";
+
+/* Nota: il database resta chiuso comunque */
+"setup.network.note" = "دونوں صورتوں میں ڈیٹابیس نیٹ ورک کے لیے بند رہتا ہے، اس لیے فون سے کھولا گیا پروجیکٹ صرف تب چلے گا جب اسے MySQL کی ضرورت نہ ہو۔";
+
+/* Titolo del passaggio rete */
+"setup.network.title" = "آپ کے پروجیکٹ تک کون پہنچ سکتا ہے";
+
+/* Pulsante: passaggio successivo */
+"setup.next" = "جاری رکھیں";
+
+/* Testo quando root ha già una password */
+"setup.password.body.existing" = "root کا پہلے سے پاس ورڈ ہے۔ نیا لکھنے سے وہ بدل جائے گا، اور پرانا استعمال کرنے والا ہر پروجیکٹ جڑنا بند کر دے گا۔ موجودہ رکھنے کے لیے خالی چھوڑ دیں۔";
+
+/* Testo quando root non ha password */
+"setup.password.body.none" = "ابھی root کا کوئی پاس ورڈ نہیں، اسٹیک ایسے ہی آتا ہے۔ پاس ورڈ رکھنے سے ڈیٹابیس آپ کے سوا ہر چیز کے لیے بند ہو جاتا ہے۔ چھوڑنے کے لیے خالی رہنے دیں۔";
+
+/* Nota: dove finisce la password */
+"setup.password.note" = "یہ macOS کی چابی کے گچھے میں جاتا ہے، اور VXOST ضرورت پڑنے پر وہیں سے پڑھتا ہے۔";
+
+/* Testo quando MySQL non risponde */
+"setup.password.offline" = "MySQL نہیں چل رہا، اس لیے ابھی کچھ مقرر کرنے کو نہیں۔ آپ بعد میں ایپ سے کر سکتے ہیں۔";
+
+/* Segnaposto del campo password */
+"setup.password.placeholder" = "چھوڑنے کے لیے خالی";
+
+/* Titolo del passaggio password di MySQL */
+"setup.password.title" = "ڈیٹابیس کا پاس ورڈ";
+
+/* Spiegazione del riavvio */
+"setup.relaunch.body" = "VXOST اپنی عبارتیں صرف شروع میں ایک بار لوڈ کرتا ہے۔ ابھی دوبارہ شروع کرنے میں لمحہ لگتا ہے اور کچھ ضائع نہیں ہوتا۔";
+
+/* Pulsante: riavvia più tardi */
+"setup.relaunch.later" = "بعد میں";
+
+/* Pulsante: riavvia adesso */
+"setup.relaunch.now" = "ابھی دوبارہ شروع کریں";
+
+/* Titolo: serve riavviare per la lingua */
+"setup.relaunch.title" = "زبان بدلنے کے لیے دوبارہ شروع کریں";
+
+/* Lo slogan, in chiusura. Non si traduce. */
+"setup.slogan" = "Let's build together, yeah!";
+
+/* Testo del passaggio aspetto */
+"setup.theme.body" = "ایک چنیں اور کھڑکی آپ کے سامنے بدل جائے گی۔";
+
+/* Nota: il tema si cambia anche dopo */
+"setup.theme.note" = "«خودکار» macOS کی پیروی کرتا ہے۔ آپ اسے کسی بھی وقت کھڑکی سے بدل سکتے ہیں۔";
+
+/* Titolo del passaggio aspetto */
+"setup.theme.title" = "ظاہری شکل";
+
+/* Titolo della finestra di primo avvio */
+"setup.title" = "VXOST سیٹ اپ کریں";
 
 "status.allRunning" = "تمام سروسز فعال";
 

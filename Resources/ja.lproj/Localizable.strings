@@ -105,6 +105,27 @@
 /* Errore: la password non fa entrare */
 "db.password.wrong" = "そのパスワードでは入れません。もう一度お試しください。";
 
+/* Avanzamento: si sta cambiando la configurazione */
+"exposure.applying" = "設定を書き換えています…";
+
+/* Esito: cambiato. %@ è il nuovo ambito */
+"exposure.done" = "プロジェクトの見え方: %@";
+
+/* Ambito riservato a Gateway, non ancora disponibile */
+"exposure.internet" = "Gateway 経由でインターネット";
+
+/* Ambito: la configurazione non concorda con se stessa */
+"exposure.mixed" = "手動で設定済み";
+
+/* Ambito: anche gli altri dispositivi in rete */
+"exposure.network" = "この Mac とローカルネットワーク";
+
+/* Esito: era già così */
+"exposure.nochange" = "すでにそう設定されていました。";
+
+/* Ambito: solo questo Mac */
+"exposure.thisMac" = "この Mac だけ";
+
 "history.byProject" = "プロジェクト別";
 
 "history.empty" = "まだ記録がありません";
@@ -179,6 +200,9 @@
 "menu.selectAll" = "すべてを選択";
 
 "menu.services" = "サービス";
+
+/* Voce di menu: rifare la configurazione iniziale */
+"menu.setup" = "初期設定…";
 
 "menu.theme" = "テーマ";
 
@@ -276,6 +300,105 @@
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "%@ を再読み込み";
+
+/* Avanzamento: si sta impostando la password */
+"setup.applying.password" = "データベースのパスワードを設定しています…";
+
+/* Pulsante: torna al passaggio precedente */
+"setup.back" = "戻る";
+
+/* Contatore dei passaggi. %1$ld di %2$ld */
+"setup.counter" = "ステップ %1$ld / %2$ld";
+
+/* Errore: la password non è stata impostata. %@ è il motivo */
+"setup.failed.password" = "パスワードは変更されませんでした: %@";
+
+/* Pulsante dell'ultimo passaggio */
+"setup.finish" = "完了";
+
+/* Riga del riepilogo: la password verrà impostata */
+"setup.finish.password" = "データベースのパスワードを新しく設定";
+
+/* Titolo dell'ultimo passaggio */
+"setup.finish.title" = "以上です";
+
+/* Nota: sta per chiedere la password di amministratore */
+"setup.finish.willAsk" = "このうち二つはアプリの外のファイルを変更するため、macOS がパスワードを尋ねます。";
+
+/* Testo del passaggio lingua */
+"setup.language.body" = "VXOST は 15 の言語に対応しています。使いたい言語を選んでください。";
+
+/* Nota: serve un riavvio dell'app */
+"setup.language.note" = "言語を変えるためにアプリを再起動します。文言は起動時に一度だけ読み込まれます。";
+
+/* Titolo del passaggio lingua */
+"setup.language.title" = "言語";
+
+/* Nota: adesso è già aperto, contro ogni aspettativa */
+"setup.network.already" = "今すでにネットワークに開かれています。このスタックの初期状態がそうで、誰かが選んだわけではありません。";
+
+/* Testo del passaggio rete. %@ è l'indirizzo del Mac */
+"setup.network.body" = "この Mac はネットワーク上で %@ です。プロジェクトを開くと、同じ wi-fi にいる誰もが作業中のサイトを見られます。";
+
+/* Testo quando il Mac non è in rete */
+"setup.network.body.offline" = "この Mac は今ネットワークに接続していないので、開く相手がいません。選択は次回にも効きます。";
+
+/* Testo quando il Mac ha un indirizzo pubblico. %@ è l'indirizzo */
+"setup.network.body.public" = "この Mac は %@ で、これは公開アドレスです。家庭用ルーターの内側ではありません。ここでプロジェクトを開くのは、部屋にではなくインターネットに公開することです。";
+
+/* Nota: il database resta chiuso comunque */
+"setup.network.note" = "データベースはどちらの場合もネットワークに閉じたままです。スマートフォンから開いたプロジェクトは、MySQL を使わない場合だけ動きます。";
+
+/* Titolo del passaggio rete */
+"setup.network.title" = "プロジェクトに誰がアクセスできるか";
+
+/* Pulsante: passaggio successivo */
+"setup.next" = "次へ";
+
+/* Testo quando root ha già una password */
+"setup.password.body.existing" = "root にはすでにパスワードがあります。新しく入力すると置き換わり、古いものを使っているプロジェクトは接続できなくなります。今のままにするには空欄のままに。";
+
+/* Testo quando root non ha password */
+"setup.password.body.none" = "今は root にパスワードがなく、これがこのスタックの初期状態です。設定すると、あなた以外にデータベースが閉じます。空のままにすると省略します。";
+
+/* Nota: dove finisce la password */
+"setup.password.note" = "macOS のキーチェーンに保存され、VXOST は必要なときにそこから読みます。";
+
+/* Testo quando MySQL non risponde */
+"setup.password.offline" = "MySQL が動いていないので、今は設定するものがありません。あとからアプリで設定できます。";
+
+/* Segnaposto del campo password */
+"setup.password.placeholder" = "空欄なら省略";
+
+/* Titolo del passaggio password di MySQL */
+"setup.password.title" = "データベースのパスワード";
+
+/* Spiegazione del riavvio */
+"setup.relaunch.body" = "VXOST は起動時に一度だけ文言を読み込みます。再起動はすぐ終わり、失われるものはありません。";
+
+/* Pulsante: riavvia più tardi */
+"setup.relaunch.later" = "あとで";
+
+/* Pulsante: riavvia adesso */
+"setup.relaunch.now" = "今すぐ再起動";
+
+/* Titolo: serve riavviare per la lingua */
+"setup.relaunch.title" = "言語を変えるには再起動が必要です";
+
+/* Lo slogan, in chiusura. Non si traduce. */
+"setup.slogan" = "Let's build together, yeah!";
+
+/* Testo del passaggio aspetto */
+"setup.theme.body" = "選ぶと、見ている間にウインドウが変わります。";
+
+/* Nota: il tema si cambia anche dopo */
+"setup.theme.note" = "「自動」は macOS に従います。あとからウインドウでいつでも変えられます。";
+
+/* Titolo del passaggio aspetto */
+"setup.theme.title" = "外観";
+
+/* Titolo della finestra di primo avvio */
+"setup.title" = "VXOST の初期設定";
 
 "status.allRunning" = "すべてのサービスが稼働中";
 

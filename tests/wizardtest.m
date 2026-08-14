@@ -205,6 +205,13 @@ int main(void) { @autoreleasepool {
         check([XPDatabase databaseExists:@"mysql"], @"il database mysql risulta presente");
     }
 
+    // ⛔ Solo il caso vuoto. Ogni altra chiamata a setRootPassword: cambierebbe
+    // per davvero la password di root su questa macchina, e un test non tocca
+    // le credenziali di chi lo esegue.
+    section(@"Cambio password di root");
+    check([XPDatabase setRootPassword:@""] != nil,
+          @"una password vuota viene rifiutata senza toccare niente");
+
     printf("\n\033[1m%d passati, %d falliti\033[0m\n\n", sPassed, sFailed);
     return sFailed == 0 ? 0 : 1;
 }}

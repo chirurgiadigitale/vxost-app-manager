@@ -105,6 +105,27 @@
 /* Errore: la password non fa entrare */
 "db.password.wrong" = "這個密碼進不去。請重試。";
 
+/* Avanzamento: si sta cambiando la configurazione */
+"exposure.applying" = "正在改寫設定…";
+
+/* Esito: cambiato. %@ è il nuovo ambito */
+"exposure.done" = "你的專案現在可從這裡存取：%@";
+
+/* Ambito riservato a Gateway, non ancora disponibile */
+"exposure.internet" = "透過 Gateway 連上網際網路";
+
+/* Ambito: la configurazione non concorda con se stessa */
+"exposure.mixed" = "手動設定";
+
+/* Ambito: anche gli altri dispositivi in rete */
+"exposure.network" = "本機和區域網路";
+
+/* Esito: era già così */
+"exposure.nochange" = "本來就是這樣設定的。";
+
+/* Ambito: solo questo Mac */
+"exposure.thisMac" = "僅本機";
+
 "history.byProject" = "依專案";
 
 "history.empty" = "尚無記錄";
@@ -179,6 +200,9 @@
 "menu.selectAll" = "全選";
 
 "menu.services" = "服務";
+
+/* Voce di menu: rifare la configurazione iniziale */
+"menu.setup" = "初始設定…";
 
 "menu.theme" = "主題";
 
@@ -276,6 +300,105 @@
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "重新載入 %@";
+
+/* Avanzamento: si sta impostando la password */
+"setup.applying.password" = "正在設定資料庫密碼…";
+
+/* Pulsante: torna al passaggio precedente */
+"setup.back" = "上一步";
+
+/* Contatore dei passaggi. %1$ld di %2$ld */
+"setup.counter" = "第 %1$ld 步，共 %2$ld 步";
+
+/* Errore: la password non è stata impostata. %@ è il motivo */
+"setup.failed.password" = "密碼未更改：%@";
+
+/* Pulsante dell'ultimo passaggio */
+"setup.finish" = "完成";
+
+/* Riga del riepilogo: la password verrà impostata */
+"setup.finish.password" = "新的資料庫密碼";
+
+/* Titolo dell'ultimo passaggio */
+"setup.finish.title" = "就這些";
+
+/* Nota: sta per chiedere la password di amministratore */
+"setup.finish.willAsk" = "其中兩項會改動應用程式之外的檔案，所以 macOS 會要求輸入你的密碼。";
+
+/* Testo del passaggio lingua */
+"setup.language.body" = "VXOST 支援十五種語言。選擇你想使用的那一種。";
+
+/* Nota: serve un riavvio dell'app */
+"setup.language.note" = "更改語言需要重新啟動應用程式：文字只在啟動時載入一次。";
+
+/* Titolo del passaggio lingua */
+"setup.language.title" = "語言";
+
+/* Nota: adesso è già aperto, contro ogni aspettativa */
+"setup.network.already" = "現在它們已經對網路開放：這是本套件的出廠狀態，沒有人選擇過。";
+
+/* Testo del passaggio rete. %@ è l'indirizzo del Mac */
+"setup.network.body" = "這台 Mac 在你的網路裡是 %@。開放專案意味著同一 wi-fi 上的任何人都能看到你正在做的網站。";
+
+/* Testo quando il Mac non è in rete */
+"setup.network.body.offline" = "這台 Mac 現在不在網路上，所以沒有可開放的對象。選擇在下次依然生效。";
+
+/* Testo quando il Mac ha un indirizzo pubblico. %@ è l'indirizzo */
+"setup.network.body.public" = "這台 Mac 是 %@，這是一個公網位址：它不在家用路由器後面。在這裡開放專案等於把它們開放給網際網路，而不是一個房間。";
+
+/* Nota: il database resta chiuso comunque */
+"setup.network.note" = "無論哪種情況，資料庫都對網路保持關閉，所以從手機開啟的專案只有在不需要 MySQL 時才能運作。";
+
+/* Titolo del passaggio rete */
+"setup.network.title" = "誰可以存取你的專案";
+
+/* Pulsante: passaggio successivo */
+"setup.next" = "繼續";
+
+/* Testo quando root ha già una password */
+"setup.password.body.existing" = "root 已經有密碼。輸入新密碼會取代它，所有使用舊密碼的專案將連不上。留空即維持現狀。";
+
+/* Testo quando root non ha password */
+"setup.password.body.none" = "現在 root 沒有密碼，這是本套件的出廠狀態。設定密碼會把資料庫對你以外的一切關上。留空即跳過。";
+
+/* Nota: dove finisce la password */
+"setup.password.note" = "它會存到 macOS 鑰匙圈，VXOST 需要時從那裡讀取。";
+
+/* Testo quando MySQL non risponde */
+"setup.password.offline" = "MySQL 沒有執行，所以現在沒有可設定的內容。之後可以在應用程式裡設定。";
+
+/* Segnaposto del campo password */
+"setup.password.placeholder" = "留空即跳過";
+
+/* Titolo del passaggio password di MySQL */
+"setup.password.title" = "資料庫密碼";
+
+/* Spiegazione del riavvio */
+"setup.relaunch.body" = "VXOST 只在啟動時載入一次文字。現在重新啟動只需片刻，不會遺失任何東西。";
+
+/* Pulsante: riavvia più tardi */
+"setup.relaunch.later" = "之後再說";
+
+/* Pulsante: riavvia adesso */
+"setup.relaunch.now" = "立即重新啟動";
+
+/* Titolo: serve riavviare per la lingua */
+"setup.relaunch.title" = "重新啟動以更改語言";
+
+/* Lo slogan, in chiusura. Non si traduce. */
+"setup.slogan" = "Let's build together, yeah!";
+
+/* Testo del passaggio aspetto */
+"setup.theme.body" = "選一個，視窗會當場改變。";
+
+/* Nota: il tema si cambia anche dopo */
+"setup.theme.note" = "「自動」跟隨 macOS。隨時可以在視窗裡更改。";
+
+/* Titolo del passaggio aspetto */
+"setup.theme.title" = "外觀";
+
+/* Titolo della finestra di primo avvio */
+"setup.title" = "設定 VXOST";
 
 "status.allRunning" = "所有服務執行中";
 

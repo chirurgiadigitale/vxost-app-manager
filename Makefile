@@ -31,7 +31,7 @@ CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS)
 # tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security
 
-.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest
+.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest exposuretest
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
@@ -98,7 +98,15 @@ updatetest:
 		tests/updatetest.m src/XPUpdateCheck.m
 	@./build/updatetest
 
-test: wizardtest updatetest
+# La riscrittura delle direttive Listen, provata sui file veri senza toccarli.
+# Una Listen sbagliata non lascia giu' un progetto, li lascia giu' tutti.
+exposuretest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/exposuretest \
+		tests/exposuretest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/exposuretest
+
+test: wizardtest updatetest exposuretest
 
 # L'app va in /Applications, non dentro la cartella dello stack.
 #

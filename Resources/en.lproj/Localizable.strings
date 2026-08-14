@@ -105,6 +105,27 @@
 /* Errore: la password non fa entrare */
 "db.password.wrong" = "That password does not get in. Try again.";
 
+/* Avanzamento: si sta cambiando la configurazione */
+"exposure.applying" = "Rewriting the configuration…";
+
+/* Esito: cambiato. %@ è il nuovo ambito */
+"exposure.done" = "Your projects are now reachable: %@";
+
+/* Ambito riservato a Gateway, non ancora disponibile */
+"exposure.internet" = "The internet, through Gateway";
+
+/* Ambito: la configurazione non concorda con se stessa */
+"exposure.mixed" = "Set by hand";
+
+/* Ambito: anche gli altri dispositivi in rete */
+"exposure.network" = "This Mac and the local network";
+
+/* Esito: era già così */
+"exposure.nochange" = "It was already set that way.";
+
+/* Ambito: solo questo Mac */
+"exposure.thisMac" = "Only this Mac";
+
 "history.byProject" = "By project";
 
 "history.empty" = "No sessions recorded yet";
@@ -179,6 +200,9 @@
 "menu.selectAll" = "Select All";
 
 "menu.services" = "Services";
+
+/* Voce di menu: rifare la configurazione iniziale */
+"menu.setup" = "Setup…";
 
 "menu.theme" = "Theme";
 
@@ -276,6 +300,105 @@
 
 /* Menu contestuale sulla riga: %@ nome servizio */
 "service.reload" = "Reload %@";
+
+/* Avanzamento: si sta impostando la password */
+"setup.applying.password" = "Setting the database password…";
+
+/* Pulsante: torna al passaggio precedente */
+"setup.back" = "Back";
+
+/* Contatore dei passaggi. %1$ld di %2$ld */
+"setup.counter" = "Step %1$ld of %2$ld";
+
+/* Errore: la password non è stata impostata. %@ è il motivo */
+"setup.failed.password" = "The password was not changed: %@";
+
+/* Pulsante dell'ultimo passaggio */
+"setup.finish" = "Finish";
+
+/* Riga del riepilogo: la password verrà impostata */
+"setup.finish.password" = "New database password";
+
+/* Titolo dell'ultimo passaggio */
+"setup.finish.title" = "That is all";
+
+/* Nota: sta per chiedere la password di amministratore */
+"setup.finish.willAsk" = "Two of these change files outside the app, so macOS will ask for your password.";
+
+/* Testo del passaggio lingua */
+"setup.language.body" = "VXOST speaks fifteen languages. Pick the one you want it in.";
+
+/* Nota: serve un riavvio dell'app */
+"setup.language.note" = "The app restarts to change language: the wording is loaded once, when it starts.";
+
+/* Titolo del passaggio lingua */
+"setup.language.title" = "Language";
+
+/* Nota: adesso è già aperto, contro ogni aspettativa */
+"setup.network.already" = "Right now they are already open to the network: the stack ships that way, and nobody chose it.";
+
+/* Testo del passaggio rete. %@ è l'indirizzo del Mac */
+"setup.network.body" = "This Mac is %@ on your network. Opening the projects means anyone on the same wi-fi can see the sites you are working on.";
+
+/* Testo quando il Mac non è in rete */
+"setup.network.body.offline" = "This Mac is not on a network right now, so there is nothing to open to. The choice still applies the next time it is.";
+
+/* Testo quando il Mac ha un indirizzo pubblico. %@ è l'indirizzo */
+"setup.network.body.public" = "This Mac is %@, which is a public address: it is not behind a home router. Opening the projects here means opening them to the internet, not to a living room.";
+
+/* Nota: il database resta chiuso comunque */
+"setup.network.note" = "The database stays closed to the network either way, so a project opened from a phone works only if it does not need MySQL.";
+
+/* Titolo del passaggio rete */
+"setup.network.title" = "Who can reach your projects";
+
+/* Pulsante: passaggio successivo */
+"setup.next" = "Continue";
+
+/* Testo quando root ha già una password */
+"setup.password.body.existing" = "root already has a password. Typing a new one replaces it, and every project that uses the old one stops connecting. Leave it empty to keep what you have.";
+
+/* Testo quando root non ha password */
+"setup.password.body.none" = "Right now root has no password, which is how the stack ships. Setting one closes the database to anything that is not you. Leave it empty to skip.";
+
+/* Nota: dove finisce la password */
+"setup.password.note" = "It goes in the macOS keychain, and VXOST reads it from there when it needs it.";
+
+/* Testo quando MySQL non risponde */
+"setup.password.offline" = "MySQL is not running, so there is nothing to set right now. You can do this later, from the app.";
+
+/* Segnaposto del campo password */
+"setup.password.placeholder" = "Leave empty to skip";
+
+/* Titolo del passaggio password di MySQL */
+"setup.password.title" = "The database password";
+
+/* Spiegazione del riavvio */
+"setup.relaunch.body" = "VXOST loads its wording once, when it starts. Restarting now takes a moment and nothing is lost.";
+
+/* Pulsante: riavvia più tardi */
+"setup.relaunch.later" = "Later";
+
+/* Pulsante: riavvia adesso */
+"setup.relaunch.now" = "Restart now";
+
+/* Titolo: serve riavviare per la lingua */
+"setup.relaunch.title" = "Restart to change language";
+
+/* Lo slogan, in chiusura. Non si traduce. */
+"setup.slogan" = "Let's build together, yeah!";
+
+/* Testo del passaggio aspetto */
+"setup.theme.body" = "Pick one and the window changes while you look at it.";
+
+/* Nota: il tema si cambia anche dopo */
+"setup.theme.note" = "Automatic follows macOS. You can change this any time, from the window.";
+
+/* Titolo del passaggio aspetto */
+"setup.theme.title" = "Appearance";
+
+/* Titolo della finestra di primo avvio */
+"setup.title" = "Set up VXOST";
 
 "status.allRunning" = "all services running";
 

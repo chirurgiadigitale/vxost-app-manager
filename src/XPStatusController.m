@@ -10,6 +10,7 @@
 #import "XPServiceMonitor.h"
 #import "XPActions.h"
 #import "XPUpdateCheck.h"
+#import "XPSetupWizard.h"
 #import "XPLogWindowController.h"
 #import "XPMainWindowController.h"
 
@@ -151,6 +152,7 @@
     [menu addItem:[NSMenuItem separatorItem]];
     [menu addItemWithTitle:NSLocalizedString(@"menu.openDashboard", nil) action:@selector(menuOpenDashboard:) keyEquivalent:@""].target = self;
     [menu addItemWithTitle:NSLocalizedString(@"menu.viewLogs", nil) action:@selector(menuOpenLogs:) keyEquivalent:@""].target = self;
+    [menu addItemWithTitle:NSLocalizedString(@"menu.setup", nil) action:@selector(menuSetup:) keyEquivalent:@""].target = self;
     [menu addItem:[NSMenuItem separatorItem]];
 
     // Aggiornamenti. La voce dice cosa si sa adesso, e non "cerca
@@ -189,6 +191,7 @@
 - (void)menuOpenWindow:(id)sender    { [[XPMainWindowController shared] present]; }
 - (void)menuOpenDashboard:(id)sender { [[XPActions shared] openDashboard]; }
 - (void)menuOpenLogs:(id)sender      { [[XPLogWindowController shared] showWindowAndReload]; }
+- (void)menuSetup:(id)sender         { [XPSetupWizard present]; }
 - (void)menuQuit:(id)sender          { [NSApp terminate:nil]; }
 
 - (void)menuDownloadUpdate:(id)sender {

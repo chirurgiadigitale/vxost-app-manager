@@ -32,6 +32,16 @@
 /// Salva la password nel portachiavi. Passare nil la cancella.
 + (void)storePassword:(NSString *)password;
 
+/// Cambia la password di root e la salva nel portachiavi.
+///
+/// Restituisce il motivo del fallimento, nil se è andata. Da chiamare fuori
+/// dal main thread.
+///
+/// ⚠️ Da quel momento ogni progetto che si collegava senza password smette di
+/// collegarsi. Non è un effetto collaterale, è cosa vuol dire mettere una
+/// password, e chi la mette deve saperlo prima.
++ (NSString *)setRootPassword:(NSString *)password;
+
 /// Il nome è utilizzabile come nome di database?
 /// Restituisce il motivo del rifiuto, nil se va bene.
 + (NSString *)validationErrorForDatabaseName:(NSString *)name;
