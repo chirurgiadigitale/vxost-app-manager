@@ -430,6 +430,21 @@
 /* Titolo della finestra di primo avvio */
 "setup.title" = "Configurer VXOST";
 
+/* Testo del passaggio aggiornamenti */
+"setup.updates.body" = "VXOST peut demander à vxost.com une fois par jour si une nouvelle version est sortie, et vous le dire depuis la barre des menus.";
+
+/* Nota: cosa esce davvero dal Mac */
+"setup.updates.note" = "C'est la seule requête réseau de VXOST. De ce Mac part la demande d'un petit fichier : aucun identifiant, aucun nom de machine, pas même votre version, car la comparaison se fait ici. Modifiable ensuite depuis la barre des menus.";
+
+/* Scelta: nessuna richiesta di rete */
+"setup.updates.off" = "Jamais, aucune requête réseau";
+
+/* Scelta: controlla una volta al giorno */
+"setup.updates.on" = "Vérifier une fois par jour";
+
+/* Titolo del passaggio aggiornamenti */
+"setup.updates.title" = "Nouvelles versions";
+
 "status.allRunning" = "tous les services actifs";
 
 "status.allStopped" = "tous les services arrêtés";

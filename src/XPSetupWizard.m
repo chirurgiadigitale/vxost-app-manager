@@ -10,6 +10,7 @@
 #import "XPExposure.h"
 #import "XPDatabase.h"
 #import "XPActions.h"
+#import "XPUpdateCheck.h"
 
 static const CGFloat XPSetupWidth   = 520;
 static const CGFloat XPSetupHeight  = 430;
@@ -56,6 +57,7 @@ static NSArray<NSArray<NSString *> *> *XPLanguages(void) {
 @property (nonatomic, assign) XPThemePreference theme;
 @property (nonatomic, copy)   NSString *mysqlPassword;
 @property (nonatomic, assign) XPExposureScope exposure;
+@property (nonatomic, assign) BOOL checkUpdates;
 
 @property (nonatomic, copy)   NSString *initialLanguage;
 @property (nonatomic, assign) XPExposureScope initialExposure;
@@ -114,6 +116,7 @@ static XPSetupWizard *sOpen = nil;
     // Aprire i progetti alla rete e' una scelta, e una scelta non si eredita
     // da un valore predefinito di Apache che nessuno ha mai deciso.
     _exposure = XPExposureScopeThisMac;
+    _checkUpdates = [XPUpdateCheck shared].automatic;
 
     [self buildChrome];
     [self showStep];
@@ -244,7 +247,7 @@ static XPSetupWizard *sOpen = nil;
 
 #pragma mark - Le cinque pagine
 
-- (NSInteger)lastStep { return 4; }
+- (NSInteger)lastStep { return 5; }
 
 - (void)showStep {
     switch (self.step) {
@@ -252,6 +255,7 @@ static XPSetupWizard *sOpen = nil;
         case 1: [self buildTheme]; break;
         case 2: [self buildPassword]; break;
         case 3: [self buildNetwork]; break;
+        case 4: [self buildUpdates]; break;
         default: [self buildFinish]; break;
     }
 
@@ -416,6 +420,40 @@ static XPSetupWizard *sOpen = nil;
     [self showStep];
 }
 
+// ------------------------------------------------------------ aggiornamenti
+
+- (void)buildUpdates {
+    NSStackView *page = [self page];
+    [page addArrangedSubview:[self title:NSLocalizedString(@"setup.updates.title", nil)]];
+    [page addArrangedSubview:[self body:NSLocalizedString(@"setup.updates.body", nil)]];
+
+    NSButton *yes = [NSButton radioButtonWithTitle:
+        NSLocalizedString(@"setup.updates.on", nil)
+                                            target:self
+                                            action:@selector(updatesChanged:)];
+    NSButton *no = [NSButton radioButtonWithTitle:
+        NSLocalizedString(@"setup.updates.off", nil)
+                                           target:self
+                                           action:@selector(updatesChanged:)];
+    yes.tag = 1;
+    no.tag = 0;
+    yes.state = self.checkUpdates ? NSControlStateValueOn : NSControlStateValueOff;
+    no.state = self.checkUpdates ? NSControlStateValueOff : NSControlStateValueOn;
+    [page addArrangedSubview:yes];
+    [page addArrangedSubview:no];
+
+    // ⚠️ Cosa esce e cosa no, scritto per esteso e non riassunto in "nessun
+    // dato personale". È l'unica richiesta di rete che l'app fa, e chi legge
+    // questa schermata sta decidendo proprio su quella.
+    [page addArrangedSubview:[self note:NSLocalizedString(@"setup.updates.note", nil)]];
+    [self install:page];
+}
+
+- (void)updatesChanged:(NSButton *)sender {
+    self.checkUpdates = sender.tag == 1;
+    [self showStep];
+}
+
 // ------------------------------------------------------------------- saluto
 
 - (void)buildFinish {
@@ -439,6 +477,9 @@ static XPSetupWizard *sOpen = nil;
     }
     [lines addObject:[NSString stringWithFormat:@"· %@",
                       [XPExposure nameForScope:self.exposure]]];
+    [lines addObject:[NSString stringWithFormat:@"· %@",
+                      NSLocalizedString(self.checkUpdates ? @"setup.updates.on"
+                                                          : @"setup.updates.off", nil)]];
 
     [page addArrangedSubview:[self body:[lines componentsJoinedByString:@"\n"]]];
 
@@ -487,6 +528,7 @@ static XPSetupWizard *sOpen = nil;
 
     // Lingua e tema non chiedono niente a nessuno: si scrivono subito.
     [XPTheme setPreference:self.theme];
+    [XPUpdateCheck shared].automatic = self.checkUpdates;
     BOOL languageChanged = ![self.language isEqualToString:self.initialLanguage];
     if (languageChanged) {
         [[NSUserDefaults standardUserDefaults] setObject:@[self.language]

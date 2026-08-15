@@ -430,6 +430,21 @@
 /* Titolo della finestra di primo avvio */
 "setup.title" = "設定 VXOST";
 
+/* Testo del passaggio aggiornamenti */
+"setup.updates.body" = "VXOST 可以每天向 vxost.com 詢問一次是否有新版本，並在選單列裡告訴你。";
+
+/* Nota: cosa esce davvero dal Mac */
+"setup.updates.note" = "這是 VXOST 唯一的網路請求。從這台 Mac 發出的只是對一個小檔案的請求：沒有識別碼，沒有機器名稱，連你正在用的版本也沒有，因為比較是在本機完成的。之後可以在選單列裡更改。";
+
+/* Scelta: nessuna richiesta di rete */
+"setup.updates.off" = "從不，完全不發出網路請求";
+
+/* Scelta: controlla una volta al giorno */
+"setup.updates.on" = "每天檢查一次";
+
+/* Titolo del passaggio aggiornamenti */
+"setup.updates.title" = "新版本";
+
 "status.allRunning" = "所有服務執行中";
 
 "status.allStopped" = "所有服務已停止";

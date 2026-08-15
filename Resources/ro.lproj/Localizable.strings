@@ -430,6 +430,21 @@
 /* Titolo della finestra di primo avvio */
 "setup.title" = "Configurează VXOST";
 
+/* Testo del passaggio aggiornamenti */
+"setup.updates.body" = "VXOST poate întreba vxost.com o dată pe zi dacă a apărut o versiune nouă, și îți poate spune din bara de meniu.";
+
+/* Nota: cosa esce davvero dal Mac */
+"setup.updates.note" = "Este singura cerere de rețea pe care o face VXOST. Din acest Mac pleacă cererea unui fișier mic: niciun identificator, niciun nume de mașină, nici măcar versiunea ta, fiindcă comparația se face aici. Poți schimba mai târziu din bara de meniu.";
+
+/* Scelta: nessuna richiesta di rete */
+"setup.updates.off" = "Niciodată, nicio cerere de rețea";
+
+/* Scelta: controlla una volta al giorno */
+"setup.updates.on" = "Verifică o dată pe zi";
+
+/* Titolo del passaggio aggiornamenti */
+"setup.updates.title" = "Versiuni noi";
+
 "status.allRunning" = "toate serviciile active";
 
 "status.allStopped" = "toate serviciile oprite";

@@ -430,6 +430,21 @@
 /* Titolo della finestra di primo avvio */
 "setup.title" = "VXOST kurulumu";
 
+/* Testo del passaggio aggiornamenti */
+"setup.updates.body" = "VXOST günde bir kez vxost.com'a yeni bir sürüm çıkıp çıkmadığını sorabilir ve menü çubuğundan size söyleyebilir.";
+
+/* Nota: cosa esce davvero dal Mac */
+"setup.updates.note" = "Bu, VXOST'un yaptığı tek ağ isteğidir. Bu Mac'ten küçük bir dosya isteği çıkar: tanımlayıcı yok, makine adı yok, sürümünüz bile yok, çünkü karşılaştırma burada yapılır. Sonradan menü çubuğundan değiştirebilirsiniz.";
+
+/* Scelta: nessuna richiesta di rete */
+"setup.updates.off" = "Asla, hiçbir ağ isteği yok";
+
+/* Scelta: controlla una volta al giorno */
+"setup.updates.on" = "Günde bir kez denetle";
+
+/* Titolo del passaggio aggiornamenti */
+"setup.updates.title" = "Yeni sürümler";
+
 "status.allRunning" = "tüm hizmetler çalışıyor";
 
 "status.allStopped" = "tüm hizmetler durduruldu";

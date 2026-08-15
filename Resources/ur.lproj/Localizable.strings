@@ -430,6 +430,21 @@
 /* Titolo della finestra di primo avvio */
 "setup.title" = "VXOST سیٹ اپ کریں";
 
+/* Testo del passaggio aggiornamenti */
+"setup.updates.body" = "VXOST دن میں ایک بار vxost.com سے پوچھ سکتا ہے کہ نیا ورژن آیا ہے یا نہیں، اور مینو بار سے بتا سکتا ہے۔";
+
+/* Nota: cosa esce davvero dal Mac */
+"setup.updates.note" = "یہ واحد نیٹ ورک درخواست ہے جو VXOST کرتا ہے۔ اس Mac سے صرف ایک چھوٹی فائل کی درخواست جاتی ہے: نہ کوئی شناخت کنندہ، نہ مشین کا نام، نہ ہی وہ ورژن جو آپ چلا رہے ہیں، کیونکہ موازنہ یہیں ہوتا ہے۔ بعد میں مینو بار سے بدل سکتے ہیں۔";
+
+/* Scelta: nessuna richiesta di rete */
+"setup.updates.off" = "کبھی نہیں، کوئی نیٹ ورک درخواست نہیں";
+
+/* Scelta: controlla una volta al giorno */
+"setup.updates.on" = "دن میں ایک بار چیک کریں";
+
+/* Titolo del passaggio aggiornamenti */
+"setup.updates.title" = "نئے ورژن";
+
 "status.allRunning" = "تمام سروسز فعال";
 
 "status.allStopped" = "تمام سروسز بند";

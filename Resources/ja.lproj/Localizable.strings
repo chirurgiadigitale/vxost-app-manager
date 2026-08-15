@@ -430,6 +430,21 @@
 /* Titolo della finestra di primo avvio */
 "setup.title" = "VXOST の初期設定";
 
+/* Testo del passaggio aggiornamenti */
+"setup.updates.body" = "VXOST は一日に一度 vxost.com に新しいバージョンが出ているか尋ね、メニューバーで知らせることができます。";
+
+/* Nota: cosa esce davvero dal Mac */
+"setup.updates.note" = "VXOST が行う唯一のネットワーク接続です。この Mac から出ていくのは小さなファイルの要求だけで、識別子も、マシン名も、使っているバージョンさえ送りません。比較はここで行うからです。あとからメニューバーで変えられます。";
+
+/* Scelta: nessuna richiesta di rete */
+"setup.updates.off" = "しない（ネットワーク接続を一切行わない）";
+
+/* Scelta: controlla una volta al giorno */
+"setup.updates.on" = "一日に一度確認する";
+
+/* Titolo del passaggio aggiornamenti */
+"setup.updates.title" = "新しいバージョン";
+
 "status.allRunning" = "すべてのサービスが稼働中";
 
 "status.allStopped" = "すべてのサービスが停止中";
