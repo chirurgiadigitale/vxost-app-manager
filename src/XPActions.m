@@ -724,16 +724,11 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 
 #pragma mark - Scrittura protetta della configurazione
 
-- (void)replaceConfiguration:(NSDictionary<NSString *, NSString *> *)staged
-                    progress:(NSString *)progress
-                     success:(NSString *)success
-                  completion:(void (^)(BOOL ok))completion {
-
-    if (staged.count == 0) {
-        if (completion) completion(YES);
-        return;
-    }
-
+/// Lo script che mette i file preparati al posto di quelli veri.
+///
+/// Esposto a sé stante perché è la parte che si può provare senza toccare
+/// niente: si guarda cosa scrive, invece di eseguirlo e vedere cosa succede.
+- (NSString *)configurationScriptFor:(NSDictionary<NSString *, NSString *> *)staged {
     NSString *root = [XPPaths installRoot];
     NSString *control = [XPPaths controlScript];
 
@@ -746,15 +741,38 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
     [script appendString:@"HTTPD=\"$R/etc/httpd.conf\"\n"];
     [script appendString:@"STAMP=$(date +%Y%m%d-%H%M%S)\n\n"];
 
-    // Le copie restano sul disco: sono la via di ritorno anche per chi arriva
-    // dopo, non solo per questo script.
-    for (NSString *source in staged) {
-        [script appendFormat:@"cp '%@' '%@.vxost-$STAMP.bak' || { echo VXOST_BACKUP_FAILED; exit 0; }\n",
-         source, source];
+    // 🔴 Ogni percorso passa da una variabile di shell, e non finisce dentro
+    // il nome del backup a mano.
+    //
+    // La prima versione scriveva:
+    //     cp '/percorso/httpd.conf' '/percorso/httpd.conf.vxost-$STAMP.bak'
+    // e dentro gli apici singoli la shell NON espande le variabili: il backup
+    // si chiamava letteralmente "httpd.conf.vxost-$STAMP.bak". Non un errore
+    // visibile — il ripristino funzionava, perché rileggeva lo stesso nome
+    // sbagliato — ma un file solo invece di uno per volta, sovrascritto a ogni
+    // operazione. La rete di sicurezza teneva una maglia sola.
+    //
+    // Gli apici singoli servono comunque, sul percorso: è dato che arriva da
+    // fuori dalla shell. Quindi si assegna una volta fra apici singoli, e da lì
+    // in poi si usa fra apici doppi, dove $STAMP si espande.
+    NSArray<NSString *> *sources = [staged.allKeys sortedArrayUsingSelector:@selector(compare:)];
+    for (NSUInteger i = 0; i < sources.count; i++) {
+        [script appendFormat:@"F%lu='%@'\n", (unsigned long)i, sources[i]];
+        [script appendFormat:@"N%lu='%@'\n", (unsigned long)i, staged[sources[i]]];
     }
     [script appendString:@"\n"];
-    for (NSString *source in staged) {
-        [script appendFormat:@"cat '%@' > '%@'\n", staged[source], source];
+
+    // Le copie restano sul disco: sono la via di ritorno anche per chi arriva
+    // dopo, non solo per questo script.
+    for (NSUInteger i = 0; i < sources.count; i++) {
+        [script appendFormat:
+         @"cp \"$F%lu\" \"$F%lu.vxost-$STAMP.bak\" || { echo VXOST_BACKUP_FAILED; exit 0; }\n",
+         (unsigned long)i, (unsigned long)i];
+    }
+    [script appendString:@"\n"];
+    for (NSUInteger i = 0; i < sources.count; i++) {
+        [script appendFormat:@"cat \"$N%lu\" > \"$F%lu\"\n",
+         (unsigned long)i, (unsigned long)i];
     }
 
     [script appendString:@"\n# Il controllo prima del riavvio: una configurazione malformata non\n"];
@@ -767,14 +785,31 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
     [script appendString:@"    fi\n"];
     [script appendString:@"    echo VXOST_OK\n"];
     [script appendString:@"else\n"];
-    for (NSString *source in staged) {
-        [script appendFormat:@"    cp '%@.vxost-$STAMP.bak' '%@'\n", source, source];
+    for (NSUInteger i = 0; i < sources.count; i++) {
+        [script appendFormat:@"    cp \"$F%lu.vxost-$STAMP.bak\" \"$F%lu\"\n",
+         (unsigned long)i, (unsigned long)i];
     }
     [script appendString:@"    echo VXOST_CONFIGTEST_FAILED\n"];
     [script appendString:@"fi\n"];
     // ⚠️ Esce sempre con 0: `do shell script` trasforma un'uscita diversa da
     // zero in un errore AppleScript e il codice vero non arriverebbe mai qui.
     [script appendString:@"exit 0\n"];
+
+
+    return script;
+}
+
+- (void)replaceConfiguration:(NSDictionary<NSString *, NSString *> *)staged
+                    progress:(NSString *)progress
+                     success:(NSString *)success
+                  completion:(void (^)(BOOL ok))completion {
+
+    if (staged.count == 0) {
+        if (completion) completion(YES);
+        return;
+    }
+
+    NSString *script = [self configurationScriptFor:staged];
 
     NSFileManager *fm = [NSFileManager defaultManager];
     NSString *scriptPath = [NSTemporaryDirectory() stringByAppendingPathComponent:
