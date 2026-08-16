@@ -7,10 +7,17 @@
 # qualcosa fosse andato storto la macchina continuava a servire. Ha funzionato,
 # e adesso si chiude il cerchio.
 #
-# 🔴 Perche' non basta l'alias. Il ServerName non e' decorazione: Apache lo usa
-# per costruire i redirect. Una richiesta a http://127.0.0.1:4000/ risponde 301
-# verso `http://localhost:4000/`, cioe' e' Apache stesso a rimettere il nome
-# vecchio nella barra degli indirizzi del browser. Verificato il 15/08/2026.
+# Perche' non basta l'alias: l'alias fa arrivare le richieste, il ServerName e'
+# il nome con cui il server si presenta. Finche' resta `localhost`, la
+# dashboard che legge la configurazione continua a mostrare il nome vecchio.
+#
+# ⚠️ Una correzione a un'ipotesi sbagliata, per non ripeterla. Il 15/08 avevo
+# scritto qui che era Apache a rimettere `localhost` nei redirect. Non e' vero:
+# con UseCanonicalName spento, che e' il default, Apache costruisce i redirect
+# dall'intestazione Host della richiesta, non dal ServerName. Il redirect che
+# si vedeva sulla porta 4000 lo scriveva **WordPress**, che lo firma con
+# `X-Redirect-By`, e prendeva il nome da un WP_HOME scritto a mano nel
+# wp-config.php di quel progetto. Vedi il controllo in fondo.
 #
 # ⚠️ Le righe commentate non si toccano. In httpd.conf c'e'
 # `#ServerName www.example.com:@@Port@@`, che e' documentazione: la stessa
@@ -158,13 +165,36 @@ code="$(curl -sI -m 6 -o /dev/null -w '%{http_code}' https://virtualhost/dashboa
 
 # Il motivo per cui esiste questo script: il redirect non deve piu' nominare
 # il nome vecchio.
+#
+# ⚠️ E se lo nomina, non e' detto che sia colpa di Apache. Un progetto puo'
+# generare il proprio redirect: WordPress lo fa, e lo firma con
+# `X-Redirect-By: WordPress`. Su questa macchina il 16/08 la porta 4000
+# rimandava a http://localhost:4000/ con il ServerName gia' cambiato, perche'
+# nel wp-config.php c'era WP_HOME scritto a mano.
+#
+# Dare la colpa alla configurazione di Apache sarebbe stato mandare qualcuno a
+# cercare per ore nel file sbagliato. Quindi si guarda chi ha firmato.
 for p in $(grep -hoE '^[[:space:]]*Listen[[:space:]]+[0-9.]*:?([0-9]+)' "$HTTPD" \
-           | grep -oE '[0-9]+$' | grep -v '^80$' | head -3); do
-    target="$(curl -sI -m 6 -o /dev/null -w '%{redirect_url}' "http://127.0.0.1:$p/" 2>/dev/null)"
+           | grep -oE '[0-9]+$' | grep -v '^80$' | head -5); do
+    head="$(curl -sI -m 6 "http://127.0.0.1:$p/" 2>/dev/null)"
+    target="$(printf '%s' "$head" | grep -i '^Location:' | sed 's/^[Ll]ocation:[[:space:]]*//' | tr -d '\r')"
+    by="$(printf '%s' "$head" | grep -i '^X-Redirect-By:' | sed 's/^[^:]*:[[:space:]]*//' | tr -d '\r')"
+
     case "$target" in
-        *localhost*) fail "la porta $p rimanda ancora a $target" ;;
-        "")          ok  "porta $p: nessun redirect" ;;
-        *)           ok  "porta $p rimanda a $target" ;;
+        "")
+            ok "porta $p: nessun redirect"
+            ;;
+        *localhost*)
+            if [ -n "$by" ]; then
+                note "porta $p rimanda a $target, ma lo scrive $by, non Apache"
+                note "   → e' la configurazione di quel progetto, non la nostra"
+            else
+                fail "la porta $p rimanda ancora a $target, e lo scrive Apache"
+            fi
+            ;;
+        *)
+            ok "porta $p rimanda a $target"
+            ;;
     esac
 done
 
