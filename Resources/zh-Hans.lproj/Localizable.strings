@@ -528,6 +528,12 @@
 /* Esito: si ha già l'ultima versione */
 "update.current" = "这已经是最新版本。";
 
+/* Pulsante dell'avviso: apre la pagina di download della nuova versione */
+"update.download" = "下载";
+
+/* Esito: il controllo non e' riuscito (rete assente, server irraggiungibile) */
+"update.failed" = "无法检查更新。";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "已在配置中停用";
 

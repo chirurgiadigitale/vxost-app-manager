@@ -98,9 +98,14 @@
     // solo chi sa che quel menu esiste: si apre con il tasto destro su
     // un'icona, e nessuno lo prova. Il menu dell'applicazione e' il posto
     // dove un utente di macOS cerca "controlla aggiornamenti".
-    [appMenu addItemWithTitle:NSLocalizedString(@"update.check", nil)
-                       action:@selector(checkForUpdates)
-                keyEquivalent:@""].target = [XPActions shared];
+    NSMenuItem *updates = [appMenu addItemWithTitle:NSLocalizedString(@"update.check", nil)
+                                             action:@selector(checkForUpdates)
+                                      keyEquivalent:@""];
+    updates.target = [XPActions shared];
+    // Le voci standard (Informazioni, Nascondi, Esci) l'icona ce l'hanno da
+    // macOS; questa e' nostra e va messa, o e' l'unica riga vuota del menu.
+    updates.image = [NSImage imageWithSystemSymbolName:@"arrow.triangle.2.circlepath"
+                              accessibilityDescription:nil];
     [appMenu addItem:[NSMenuItem separatorItem]];
 
     NSMenuItem *dashboard = [appMenu addItemWithTitle:NSLocalizedString(@"menu.openDashboard", nil)

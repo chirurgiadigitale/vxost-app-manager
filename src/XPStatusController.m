@@ -230,6 +230,11 @@
 /// per una non-notizia. Chi lo ha chiesto dal menu invece una risposta la
 /// aspetta, e quella arriva perché il controllo manuale scrive comunque.
 - (void)updateCheckDidFinish:(NSNotification *)note {
+    // Il controllo chiesto da una persona lo racconta XPActions con un
+    // avviso: scriverlo anche qui vorrebbe dire dire la stessa cosa due
+    // volte, nell'avviso e nella riga in fondo alla finestra.
+    if ([note.userInfo[@"manual"] boolValue]) return;
+
     if ([note.userInfo[@"available"] boolValue]) {
         [[XPActions shared] postMessage:
             [NSString stringWithFormat:NSLocalizedString(@"update.available", nil),

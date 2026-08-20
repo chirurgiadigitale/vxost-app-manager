@@ -528,6 +528,12 @@
 /* Esito: si ha già l'ultima versione */
 "update.current" = "Aceasta este cea mai nouă versiune.";
 
+/* Pulsante dell'avviso: apre la pagina di download della nuova versione */
+"update.download" = "Descarcă";
+
+/* Esito: il controllo non e' riuscito (rete assente, server irraggiungibile) */
+"update.failed" = "Nu s-a putut verifica dacă există actualizări.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "dezactivat în configurare";
 

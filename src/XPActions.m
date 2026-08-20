@@ -263,8 +263,40 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 // così lo vede anche l'interfaccia da cui non è partito.
 - (void)checkForUpdates {
     [self postMessage:NSLocalizedString(@"update.checking", nil) isError:NO];
+
+    // ⚠️ postMessage scrive nel popover e nella finestra: chiamato dal menu
+    // dell'applicazione sono chiusi tutti e due, e l'esito non ha dove
+    // comparire. L'avviso arriva comunque, anche a finestra aperta: chi ha
+    // chiesto di controllare vuole una risposta che non gli sfugga, e una
+    // riga in fondo a una finestra si perde. Deciso da Davide il 20/08.
+    __block id token = [[NSNotificationCenter defaultCenter]
+        addObserverForName:XPUpdateCheckDidFinishNotification
+                    object:nil
+                     queue:[NSOperationQueue mainQueue]
+                usingBlock:^(NSNotification *note) {
+        [[NSNotificationCenter defaultCenter] removeObserver:token];
+
+        NSAlert *alert = [[NSAlert alloc] init];
+        if ([note.userInfo[@"available"] boolValue]) {
+            alert.messageText = [NSString stringWithFormat:
+                NSLocalizedString(@"update.available", nil), note.userInfo[@"version"]];
+            [alert addButtonWithTitle:NSLocalizedString(@"update.download", nil)];
+            [alert addButtonWithTitle:NSLocalizedString(@"btn.cancel", nil)];
+        } else {
+            alert.messageText = NSLocalizedString(
+                [note.userInfo[@"failed"] boolValue] ? @"update.failed" : @"update.current", nil);
+            [alert addButtonWithTitle:NSLocalizedString(@"btn.ok", nil)];
+        }
+
+        [NSApp activateIgnoringOtherApps:YES];
+        if ([alert runModal] == NSAlertFirstButtonReturn && note.userInfo[@"url"]) {
+            [self openURLString:note.userInfo[@"url"]];
+        }
+    }];
+
     [[XPUpdateCheck shared] checkNow];
 }
+
 
 #pragma mark - Nuovo progetto
 

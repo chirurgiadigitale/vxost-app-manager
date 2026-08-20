@@ -528,6 +528,12 @@
 /* Esito: si ha già l'ultima versione */
 "update.current" = "This is the latest version.";
 
+/* Pulsante dell'avviso: apre la pagina di download della nuova versione */
+"update.download" = "Download";
+
+/* Esito: il controllo non e' riuscito (rete assente, server irraggiungibile) */
+"update.failed" = "Could not check for updates.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "disabled in configuration";
 

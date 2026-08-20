@@ -528,6 +528,12 @@
 /* Esito: si ha già l'ultima versione */
 "update.current" = "یہ تازہ ترین ورژن ہے۔";
 
+/* Pulsante dell'avviso: apre la pagina di download della nuova versione */
+"update.download" = "ڈاؤن لوڈ کریں";
+
+/* Esito: il controllo non e' riuscito (rete assente, server irraggiungibile) */
+"update.failed" = "اپ ڈیٹس کی جانچ نہیں ہو سکی۔";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "کنفیگریشن میں غیر فعال";
 

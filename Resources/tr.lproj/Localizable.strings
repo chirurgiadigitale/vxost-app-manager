@@ -528,6 +528,12 @@
 /* Esito: si ha già l'ultima versione */
 "update.current" = "Bu en son sürüm.";
 
+/* Pulsante dell'avviso: apre la pagina di download della nuova versione */
+"update.download" = "İndir";
+
+/* Esito: il controllo non e' riuscito (rete assente, server irraggiungibile) */
+"update.failed" = "Güncellemeler denetlenemedi.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "yapılandırmada devre dışı";
 

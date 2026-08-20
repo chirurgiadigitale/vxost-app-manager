@@ -34,6 +34,11 @@ static NSString *const XPLastCheckKey = @"UpdateCheckLast";
 /// nuovo"; il controllo di sfondo tace, o sarebbe un avviso al giorno per
 /// dire che non è successo nulla.
 @property (nonatomic, assign) BOOL manual;
+
+/// L'ultimo controllo non è arrivato a leggere un numero di versione.
+/// Serve perché "non ho potuto controllare" e "sei aggiornato" hanno lo
+/// stesso availableVersion, cioè nil, ma non vanno detti nello stesso modo.
+@property (nonatomic, assign) BOOL failed;
 @end
 
 @implementation XPUpdateCheck
@@ -147,6 +152,12 @@ static NSString *const XPLastCheckKey = @"UpdateCheckLast";
         completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         NSString *version = nil;
         NSString *download = nil;
+        // ⚠️ "Non ho potuto controllare" e "sei aggiornato" non sono la stessa
+        // cosa, e dirle con la stessa frase e' una bugia: chi legge "questa e'
+        // l'ultima versione" con la rete staccata resta indietro convinto di
+        // essere avanti. Oggi vxost.com/version.json risponde 404 perche' il
+        // sito non e' pubblicato, ed e' esattamente questo il caso.
+        __block BOOL failed = YES;
 
         if (!error && data) {
             NSHTTPURLResponse *http = (NSHTTPURLResponse *)response;
@@ -163,6 +174,10 @@ static NSString *const XPLastCheckKey = @"UpdateCheckLast";
                     if ([v isKindOfClass:[NSString class]]) version = v;
                     if ([u isKindOfClass:[NSString class]]) download = u;
                 }
+                // Riuscito vuol dire "ho letto un numero di versione", non
+                // "il server ha risposto": una pagina di errore con codice
+                // 200, o un JSON senza il campo, non sono una risposta.
+                failed = (version == nil);
             }
         }
 
@@ -185,6 +200,7 @@ static NSString *const XPLastCheckKey = @"UpdateCheckLast";
                 self.availableVersion = nil;
                 self.downloadURL = nil;
             }
+            self.failed = failed;
             [self postResult];
         });
     }];
@@ -195,6 +211,7 @@ static NSString *const XPLastCheckKey = @"UpdateCheckLast";
     NSMutableDictionary *info = [NSMutableDictionary dictionary];
     info[@"available"] = @(self.availableVersion != nil);
     info[@"manual"] = @(self.manual);
+    info[@"failed"] = @(self.failed);
     if (self.availableVersion) info[@"version"] = self.availableVersion;
     if (self.downloadURL) info[@"url"] = self.downloadURL;
 

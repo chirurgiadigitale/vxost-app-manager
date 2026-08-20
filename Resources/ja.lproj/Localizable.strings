@@ -528,6 +528,12 @@
 /* Esito: si ha già l'ultima versione */
 "update.current" = "これが最新バージョンです。";
 
+/* Pulsante dell'avviso: apre la pagina di download della nuova versione */
+"update.download" = "ダウンロード";
+
+/* Esito: il controllo non e' riuscito (rete assente, server irraggiungibile) */
+"update.failed" = "アップデートを確認できませんでした。";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "設定で無効";
 

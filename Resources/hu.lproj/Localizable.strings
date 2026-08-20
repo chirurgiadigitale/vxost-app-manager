@@ -528,6 +528,12 @@
 /* Esito: si ha già l'ultima versione */
 "update.current" = "Ez a legfrissebb verzió.";
 
+/* Pulsante dell'avviso: apre la pagina di download della nuova versione */
+"update.download" = "Letöltés";
+
+/* Esito: il controllo non e' riuscito (rete assente, server irraggiungibile) */
+"update.failed" = "Nem sikerült frissítéseket keresni.";
+
 /* Il blocco VirtualHost è commentato nella configurazione */
 "vhost.disabled" = "letiltva a beállításokban";
 
