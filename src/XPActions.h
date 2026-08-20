@@ -57,6 +57,11 @@ extern NSString *const XPActionMessageNotification;
 /// Il pannello Informazioni, con release e autore.
 - (void)showAbout;
 
+/// Controlla adesso se è uscita una versione nuova, anche se il controllo
+/// automatico è spento. L'esito arriva come messaggio, non come valore di
+/// ritorno: la richiesta è di rete e finisce dopo.
+- (void)checkForUpdates;
+
 #pragma mark - Nuovo progetto
 
 /// Prima porta libera dopo quelle già dichiarate in httpd.conf.

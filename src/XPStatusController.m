@@ -200,8 +200,7 @@
 }
 
 - (void)menuCheckForUpdates:(id)sender {
-    [[XPActions shared] postMessage:NSLocalizedString(@"update.checking", nil) isError:NO];
-    [[XPUpdateCheck shared] checkNow];
+    [[XPActions shared] checkForUpdates];
 }
 
 - (void)menuToggleAutomatic:(id)sender {

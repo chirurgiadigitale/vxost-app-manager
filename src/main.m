@@ -93,6 +93,14 @@
     [appMenu addItemWithTitle:NSLocalizedString(@"menu.about", nil)
                        action:@selector(showAbout)
                 keyEquivalent:@""].target = [XPActions shared];
+
+    // Sta anche nel menu contestuale della barra di stato, ma li' lo trova
+    // solo chi sa che quel menu esiste: si apre con il tasto destro su
+    // un'icona, e nessuno lo prova. Il menu dell'applicazione e' il posto
+    // dove un utente di macOS cerca "controlla aggiornamenti".
+    [appMenu addItemWithTitle:NSLocalizedString(@"update.check", nil)
+                       action:@selector(checkForUpdates)
+                keyEquivalent:@""].target = [XPActions shared];
     [appMenu addItem:[NSMenuItem separatorItem]];
 
     NSMenuItem *dashboard = [appMenu addItemWithTitle:NSLocalizedString(@"menu.openDashboard", nil)

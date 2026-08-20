@@ -8,6 +8,7 @@
 #import "XPTaskRunner.h"
 #import "XPDatabase.h"
 #import "XPPhpVersion.h"
+#import "XPUpdateCheck.h"
 
 NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
@@ -254,6 +255,15 @@ NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
         @"Version": versionLine,
         @"Credits": [[NSAttributedString alloc] initWithString:credits attributes:attributes],
     }];
+}
+
+// Il controllo vive qui e non nel controller del menu perché lo chiamano in
+// due: il menu contestuale della barra di stato e il menu dell'applicazione.
+// L'esito non torna al chiamante, arriva come XPActionMessageNotification,
+// così lo vede anche l'interfaccia da cui non è partito.
+- (void)checkForUpdates {
+    [self postMessage:NSLocalizedString(@"update.checking", nil) isError:NO];
+    [[XPUpdateCheck shared] checkNow];
 }
 
 #pragma mark - Nuovo progetto
