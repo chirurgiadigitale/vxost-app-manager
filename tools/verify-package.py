@@ -23,7 +23,15 @@ import os
 import sys
 
 # Text that legitimately precedes an allowed occurrence.
-ALLOWED_AFTER = b"github.com/"
+#
+# "www." and "it." are the author's own identity, which the product states in
+# the open and does not hide: the About panel credits www.chirurgiadigitale.it,
+# and the time tracker reads the old it.chirurgiadigitale.xampp folder to carry
+# over data from before the rename. Both carry a company name that is also the
+# name of a project folder on this build machine, which is why they end up on
+# the forbidden list at all. A leak is that same word inside a path, a virtual
+# host or a database name — not the signature the author puts on his own work.
+ALLOWED_AFTER = (b"github.com/", b"www.", b"it.")
 
 # Files larger than this are read in pieces. Nothing in the package should be
 # anywhere near it, but a stray database or archive must not exhaust memory.
@@ -63,10 +71,11 @@ def leaks_in(data, words):
         for at in occurrences(data, word):
             if not is_whole_word(data, at, len(word)):
                 continue
-            before = data[max(0, at - len(ALLOWED_AFTER)):at]
-            if before != ALLOWED_AFTER:
-                found.add(word)
-                break
+            if any(data[max(0, at - len(prefix)):at] == prefix
+                   for prefix in ALLOWED_AFTER):
+                continue
+            found.add(word)
+            break
     return found
 
 

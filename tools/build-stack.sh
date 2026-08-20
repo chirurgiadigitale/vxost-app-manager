@@ -117,14 +117,36 @@ for dir in bin sbin lib libexec modules share etc man licenses phpmyadmin cgi-bi
     [ -d "$SOURCE/$dir" ] || continue
     printf "  %s\n" "$dir"
     # Sockets and caches inside phpmyadmin/tmp belong to the running instance.
+    # ⚠️ ssl.key e ssl.crt non escono da questa macchina, mai.
+    #
+    # Il certificato di sviluppo lo firma mkcert e porta scritto dentro il
+    # nome di chi l'ha generato e quello del suo Mac: spedirlo vorrebbe dire
+    # mostrare quel nome nel certificato di ogni utente. La chiave privata e'
+    # peggio ancora: se la stessa chiave sta in tutte le installazioni del
+    # mondo, chi la estrae dal pacchetto puo' intercettare l'HTTPS locale di
+    # chiunque altro l'abbia installato. Una chiave condivisa non e' una
+    # chiave.
+    #
+    # Ognuno genera le sue al primo uso: il pulsante "Attiva SSL" nell'app
+    # chiama mkcert sulla macchina di chi lo preme.
+    #
+    # ⛔ Si escludono le due cartelle, non "*.crt" ovunque:
+    # share/curl/curl-ca-bundle.crt e' l'elenco delle autorita' di cui curl e
+    # PHP si fidano. Toglierlo non spedisce una chiave in meno, rompe la
+    # verifica di ogni HTTPS in uscita — e lo fa in silenzio.
     rsync -a --quiet \
           --exclude "tmp/" --exclude "*.sock" --exclude "*.pid" \
           --exclude "*.log" --exclude "*.err" \
           --exclude "*.bak" --exclude "*.bak-*" --exclude "*.bak.*" \
           --exclude "*.orig" --exclude "*.save" --exclude "*~" \
           --exclude "*.old" --exclude "*.backup" \
+          --exclude "ssl.key/" --exclude "ssl.crt/" \
           "$SOURCE/$dir" "$PAYLOAD/" 2>/dev/null || \
     cp -R "$SOURCE/$dir" "$PAYLOAD/"
+
+    # Il ripiego con cp non conosce le esclusioni: se e' scattato, si tolgono
+    # a mano. Senza questo, un rsync fallito farebbe uscire le chiavi.
+    rm -rf "$PAYLOAD/$dir/ssl.key" "$PAYLOAD/$dir/ssl.crt"
 
     # A stray backup is enough to leak every virtual host ever configured.
     find "$PAYLOAD/$dir" \( -name "*.bak*" -o -name "*.orig" -o -name "*.save" \
@@ -397,12 +419,47 @@ if ! printf '%s\n' "${FORBIDDEN[@]}" | python3 "$HERE/tools/verify-package.py" "
     exit 1
 fi
 
-step "Checking the configuration still works"
-if ! grep -qE '^\s*Listen\s+80\b' "$PAYLOAD/etc/httpd.conf"; then
-    echo "  Listen 80 is missing: Apache would not start" >&2
+# Una chiave privata non contiene il nome di nessuno, quindi il controllo qui
+# sopra la lascerebbe passare: cerca parole, e una chiave e' base64. Si guarda
+# per quello che e', non per quello che dice.
+#
+# ⚠️ E si guarda il contenuto, non l'estensione. phpmyadmin porta con se'
+# vendor/composer/ca-bundle/res/cacert.pem, che e' l'elenco delle autorita' di
+# cui fidarsi: stessa estensione di una chiave, significato opposto. Quello che
+# distingue una chiave e' la riga che si dichiara tale.
+#
+# ⚠️ E non basta cercare il marcatore ovunque: i binari di PHP lo contengono
+# perche' sanno leggere le chiavi, e le pagine di manuale di OpenSSL perche'
+# le spiegano. Parlare di una chiave non e' esserlo. Una chiave vera e' un
+# file piccolo che *comincia* con quel marcatore.
+step "Checking no private key got in"
+LEAKED="$(find "$STAGE" -type f -size -100k 2>/dev/null | while IFS= read -r f; do
+    head -c 200 "$f" 2>/dev/null | grep -q -- "-----BEGIN .*PRIVATE KEY-----" && echo "$f"
+done || true)"
+if [ -n "$LEAKED" ]; then
+    echo "$LEAKED" | sed 's|^|  |'
+    echo
+    echo "Refusing to package: a private key is inside." >&2
     exit 1
 fi
-echo "  Listen 80 present"
+echo "  none"
+
+step "Checking the configuration still works"
+# Vanno bene tutte e due le forme, e quella con l'indirizzo e' preferibile:
+#
+#   Listen 80              ascolta su ogni interfaccia, cioe' i progetti sono
+#                          visibili a chiunque sia sulla stessa rete
+#   Listen 127.0.0.1:80    solo questa macchina
+#
+# Il pacchetto esce chiuso, deciso il 14/08: aprire alla rete e' una scelta di
+# sicurezza e la fa l'utente nel wizard, non noi al posto suo. Il controllo qui
+# serve a un'altra cosa — che una direttiva Listen sulla 80 ci sia, perche'
+# senza Apache non parte affatto.
+if ! grep -qE '^\s*Listen\s+([0-9.]+:)?80\b' "$PAYLOAD/etc/httpd.conf"; then
+    echo "  no Listen on port 80: Apache would not start" >&2
+    exit 1
+fi
+echo "  listening on port 80: $(grep -oE '^\s*Listen\s+([0-9.]+:)?80\b' "$PAYLOAD/etc/httpd.conf" | head -1 | xargs)"
 
 if "$PAYLOAD/bin/httpd" -t -d "$PAYLOAD" -f "$PAYLOAD/etc/httpd.conf" > /tmp/configtest.log 2>&1; then
     echo "  Apache configuration valid"
