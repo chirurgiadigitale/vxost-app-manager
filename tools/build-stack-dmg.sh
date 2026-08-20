@@ -54,7 +54,7 @@ The database ships empty, with no tables and no data.
    Host:     127.0.0.1
    Port:     3306
 
-phpMyAdmin is at http://localhost/phpmyadmin once MySQL is running.
+phpMyAdmin is at https://virtualhost/phpmyadmin once MySQL is running.
 
 These credentials are meant for a local development machine. If this
 installation is ever reachable from outside your computer, change them
