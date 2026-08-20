@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "Csak ez a Mac";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "Munkamenet hozzáadása";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "Munkamenet hozzáadása";
+
 "history.byProject" = "Projektenként";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "Törlés";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "Törli ezt a munkamenetet? A benne lévő órák elvesznek.";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "Szerkesztés";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "Munkamenet szerkesztése";
+
 "history.empty" = "Még nincs rögzített munkamenet";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "Eddig";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "Projekt";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "Ettől";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "Mit csinált";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "A befejezés korábbi, mint a kezdés.";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "Mentés";
 
 "history.title" = "Munkanapló";
 

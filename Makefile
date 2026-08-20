@@ -125,7 +125,17 @@ scripttest:
 		tests/scripttest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/scripttest
 
-test: wizardtest updatetest exposuretest phptest scripttest
+# Le correzioni allo storico del tracker, provate sul motore vero.
+# ⚠️ Qui si riscrivono ore gia' registrate: un errore non fa cadere niente e
+# non stampa nulla, cambia solo il totale del giorno. E' il difetto che si
+# scopre mesi dopo, quando non si ricorda piu' quante ore erano davvero.
+trackertest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/trackertest \
+		tests/trackertest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/trackertest
+
+test: wizardtest updatetest exposuretest phptest scripttest trackertest
 
 # L'app va in /Applications, non dentro la cartella dello stack.
 #

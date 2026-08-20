@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "僅本機";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "新增工作階段";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "新增工作階段";
+
 "history.byProject" = "依專案";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "刪除";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "要刪除這個工作階段嗎？其中記錄的時間會遺失。";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "編輯";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "編輯工作階段";
+
 "history.empty" = "尚無記錄";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "到";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "專案";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "從";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "做了什麼";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "結束時間早於開始時間。";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "儲存";
 
 "history.title" = "工作歷史";
 

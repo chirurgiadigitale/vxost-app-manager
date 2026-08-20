@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "Solo este Mac";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "Añadir sesión";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "Añadir una sesión";
+
 "history.byProject" = "Por proyecto";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "Eliminar";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "¿Eliminar esta sesión? Las horas que contiene se pierden.";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "Editar";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "Editar sesión";
+
 "history.empty" = "Aún no hay sesiones registradas";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "Hasta";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "Proyecto";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "Desde";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "Qué has hecho";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "La hora de fin es anterior a la de inicio.";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "Guardar";
 
 "history.title" = "Historial de trabajo";
 

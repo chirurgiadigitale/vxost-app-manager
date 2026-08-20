@@ -21,4 +21,12 @@
 /// avere lo stesso aspetto.
 + (NSView *)rowForEntry:(id)entry formatter:(NSDateFormatter *)formatter;
 
+/// La stessa riga, lasciando libero uno spazio a destra.
+///
+/// Serve allo storico, che ci mette i pulsanti di modifica ed eliminazione.
+/// Nel popover non ci sono: lì lo spazio è poco e la riga è di sola lettura.
++ (NSView *)rowForEntry:(id)entry
+              formatter:(NSDateFormatter *)formatter
+          trailingInset:(CGFloat)inset;
+
 @end

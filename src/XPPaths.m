@@ -93,6 +93,47 @@ static NSString *XPDetectControlScript(NSString *root) {
     return cached;
 }
 
++ (NSString *)projectsRoot {
+    // Stesso ragionamento della radice web: progetti e' diventata projects il
+    // 13/08, ma chi non ha ancora migrato ha la vecchia.
+    static NSString *cached = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSFileManager *fm = [NSFileManager defaultManager];
+        for (NSString *name in @[@"projects", @"progetti"]) {
+            NSString *candidate = [[self htdocs] stringByAppendingPathComponent:name];
+            BOOL isDirectory = NO;
+            if ([fm fileExistsAtPath:candidate isDirectory:&isDirectory] && isDirectory) {
+                cached = candidate;
+                return;
+            }
+        }
+        cached = [[self htdocs] stringByAppendingPathComponent:@"projects"];
+    });
+    return cached;
+}
+
++ (NSArray<NSString *> *)projectFolders {
+    // ⛔ Non si mette in cache: le cartelle nascono e spariscono mentre l'app
+    // e' aperta, e un elenco congelato all'avvio direbbe che un progetto
+    // creato cinque minuti fa non esiste.
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSArray<NSString *> *content = [fm contentsOfDirectoryAtPath:[self projectsRoot] error:NULL];
+    if (!content) return @[];
+
+    NSMutableArray<NSString *> *folders = [NSMutableArray array];
+    for (NSString *name in content) {
+        if ([name hasPrefix:@"."]) continue;      // .DS_Store e simili
+        BOOL isDirectory = NO;
+        NSString *full = [[self projectsRoot] stringByAppendingPathComponent:name];
+        if ([fm fileExistsAtPath:full isDirectory:&isDirectory] && isDirectory) {
+            [folders addObject:name];
+        }
+    }
+    [folders sortUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
+    return folders;
+}
+
 + (NSString *)localHostname {
     static NSString *name = nil;
     static dispatch_once_t once;

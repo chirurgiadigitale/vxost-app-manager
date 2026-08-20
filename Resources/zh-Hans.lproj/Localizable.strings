@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "仅本机";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "添加会话";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "添加一个会话";
+
 "history.byProject" = "按项目";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "删除";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "删除这个会话吗？其中记录的时间将丢失。";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "编辑";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "编辑会话";
+
 "history.empty" = "暂无记录";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "到";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "项目";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "从";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "做了什么";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "结束时间早于开始时间。";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "保存";
 
 "history.title" = "工作历史";
 

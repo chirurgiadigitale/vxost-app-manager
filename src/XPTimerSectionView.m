@@ -432,6 +432,12 @@
 }
 
 + (NSView *)rowForEntry:(id)rawEntry formatter:(NSDateFormatter *)formatter {
+    return [self rowForEntry:rawEntry formatter:formatter trailingInset:10];
+}
+
++ (NSView *)rowForEntry:(id)rawEntry
+              formatter:(NSDateFormatter *)formatter
+          trailingInset:(CGFloat)inset {
     XPTimeEntry *entry = rawEntry;
     NSView *row = [[NSView alloc] init];
     row.translatesAutoresizingMaskIntoConstraints = NO;
@@ -474,10 +480,10 @@
         [name.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
         [name.trailingAnchor constraintLessThanOrEqualToAnchor:duration.leadingAnchor constant:-8],
 
-        [duration.trailingAnchor constraintEqualToAnchor:row.trailingAnchor constant:-10],
+        [duration.trailingAnchor constraintEqualToAnchor:row.trailingAnchor constant:-inset],
         [duration.topAnchor constraintEqualToAnchor:row.topAnchor constant:5],
 
-        [range.trailingAnchor constraintEqualToAnchor:row.trailingAnchor constant:-10],
+        [range.trailingAnchor constraintEqualToAnchor:row.trailingAnchor constant:-inset],
         [range.topAnchor constraintEqualToAnchor:duration.bottomAnchor constant:0],
     ]];
 

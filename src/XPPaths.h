@@ -44,6 +44,17 @@
 /// Document root di Apache.
 + (NSString *)htdocs;
 
+/// La cartella dei progetti dentro la radice web.
+///
+/// Si rileva come la radice: projects se c'è, altrimenti progetti, che è il
+/// nome usato fino al 13/08 e che sopravvive sulle installazioni non migrate.
++ (NSString *)projectsRoot;
+
+/// I nomi delle cartelle di primo livello sotto projectsRoot, in ordine
+/// alfabetico. Le nascoste e i file sciolti non contano: un progetto è una
+/// cartella.
++ (NSArray<NSString *> *)projectFolders;
+
 /// Il nome con cui la macchina raggiunge lo stack.
 ///
 /// virtualhost se /etc/hosts lo risolve, altrimenti localhost. Si rileva

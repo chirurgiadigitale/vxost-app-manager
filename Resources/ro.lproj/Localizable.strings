@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "Doar acest Mac";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "Adaugă sesiune";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "Adaugă o sesiune";
+
 "history.byProject" = "Pe proiect";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "Șterge";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "Ștergi această sesiune? Orele conținute se pierd.";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "Editează";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "Editează sesiunea";
+
 "history.empty" = "Nicio sesiune înregistrată";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "Până la";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "Proiect";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "De la";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "Ce ai făcut";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "Ora de final este înaintea celei de început.";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "Salvează";
 
 "history.title" = "Istoricul muncii";
 

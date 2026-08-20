@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "صرف یہ Mac";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "سیشن شامل کریں";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "سیشن شامل کریں";
+
 "history.byProject" = "پروجیکٹ کے لحاظ سے";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "حذف کریں";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "کیا یہ سیشن حذف کریں؟ اس میں درج گھنٹے ضائع ہو جائیں گے۔";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "ترمیم کریں";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "سیشن میں ترمیم";
+
 "history.empty" = "ابھی کوئی سیشن ریکارڈ نہیں";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "تک";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "پروجیکٹ";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "سے";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "آپ نے کیا کیا";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "اختتامی وقت آغاز سے پہلے ہے۔";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "محفوظ کریں";
 
 "history.title" = "کام کی تاریخ";
 

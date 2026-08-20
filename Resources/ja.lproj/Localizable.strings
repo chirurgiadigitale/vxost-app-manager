@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "この Mac だけ";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "セッションを追加";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "セッションを追加";
+
 "history.byProject" = "プロジェクト別";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "削除";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "このセッションを削除しますか。記録された時間は失われます。";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "編集";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "セッションを編集";
+
 "history.empty" = "まだ記録がありません";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "終了";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "プロジェクト";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "開始";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "作業内容";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "終了時刻が開始時刻より前です。";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "保存";
 
 "history.title" = "作業履歴";
 

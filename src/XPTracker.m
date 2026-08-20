@@ -4,6 +4,7 @@
 
 #import "XPTracker.h"
 #import "XPVirtualHost.h"
+#import "XPPaths.h"
 
 #import <AppKit/AppKit.h>
 #import <CoreGraphics/CoreGraphics.h>
@@ -225,15 +226,47 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 - (NSArray<XPTrackableProject *> *)allProjects {
     NSMutableArray<XPTrackableProject *> *projects = [NSMutableArray array];
 
+    // ⚠️ I virtual host non sono i progetti.
+    //
+    // Prima l'elenco veniva solo da httpd-vhosts.conf, e su questa macchina
+    // vuol dire sette voci contro sessantatre cartelle in www/projects: su un
+    // progetto senza porta dedicata le ore non si potevano registrare affatto.
+    // Un vhost e' un progetto pubblicato, non tutto il lavoro che si fa.
+    //
+    // Le fonti sono tre e in quest'ordine: prima i virtual host, che hanno un
+    // nome scelto da chi li ha scritti, poi le cartelle, poi le voci create a
+    // mano. Chi arriva dopo con lo stesso nome non entra, cosi' il progetto
+    // che ha sia il vhost sia la cartella compare una volta sola.
+    NSMutableSet<NSString *> *visti = [NSMutableSet set];
+
     for (XPVirtualHost *host in [XPVirtualHost allHosts]) {
         XPTrackableProject *project = [[XPTrackableProject alloc] init];
         project.key  = [NSString stringWithFormat:@"vhost:%ld", (long)host.port];
         project.name = host.name;
         project.isCustom = NO;
         [projects addObject:project];
+        if (host.name) [visti addObject:[host.name lowercaseString]];
     }
 
-    [projects addObjectsFromArray:self.customProjects];
+    for (NSString *folder in [XPPaths projectFolders]) {
+        if ([visti containsObject:[folder lowercaseString]]) continue;
+        XPTrackableProject *project = [[XPTrackableProject alloc] init];
+        // La chiave porta il nome della cartella, non la posizione
+        // nell'elenco: rinominare una cartella accanto non deve spostare le
+        // ore gia' registrate su questa.
+        project.key  = [NSString stringWithFormat:@"folder:%@", folder];
+        project.name = folder;
+        project.isCustom = NO;
+        [projects addObject:project];
+        [visti addObject:[folder lowercaseString]];
+    }
+
+    for (XPTrackableProject *custom in self.customProjects) {
+        if (custom.name && [visti containsObject:[custom.name lowercaseString]]) continue;
+        [projects addObject:custom];
+        if (custom.name) [visti addObject:[custom.name lowercaseString]];
+    }
+
     return projects;
 }
 
@@ -353,6 +386,56 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     [self.entries removeObject:entry];
     [self save];
     [self notifyChange];
+}
+
+- (BOOL)updateEntry:(XPTimeEntry *)entry
+              start:(NSDate *)start
+                end:(NSDate *)end
+               task:(NSString *)task {
+    if (!entry || !start || !end) return NO;
+    // Una fine prima dell'inizio dà durata negativa, e il totale del giorno
+    // scenderebbe aggiungendo lavoro. Si rifiuta qui: l'interfaccia mostra il
+    // motivo, ma il motore non deve fidarsi di chi lo chiama.
+    if ([end compare:start] != NSOrderedDescending) return NO;
+
+    entry.startDate = start;
+    entry.endDate   = end;
+    if (task) entry.task = task;
+
+    // La sessione può essere finita in un altro giorno: l'elenco è ordinato
+    // per data e va rimesso in ordine, o lo storico mostrerebbe le voci
+    // mescolate.
+    [self.entries sortUsingComparator:^NSComparisonResult(XPTimeEntry *a, XPTimeEntry *b) {
+        return [b.startDate compare:a.startDate];
+    }];
+
+    [self save];
+    [self notifyChange];
+    return YES;
+}
+
+- (XPTimeEntry *)addEntryForProject:(XPTrackableProject *)project
+                               task:(NSString *)task
+                              start:(NSDate *)start
+                                end:(NSDate *)end {
+    if (!project || !start || !end) return nil;
+    if ([end compare:start] != NSOrderedDescending) return nil;
+
+    XPTimeEntry *entry = [[XPTimeEntry alloc] init];
+    entry.projectKey  = project.key;
+    entry.projectName = project.name;
+    entry.task        = task;
+    entry.startDate   = start;
+    entry.endDate     = end;
+
+    [self.entries addObject:entry];
+    [self.entries sortUsingComparator:^NSComparisonResult(XPTimeEntry *a, XPTimeEntry *b) {
+        return [b.startDate compare:a.startDate];
+    }];
+
+    [self save];
+    [self notifyChange];
+    return entry;
 }
 
 #pragma mark - Persistenza

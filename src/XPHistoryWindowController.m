@@ -9,11 +9,14 @@
 #import "XPTimerSectionView.h"
 #import "XPReport.h"
 #import "XPButton.h"
+#import "XPEntryEditor.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 @interface XPHistoryWindowController () <NSTableViewDataSource, NSTableViewDelegate>
 @property (nonatomic, strong) NSTableView *daysTable;
 @property (nonatomic, strong) NSArray<NSDate *> *days;
+/// Il giorno attualmente mostrato a destra.
+@property (nonatomic, strong) NSDate *selectedDay;
 @property (nonatomic, strong) NSStackView *entriesStack;
 @property (nonatomic, strong) NSStackView *projectTotalsStack;
 @property (nonatomic, strong) NSTextField *dayTitle;
@@ -28,6 +31,8 @@
 @property (nonatomic, strong) NSTextField *reportTotalLabel;
 @property (nonatomic, strong) XPButton *clipboardButton;
 @property (nonatomic, strong) XPButton *csvButton;
+/// Aggiunge a mano una sessione al giorno mostrato.
+@property (nonatomic, strong) XPButton *addButton;
 @property (nonatomic, strong) NSArray<NSString *> *reportProjectKeys;
 @end
 
@@ -149,8 +154,16 @@
     self.emptyLabel.stringValue = NSLocalizedString(@"history.empty", nil);
     self.emptyLabel.alignment = NSTextAlignmentCenter;
 
+    self.addButton = [XPButton buttonWithTitle:@"" style:XPButtonStyleGhost onClick:^(XPButton *b) {
+        [self addEntryClicked:b];
+    }];
+    self.addButton.symbolName = @"plus";
+    self.addButton.toolTip = NSLocalizedString(@"history.add", nil);
+    self.addButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     [content addSubview:self.dayTitle];
     [content addSubview:self.dayTotal];
+    [content addSubview:self.addButton];
     [content addSubview:detailScroll];
     [content addSubview:self.emptyLabel];
 
@@ -236,8 +249,11 @@
         [self.dayTitle.topAnchor constraintEqualToAnchor:content.topAnchor constant:18],
         [self.dayTitle.leadingAnchor constraintEqualToAnchor:daysScroll.trailingAnchor constant:16],
 
+        [self.addButton.centerYAnchor constraintEqualToAnchor:self.dayTitle.centerYAnchor],
+        [self.addButton.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-20],
+
         [self.dayTotal.centerYAnchor constraintEqualToAnchor:self.dayTitle.centerYAnchor],
-        [self.dayTotal.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-20],
+        [self.dayTotal.trailingAnchor constraintEqualToAnchor:self.addButton.leadingAnchor constant:-12],
         [self.dayTotal.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.dayTitle.trailingAnchor
                                                                  constant:10],
 
@@ -479,6 +495,7 @@
 #pragma mark - Dettaglio del giorno
 
 - (void)showDay:(NSDate *)day {
+    self.selectedDay = day;
     for (NSStackView *stack in @[self.entriesStack, self.projectTotalsStack]) {
         for (NSView *view in [stack.arrangedSubviews copy]) {
             [stack removeArrangedSubview:view];
@@ -504,12 +521,110 @@
     }
 
     for (XPTimeEntry *entry in all) {
-        NSView *row = [XPTimerSectionView rowForEntry:entry formatter:self.timeFormatter];
+        // Una sessione ancora aperta non si corregge: la fine non c'è, e
+        // metterci mano mentre il cronometro va vorrebbe dire scrivere sopra
+        // un dato che sta cambiando. Prima si ferma.
+        BOOL editable = !entry.isRunning && !entry.isPaused;
+        CGFloat inset = editable ? 74 : 10;
+
+        NSView *row = [XPTimerSectionView rowForEntry:entry
+                                            formatter:self.timeFormatter
+                                        trailingInset:inset];
+        if (editable) [self addActionsTo:row forEntry:entry];
+
         [self.entriesStack addArrangedSubview:row];
         [row.widthAnchor constraintEqualToAnchor:self.entriesStack.widthAnchor].active = YES;
     }
 
     [self buildProjectTotalsForDay:day entries:all];
+}
+
+/// I due pulsanti in fondo alla riga: correggi ed elimina.
+///
+/// Sono icone e non parole perché la riga è alta 34 punti e due etichette
+/// tradotte in quindici lingue non ci stanno; il nome per esteso arriva nel
+/// tooltip e da lì lo legge anche VoiceOver.
+- (void)addActionsTo:(NSView *)row forEntry:(XPTimeEntry *)entry {
+    NSButton *(^iconButton)(NSString *, NSString *, SEL) =
+        ^(NSString *symbol, NSString *title, SEL action) {
+        NSImage *image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:title];
+        NSButton *button = [NSButton buttonWithImage:image target:self action:action];
+        button.translatesAutoresizingMaskIntoConstraints = NO;
+        button.bezelStyle = NSBezelStyleAccessoryBarAction;
+        button.bordered = NO;
+        button.toolTip = title;
+        button.contentTintColor = [XPTheme textMuted];
+        return button;
+    };
+
+    NSButton *edit = iconButton(@"pencil",
+                                NSLocalizedString(@"history.edit", nil),
+                                @selector(editEntryClicked:));
+    NSButton *remove = iconButton(@"trash",
+                                  NSLocalizedString(@"history.delete", nil),
+                                  @selector(deleteEntryClicked:));
+
+    // L'identificatore viaggia sul pulsante: la riga viene ricostruita a ogni
+    // ricarica e un puntatore alla sessione punterebbe a un oggetto sostituito.
+    edit.identifier = entry.identifier;
+    remove.identifier = entry.identifier;
+
+    [row addSubview:edit];
+    [row addSubview:remove];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [remove.trailingAnchor constraintEqualToAnchor:row.trailingAnchor constant:-10],
+        [remove.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [remove.widthAnchor constraintEqualToConstant:24],
+
+        [edit.trailingAnchor constraintEqualToAnchor:remove.leadingAnchor constant:-4],
+        [edit.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [edit.widthAnchor constraintEqualToConstant:24],
+    ]];
+}
+
+/// La sessione a cui punta un pulsante, cercata per identificatore.
+- (XPTimeEntry *)entryWithIdentifier:(NSString *)identifier {
+    if (!identifier) return nil;
+    for (XPTimeEntry *entry in [[XPTracker shared] entriesForDay:self.selectedDay]) {
+        if ([entry.identifier isEqualToString:identifier]) return entry;
+    }
+    return nil;
+}
+
+- (void)editEntryClicked:(NSButton *)sender {
+    XPTimeEntry *entry = [self entryWithIdentifier:sender.identifier];
+    if (!entry) return;
+    [XPEntryEditor editEntry:entry forWindow:self.window done:^{
+        [self reload];
+    }];
+}
+
+- (void)deleteEntryClicked:(NSButton *)sender {
+    XPTimeEntry *entry = [self entryWithIdentifier:sender.identifier];
+    if (!entry) return;
+
+    // ⚠️ Si chiede conferma perché non c'è un annulla: le ore cancellate non
+    // si recuperano, e il pulsante sta a quattro punti da quello di modifica.
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = NSLocalizedString(@"history.delete.confirm", nil);
+    alert.informativeText = entry.task.length > 0
+        ? [NSString stringWithFormat:@"%@ · %@", entry.projectName ?: @"", entry.task]
+        : (entry.projectName ?: @"");
+    [alert addButtonWithTitle:NSLocalizedString(@"history.delete", nil)];
+    [alert addButtonWithTitle:NSLocalizedString(@"btn.cancel", nil)];
+
+    [alert beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse response) {
+        if (response != NSAlertFirstButtonReturn) return;
+        [[XPTracker shared] deleteEntry:entry];
+        [self reload];
+    }];
+}
+
+- (void)addEntryClicked:(id)sender {
+    [XPEntryEditor addEntryOnDay:self.selectedDay forWindow:self.window done:^{
+        [self reload];
+    }];
 }
 
 /// Totali per progetto del giorno: quanto è andato su cosa.

@@ -126,9 +126,45 @@
 /* Ambito: solo questo Mac */
 "exposure.thisMac" = "Yalnızca bu Mac";
 
+/* Pulsante: aggiunge a mano una sessione non cronometrata */
+"history.add" = "Oturum ekle";
+
+/* Titolo del pannello di inserimento a mano */
+"history.add.title" = "Oturum ekle";
+
 "history.byProject" = "Projeye göre";
 
+/* Pulsante su una sessione: la elimina dallo storico */
+"history.delete" = "Sil";
+
+/* Conferma prima di eliminare una sessione */
+"history.delete.confirm" = "Bu oturum silinsin mi? İçindeki saatler kaybolur.";
+
+/* Pulsante su una sessione: apre la correzione di orari e descrizione */
+"history.edit" = "Düzenle";
+
+/* Titolo del pannello di correzione */
+"history.edit.title" = "Oturumu düzenle";
+
 "history.empty" = "Henüz kayıtlı oturum yok";
+
+/* Etichetta dell'ora di fine */
+"history.field.end" = "Bitiş";
+
+/* Etichetta del campo progetto */
+"history.field.project" = "Proje";
+
+/* Etichetta dell'ora di inizio */
+"history.field.start" = "Başlangıç";
+
+/* Etichetta del campo descrizione del lavoro */
+"history.field.task" = "Ne yaptınız";
+
+/* Errore: la fine precede l'inizio */
+"history.invalidRange" = "Bitiş saati başlangıçtan önce.";
+
+/* Pulsante che conferma la correzione */
+"history.save" = "Kaydet";
 
 "history.title" = "Çalışma geçmişi";
 

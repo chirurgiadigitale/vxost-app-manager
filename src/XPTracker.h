@@ -83,6 +83,28 @@ extern NSString *const XPTrackerDidChangeNotification;
 /// Elimina una sessione dallo storico.
 - (void)deleteEntry:(XPTimeEntry *)entry;
 
+/// Corregge orari e descrizione di una sessione già chiusa.
+///
+/// Passare nil a `task` lascia la descrizione com'è; una stringa vuota la
+/// cancella. Restituisce NO se la fine precede l'inizio: una sessione di
+/// durata negativa manderebbe in negativo anche i totali del giorno.
+///
+/// ⚠️ Le pause registrate non si toccano. Spostando gli estremi la durata
+/// cambia, ma i minuti di pausa restano quelli che sono stati: erano pausa
+/// allora e lo restano adesso.
+- (BOOL)updateEntry:(XPTimeEntry *)entry
+              start:(NSDate *)start
+                end:(NSDate *)end
+               task:(NSString *)task;
+
+/// Aggiunge a mano una sessione già conclusa, per le ore lavorate senza aver
+/// fatto partire il cronometro. Restituisce nil se manca il progetto o se la
+/// fine precede l'inizio.
+- (XPTimeEntry *)addEntryForProject:(XPTrackableProject *)project
+                               task:(NSString *)task
+                              start:(NSDate *)start
+                                end:(NSDate *)end;
+
 /// Percorso del file dei dati, mostrato nell'interfaccia.
 - (NSString *)storagePath;
 
