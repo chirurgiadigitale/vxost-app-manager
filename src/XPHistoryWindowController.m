@@ -10,6 +10,7 @@
 #import "XPReport.h"
 #import "XPButton.h"
 #import "XPEntryEditor.h"
+#import "XPGitLog.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 @interface XPHistoryWindowController () <NSTableViewDataSource, NSTableViewDelegate>
@@ -537,6 +538,65 @@
     }
 
     [self buildProjectTotalsForDay:day entries:all];
+    [self buildCommitsForDay:day entries:all];
+}
+
+/// I commit fatti quel giorno, sotto i totali per progetto.
+///
+/// Si cercano solo nei progetti su cui quel giorno sono andate delle ore: un
+/// elenco di tutti i repository del disco sarebbe un altro strumento, e su
+/// sessantatré cartelle costerebbe sessantatré `git log` per aprire una
+/// finestra.
+- (void)buildCommitsForDay:(NSDate *)day entries:(NSArray<XPTimeEntry *> *)entries {
+    if (entries.count == 0) return;
+
+    // Le chiavi dei progetti toccati quel giorno, senza ripetizioni e
+    // nell'ordine in cui compaiono: chi ha lavorato di più sta più in alto.
+    NSMutableArray<NSString *> *keys = [NSMutableArray array];
+    NSMutableDictionary<NSString *, NSString *> *names = [NSMutableDictionary dictionary];
+    for (XPTimeEntry *entry in entries) {
+        NSString *key = entry.projectKey ?: @"";
+        if (key.length == 0 || [keys containsObject:key]) continue;
+        [keys addObject:key];
+        names[key] = entry.projectName ?: key;
+    }
+
+    NSMutableArray<XPCommit *> *tutti = [NSMutableArray array];
+    NSMutableDictionary<NSString *, NSString *> *diChi = [NSMutableDictionary dictionary];
+    for (NSString *key in keys) {
+        NSString *path = [XPGitLog pathForProjectKey:key];
+        if (!path) continue;
+        for (XPCommit *commit in [XPGitLog commitsForPath:path onDay:day]) {
+            [tutti addObject:commit];
+            diChi[commit.shortHash ?: @""] = names[key];
+        }
+    }
+    if (tutti.count == 0) return;
+
+    [tutti sortUsingComparator:^NSComparisonResult(XPCommit *a, XPCommit *b) {
+        return [b.date compare:a.date];
+    }];
+
+    NSTextField *title = [self labelWithFont:[NSFont systemFontOfSize:10
+                                                               weight:NSFontWeightSemibold]
+                                       color:[XPTheme textMuted]];
+    title.stringValue = [NSLocalizedString(@"history.commits", nil) uppercaseString];
+    [self.projectTotalsStack addArrangedSubview:title];
+
+    for (XPCommit *commit in tutti) {
+        NSTextField *row = [self labelWithFont:[XPTheme fontSmall] color:[XPTheme textSoft]];
+        row.stringValue = [NSString stringWithFormat:@"%@  %@  ·  %@  ·  %@",
+                           [self.timeFormatter stringFromDate:commit.date],
+                           commit.shortHash ?: @"",
+                           diChi[commit.shortHash ?: @""] ?: @"",
+                           commit.subject ?: @""];
+        // Il messaggio può essere lungo quanto vuole chi l'ha scritto: si
+        // taglia alla fine invece di allargare la finestra.
+        row.lineBreakMode = NSLineBreakByTruncatingTail;
+        row.toolTip = commit.subject;
+        [self.projectTotalsStack addArrangedSubview:row];
+        [row.widthAnchor constraintEqualToAnchor:self.projectTotalsStack.widthAnchor].active = YES;
+    }
 }
 
 /// I due pulsanti in fondo alla riga: correggi ed elimina.

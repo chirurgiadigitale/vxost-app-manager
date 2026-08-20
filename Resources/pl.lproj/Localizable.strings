@@ -134,6 +134,12 @@
 
 "history.byProject" = "Wg projektu";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "Commity";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "Tego dnia brak commitów.";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "Usuń";
 

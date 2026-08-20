@@ -134,6 +134,12 @@
 
 "history.byProject" = "Projektenként";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "Commitok";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "Aznap nem volt commit.";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "Törlés";
 

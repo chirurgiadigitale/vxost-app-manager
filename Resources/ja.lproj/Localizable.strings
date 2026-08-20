@@ -134,6 +134,12 @@
 
 "history.byProject" = "プロジェクト別";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "コミット";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "その日のコミットはありません。";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "削除";
 

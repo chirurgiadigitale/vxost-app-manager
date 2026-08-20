@@ -134,6 +134,12 @@
 
 "history.byProject" = "Projeye göre";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "Commit'ler";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "O gün commit yok.";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "Sil";
 

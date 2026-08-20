@@ -4669,5 +4669,41 @@
     "zh-Hans": "删除这个会话吗？其中记录的时间将丢失。",
     "zh-Hant": "要刪除這個工作階段嗎？其中記錄的時間會遺失。",
     "ur": "کیا یہ سیشن حذف کریں؟ اس میں درج گھنٹے ضائع ہو جائیں گے۔"
+  },
+  "history.commits": {
+    "comment": "Intestazione dell'elenco dei commit del giorno",
+    "en": "Commits",
+    "it": "Commit",
+    "de": "Commits",
+    "es": "Commits",
+    "fr": "Commits",
+    "pt-BR": "Commits",
+    "ro": "Commit-uri",
+    "hu": "Commitok",
+    "pl": "Commity",
+    "ru": "Коммиты",
+    "tr": "Commit'ler",
+    "ja": "コミット",
+    "zh-Hans": "提交",
+    "zh-Hant": "提交",
+    "ur": "کمٹس"
+  },
+  "history.commits.none": {
+    "comment": "Nessun commit quel giorno",
+    "en": "No commits that day.",
+    "it": "Nessun commit quel giorno.",
+    "de": "Keine Commits an diesem Tag.",
+    "es": "Sin commits ese día.",
+    "fr": "Aucun commit ce jour-là.",
+    "pt-BR": "Nenhum commit nesse dia.",
+    "ro": "Niciun commit în acea zi.",
+    "hu": "Aznap nem volt commit.",
+    "pl": "Tego dnia brak commitów.",
+    "ru": "В этот день коммитов не было.",
+    "tr": "O gün commit yok.",
+    "ja": "その日のコミットはありません。",
+    "zh-Hans": "当天没有提交。",
+    "zh-Hant": "當天沒有提交。",
+    "ur": "اُس دن کوئی کمٹ نہیں۔"
   }
 }

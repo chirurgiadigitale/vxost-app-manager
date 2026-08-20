@@ -134,6 +134,12 @@
 
 "history.byProject" = "پروجیکٹ کے لحاظ سے";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "کمٹس";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "اُس دن کوئی کمٹ نہیں۔";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "حذف کریں";
 

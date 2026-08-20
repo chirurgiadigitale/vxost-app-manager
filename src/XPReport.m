@@ -3,6 +3,7 @@
 //
 
 #import "XPReport.h"
+#import "XPGitLog.h"
 #import "XPTracker.h"
 
 @implementation XPReport
@@ -143,11 +144,37 @@
     __block NSTimeInterval dayTotal = 0;
     __block NSMutableArray<NSString *> *dayLines = [NSMutableArray array];
 
+    // Le chiavi dei progetti toccati in ogni giorno: servono a cercare i
+    // commit solo dove si e' lavorato davvero.
+    __block NSMutableOrderedSet<NSString *> *dayKeys = [NSMutableOrderedSet orderedSet];
+
     void (^flushDay)(void) = ^{
         if (!currentDay) return;
         [text appendFormat:@"%@, %@\n", [dayFormatter stringFromDate:currentDay],
          [XPTimeEntry shortStringFromInterval:dayTotal]];
         for (NSString *line in dayLines) [text appendFormat:@"%@\n", line];
+
+        // I commit di quel giorno, sotto le ore. Un riepilogo che dice "4h 20m
+        // su listeoo" non racconta niente a distanza di settimane; l'elenco
+        // dei commit lo dice per intero, ed e' gia' scritto.
+        NSMutableArray<XPCommit *> *commits = [NSMutableArray array];
+        for (NSString *key in dayKeys) {
+            NSString *path = [XPGitLog pathForProjectKey:key];
+            if (!path) continue;
+            [commits addObjectsFromArray:[XPGitLog commitsForPath:path onDay:currentDay]];
+        }
+        if (commits.count > 0) {
+            [commits sortUsingComparator:^NSComparisonResult(XPCommit *a, XPCommit *b) {
+                return [a.date compare:b.date];
+            }];
+            [text appendFormat:@"  %@\n", NSLocalizedString(@"history.commits", nil)];
+            for (XPCommit *commit in commits) {
+                [text appendFormat:@"    %@  %@  %@\n",
+                 [timeFormatter stringFromDate:commit.date],
+                 commit.shortHash ?: @"",
+                 commit.subject ?: @""];
+            }
+        }
         [text appendString:@"\n"];
     };
 
@@ -158,8 +185,10 @@
             currentDay = day;
             dayTotal = 0;
             dayLines = [NSMutableArray array];
+            dayKeys = [NSMutableOrderedSet orderedSet];
         }
         dayTotal += entry.duration;
+        if (entry.projectKey) [dayKeys addObject:entry.projectKey];
 
         NSString *task = entry.task.length > 0 ? entry.task : entry.projectName;
         // Senza filtro per progetto il nome va ripetuto, o non si capisce a

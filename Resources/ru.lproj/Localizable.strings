@@ -134,6 +134,12 @@
 
 "history.byProject" = "По проектам";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "Коммиты";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "В этот день коммитов не было.";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "Удалить";
 

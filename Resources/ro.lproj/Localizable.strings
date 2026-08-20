@@ -134,6 +134,12 @@
 
 "history.byProject" = "Pe proiect";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "Commit-uri";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "Niciun commit în acea zi.";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "Șterge";
 

@@ -135,7 +135,16 @@ trackertest:
 		tests/trackertest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/trackertest
 
-test: wizardtest updatetest exposuretest phptest scripttest trackertest
+# I commit di un giorno, letti da un repository costruito dal test in /tmp.
+# ⚠️ Il messaggio di commit e' testo libero: si controlla che uno con dentro
+# tabulazioni e barre verticali non riesca a spostare i campi.
+gitlogtest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/gitlogtest \
+		tests/gitlogtest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/gitlogtest
+
+test: wizardtest updatetest exposuretest phptest scripttest trackertest gitlogtest
 
 # L'app va in /Applications, non dentro la cartella dello stack.
 #

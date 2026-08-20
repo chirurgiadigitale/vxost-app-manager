@@ -134,6 +134,12 @@
 
 "history.byProject" = "Nach Projekt";
 
+/* Intestazione dell'elenco dei commit del giorno */
+"history.commits" = "Commits";
+
+/* Nessun commit quel giorno */
+"history.commits.none" = "Keine Commits an diesem Tag.";
+
 /* Pulsante su una sessione: la elimina dallo storico */
 "history.delete" = "Löschen";
 
