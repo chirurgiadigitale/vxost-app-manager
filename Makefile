@@ -144,7 +144,17 @@ gitlogtest:
 		tests/gitlogtest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/gitlogtest
 
-test: wizardtest updatetest exposuretest phptest scripttest trackertest gitlogtest
+# Quali blocchi di httpd-vhosts.conf sono progetti e quali no.
+# ⚠️ Apache scrive di fabbrica due virtual host per dummy-host.example.com,
+# non commentati: l'app li mostrava fra i progetti, e chi ci cliccava finiva
+# su un dominio che non e' suo.
+vhosttest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/vhosttest \
+		tests/vhosttest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/vhosttest
+
+test: wizardtest updatetest exposuretest phptest scripttest trackertest gitlogtest vhosttest
 
 # L'app va in /Applications, non dentro la cartella dello stack.
 #

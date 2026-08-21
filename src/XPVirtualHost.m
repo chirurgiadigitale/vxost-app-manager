@@ -41,6 +41,37 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
                     probePorts:YES];
 }
 
+
+/// Un blocco di esempio della configurazione di fabbrica di Apache?
+///
+/// ⚠️ httpd-vhosts.conf esce da Apache con due blocchi gia' scritti, per
+/// dummy-host.example.com e dummy-host2.example.com. Non sono commentati: sono
+/// virtual host veri, che puntano a cartelle sotto docs/ che non esistono.
+///
+/// Senza questo controllo l'app li mostra fra i progetti, e chi ci clicca
+/// finisce su http://dummy-host.example.com - un dominio che non e' suo e che
+/// non risponde. Sembra un difetto dell'app, ed e' la configurazione che
+/// arriva cosi'.
+///
+/// Colpisce soprattutto chi passa da XAMPP: la guida di migrazione dice di
+/// portarsi dietro i virtual host, e chi non ha mai toccato quel file se li
+/// porta dietro anche quando non sa di averli. Su un'installazione nuova non
+/// c'e' problema, perche' il pacchetto azzera il file.
+///
+/// Si guarda example.com e non il nome esatto: i due blocchi sono quelli, ma
+/// example.com e' riservato apposta dalla RFC 2606 per gli esempi, e nessun
+/// progetto vero puo' starci sopra.
++ (BOOL)isExampleHost:(XPVirtualHost *)host {
+    NSString *name = [host.serverName lowercaseString];
+    if ([name hasSuffix:@"example.com"] || [name hasSuffix:@"example.org"] ||
+        [name hasSuffix:@"example.net"]) {
+        return YES;
+    }
+    // Il DocumentRoot degli esempi punta sotto docs/, una cartella che nello
+    // stack non esiste: un blocco che indica il vuoto non e' un progetto.
+    return [host.documentRoot containsString:@"/docs/dummy-host"];
+}
+
 + (NSArray<XPVirtualHost *> *)hostsFromFile:(NSString *)path probePorts:(BOOL)probe {
     NSString *content = [NSString stringWithContentsOfFile:path
                                                   encoding:NSUTF8StringEncoding
@@ -76,7 +107,8 @@ static NSString *DirectiveValue(NSString *line, NSString *directive) {
         }
 
         if ([[line lowercaseString] hasPrefix:@"</virtualhost"]) {
-            if (current && current.port > 0 && current.documentRoot) {
+            if (current && current.port > 0 && current.documentRoot &&
+                ![self isExampleHost:current]) {
                 current.state = currentIsCommented ? XPVHostStateDisabled : XPVHostStateStopped;
                 [hosts addObject:current];
             }
