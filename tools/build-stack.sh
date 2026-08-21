@@ -342,6 +342,21 @@ if [ -f "$PAYLOAD/bin/apachectl" ]; then
     fi
 fi
 
+# The diagnose script announces one file and reads another: "Last 10 lines of
+# logs/error_log", then tail on logs/error.log, which has never existed. A dot
+# instead of an underscore, and the result is that the one moment it exists to
+# be useful — Apache refused to start, here is why — it prints "No such file or
+# directory" and nothing else. Seen for real on 21/08/2026, on top of a problem
+# that was already hard enough to read.
+if [ -f "$PAYLOAD/share/vxost/diagnose" ]; then
+    sed -i '' 's|logs/error\.log|logs/error_log|g' "$PAYLOAD/share/vxost/diagnose"
+    if grep -q 'logs/error\.log' "$PAYLOAD/share/vxost/diagnose"; then
+        echo "!! diagnose still points at logs/error.log" >&2
+        exit 1
+    fi
+    echo "  diagnose: reads the log it names"
+fi
+
 # The syntax check in the control script calls httpd directly, so it needs the
 # same two options. Without them it validates one file and starts another,
 # which is worse than not checking at all: it reports Syntax OK for a config
