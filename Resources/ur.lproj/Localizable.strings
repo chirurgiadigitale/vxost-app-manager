@@ -454,6 +454,15 @@
 /* Titolo del passaggio password di MySQL */
 "setup.password.title" = "ڈیٹابیس کا پاس ورڈ";
 
+/* Stato: si sta togliendo la quarantena allo stack */
+"setup.quarantine.applying" = "ڈاؤن لوڈ قرنطینہ ہٹایا جا رہا ہے…";
+
+/* Esito: la quarantena e' stata tolta */
+"setup.quarantine.done" = "اب سرور شروع ہو سکتا ہے۔";
+
+/* Errore: la quarantena non e' stata tolta */
+"setup.quarantine.failed" = "ہٹایا نہیں جا سکا۔ اگر سرور شروع نہ ہو تو چلائیں: xattr -dr com.apple.quarantine /Applications/VXOST";
+
 /* Spiegazione del riavvio */
 "setup.relaunch.body" = "VXOST اپنی عبارتیں صرف شروع میں ایک بار لوڈ کرتا ہے۔ ابھی دوبارہ شروع کرنے میں لمحہ لگتا ہے اور کچھ ضائع نہیں ہوتا۔";
 

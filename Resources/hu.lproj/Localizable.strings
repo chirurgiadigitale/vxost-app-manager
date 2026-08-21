@@ -454,6 +454,15 @@
 /* Titolo del passaggio password di MySQL */
 "setup.password.title" = "Az adatbázis jelszava";
 
+/* Stato: si sta togliendo la quarantena allo stack */
+"setup.quarantine.applying" = "A letöltési karantén eltávolítása…";
+
+/* Esito: la quarantena e' stata tolta */
+"setup.quarantine.done" = "A kiszolgáló mostantól elindítható.";
+
+/* Errore: la quarantena non e' stata tolta */
+"setup.quarantine.failed" = "Nem sikerült eltávolítani. Ha a kiszolgáló nem indul, futtassa: xattr -dr com.apple.quarantine /Applications/VXOST";
+
 /* Spiegazione del riavvio */
 "setup.relaunch.body" = "A VXOST egyszer tölti be a szövegeit, induláskor. Az újraindítás egy pillanat, és semmi nem vész el.";
 

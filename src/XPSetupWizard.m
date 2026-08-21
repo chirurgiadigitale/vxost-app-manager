@@ -547,7 +547,11 @@ static XPSetupWizard *sOpen = nil;
             [self applyHostnameThen:^{
                 __strong typeof(weakSelf) self = weakSelf;
                 if (!self) return;
-                [self finishAndRelaunch:languageChanged];
+                [self clearQuarantineThen:^{
+                    __strong typeof(weakSelf) self = weakSelf;
+                    if (!self) return;
+                    [self finishAndRelaunch:languageChanged];
+                }];
             }];
         }];
     }];
@@ -598,6 +602,55 @@ static XPSetupWizard *sOpen = nil;
         self.statusLabel.textColor = ok ? [XPTheme textSoft] : [XPTheme danger];
         self.statusLabel.stringValue = NSLocalizedString(
             ok ? @"setup.hostname.done" : @"setup.hostname.failed", nil);
+        next();
+    }];
+}
+
+
+/// Toglie la quarantena allo stack, o macOS ne uccide i programmi.
+///
+/// 🔴 I binari dello stack - Apache, MariaDB, PHP - arrivano dall'installer
+/// del 2018 e non sono firmati. Sulla macchina che li ha installati funzionano;
+/// scaricati dentro un DMG no, perche' un file che arriva da internet porta
+/// com.apple.quarantine e l'attributo si propaga a tutto quello che si estrae.
+/// Gatekeeper li ferma con SIGKILL, e nel Terminale si legge solo
+///
+///     Killed: 9
+///
+/// Non dice che e' Gatekeeper, non dice che e' la quarantena, non dice cosa
+/// fare. Chi ha scaricato pensa che il pacchetto sia rotto e lo butta.
+/// Successo a Davide il 21/08/2026, sul secondo Mac.
+///
+/// ⚠️ Si toglie solo alla cartella dello stack, non a caso per il disco: e'
+/// un contrassegno di sicurezza, e toglierlo dove non serve indebolisce
+/// protezioni che non c'entrano niente con noi.
+- (void)clearQuarantineThen:(void (^)(void))next {
+    NSString *root = [XPPaths installRoot];
+    if (root.length == 0) {
+        next();
+        return;
+    }
+
+    // Se non c'e' quarantena non si chiede niente: e' il caso di chi ha
+    // installato da un pacchetto costruito sulla sua macchina.
+    XPTaskResult *check = [XPTaskRunner run:@"/usr/bin/xattr"
+                                  arguments:@[@"-p", @"com.apple.quarantine", root]];
+    if (check.status != 0) {
+        next();
+        return;
+    }
+
+    self.statusLabel.textColor = [XPTheme textSoft];
+    self.statusLabel.stringValue = NSLocalizedString(@"setup.quarantine.applying", nil);
+
+    NSString *command = [NSString stringWithFormat:
+        @"xattr -dr com.apple.quarantine '%@'", root];
+
+    [XPTaskRunner runPrivilegedShell:command completion:^(XPTaskResult *result) {
+        BOOL ok = (result.status == 0);
+        self.statusLabel.textColor = ok ? [XPTheme textSoft] : [XPTheme danger];
+        self.statusLabel.stringValue = NSLocalizedString(
+            ok ? @"setup.quarantine.done" : @"setup.quarantine.failed", nil);
         next();
     }];
 }

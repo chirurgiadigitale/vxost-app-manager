@@ -454,6 +454,15 @@
 /* Titolo del passaggio password di MySQL */
 "setup.password.title" = "Veritabanı parolası";
 
+/* Stato: si sta togliendo la quarantena allo stack */
+"setup.quarantine.applying" = "İndirme karantinası kaldırılıyor…";
+
+/* Esito: la quarantena e' stata tolta */
+"setup.quarantine.done" = "Sunucu artık başlatılabilir.";
+
+/* Errore: la quarantena non e' stata tolta */
+"setup.quarantine.failed" = "Kaldırılamadı. Sunucu başlamazsa şunu çalıştırın: xattr -dr com.apple.quarantine /Applications/VXOST";
+
 /* Spiegazione del riavvio */
 "setup.relaunch.body" = "VXOST metinlerini yalnızca açılışta bir kez yükler. Yeniden başlatmak bir an sürer, hiçbir şey kaybolmaz.";
 

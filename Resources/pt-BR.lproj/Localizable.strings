@@ -454,6 +454,15 @@
 /* Titolo del passaggio password di MySQL */
 "setup.password.title" = "A senha do banco de dados";
 
+/* Stato: si sta togliendo la quarantena allo stack */
+"setup.quarantine.applying" = "Removendo a quarentena do download…";
+
+/* Esito: la quarantena e' stata tolta */
+"setup.quarantine.done" = "Agora o servidor pode iniciar.";
+
+/* Errore: la quarantena non e' stata tolta */
+"setup.quarantine.failed" = "Não foi possível remover. Se o servidor não iniciar, execute: xattr -dr com.apple.quarantine /Applications/VXOST";
+
 /* Spiegazione del riavvio */
 "setup.relaunch.body" = "O VXOST carrega seus textos uma única vez, ao iniciar. Reiniciar leva um instante e nada se perde.";
 

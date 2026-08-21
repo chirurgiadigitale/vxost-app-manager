@@ -403,6 +403,57 @@ rm -f "$STAGE/db-init.sql" "$STAGE/init-my.cnf"
 
 # --------------------------------------------------------------- the app ---
 
+# 🔴 I binari si firmano, o macOS li uccide sul Mac di chi scarica.
+#
+# Arrivano dall'installer del 2018 e non sono firmati affatto: "code object is
+# not signed at all". Sulla macchina che li ha installati funzionano, perche'
+# quei file non hanno l'attributo di quarantena. Ma un DMG scaricato da
+# internet ce l'ha, e si propaga a tutto quello che si estrae: Gatekeeper li
+# ferma con SIGKILL, e nel Terminale si legge soltanto
+#
+#     Killed: 9
+#
+# Nient'altro. Non dice che e' Gatekeeper, non dice che e' la quarantena, non
+# dice cosa fare. Chi ha scaricato pensa che il pacchetto sia rotto.
+#
+# ⚠️ La firma ad-hoc non e' una notarizzazione e non fa sparire l'avviso al
+# primo avvio dell'app: quello serve un account Apple. Ma toglie di mezzo il
+# caso peggiore, il binario che muore senza spiegazioni, e rende la quarantena
+# una cosa che si toglie una volta invece che un muro.
+step "Signing the binaries"
+FIRMATI=0
+while IFS= read -r eseguibile; do
+    codesign --force --sign - --timestamp=none "$eseguibile" 2>/dev/null && \
+        FIRMATI=$((FIRMATI + 1))
+# ⚠️ Si cerca in tutto il payload e non in un elenco di cartelle: un plugin
+# di MariaDB stava sotto share/, fuori da ogni cartella che uno si aspetta, e
+# un elenco scritto a mano lo saltava. Il criterio giusto e' cosa il file e',
+# non dove sta.
+done < <(find "$PAYLOAD" -type f -perm +111 2>/dev/null | while read -r f; do
+    file "$f" 2>/dev/null | grep -q "Mach-O" && echo "$f"
+done)
+echo "  $FIRMATI binaries signed ad-hoc"
+
+# La prova che conta: un binario preso a caso deve risultare firmato.
+#
+# ⚠️ Si cerca "adhoc" fra i flag del CodeDirectory, non la riga
+# "Signature=adhoc": quella codesign la stampa solo per i bundle, e su un
+# eseguibile sciolto non compare mai. Cercandola, la verifica diceva sempre di
+# no su binari che erano firmati benissimo.
+# ⚠️ Niente `grep -q` in fondo a una pipe, con set -o pipefail attivo.
+#
+# grep -q chiude la pipe appena trova la riga; codesign, che sta ancora
+# scrivendo, riceve SIGPIPE e muore con 141; pipefail prende quel 141 come
+# esito dell'intera pipe. Risultato: il controllo falliva **proprio quando** la
+# firma c'era, e diceva "still unsigned" su binari firmati benissimo.
+#
+# L'output si raccoglie prima e si guarda dopo: nessuna pipe da chiudere.
+FIRMA="$(codesign -dv "$PAYLOAD/bin/mysql" 2>&1 || true)"
+case "$FIRMA" in
+    *adhoc*) echo "  verified on bin/mysql" ;;
+    *)       echo "  ⚠ bin/mysql is still unsigned" >&2; exit 1 ;;
+esac
+
 step "Adding the VXOST app"
 cp -R "$HERE/build/VXOST.app" "$STAGE/" 2>/dev/null || {
     echo "  build/VXOST.app missing, run make first" >&2; exit 1; }
