@@ -6,6 +6,7 @@
 #import "XPTheme.h"
 #import "XPButton.h"
 #import "XPPaths.h"
+#import "XPTaskRunner.h"
 #import "XPNetwork.h"
 #import "XPExposure.h"
 #import "XPDatabase.h"
@@ -543,8 +544,61 @@ static XPSetupWizard *sOpen = nil;
         [self applyExposureThen:^{
             __strong typeof(weakSelf) self = weakSelf;
             if (!self) return;
-            [self finishAndRelaunch:languageChanged];
+            [self applyHostnameThen:^{
+                __strong typeof(weakSelf) self = weakSelf;
+                if (!self) return;
+                [self finishAndRelaunch:languageChanged];
+            }];
         }];
+    }];
+}
+
+
+/// Fa risolvere il nome "virtualhost" su questa macchina.
+///
+/// 🔴 Perche' sta nel wizard e non in uno script da lanciare a mano.
+///
+/// Il pacchetto configura Apache con `ServerName virtualhost`, la dashboard si
+/// presenta come virtualhost, ogni guida scrive https://virtualhost/. Ma
+/// nessuno aggiunge quel nome a /etc/hosts, e senza quella riga il nome non
+/// esiste: il browser non lo trova, e l'app ripiega su localhost.
+///
+/// Su un Mac dove c'e' ancora XAMPP, localhost e' XAMPP. Si preme "Apri
+/// dashboard" nell'app di VXOST e si apre la dashboard di XAMPP - due prodotti
+/// diversi che si contendono lo stesso nome, e nessun errore da nessuna parte.
+/// Trovato da Davide il 21/08/2026 sul suo secondo Mac.
+///
+/// Lo script tools/enable-virtualhost.sh lo fa da sempre, ma va lanciato a
+/// mano e nessuno sa che esiste. Il primo avvio e' il momento giusto: la
+/// password l'app la sta gia' chiedendo per le altre scelte.
+- (void)applyHostnameThen:(void (^)(void))next {
+    // Se il nome risolve gia', non si tocca niente: riscrivere /etc/hosts a
+    // ogni avvio del wizard accumulerebbe righe uguali.
+    if ([[XPPaths localHostname] isEqualToString:@"virtualhost"]) {
+        next();
+        return;
+    }
+
+    self.statusLabel.textColor = [XPTheme textSoft];
+    self.statusLabel.stringValue = NSLocalizedString(@"setup.hostname.applying", nil);
+
+    // ⚠️ Si controlla dentro il comando e non solo qui sopra: fra il controllo
+    // e l'esecuzione passa il tempo della richiesta della password, e in mezzo
+    // qualcuno potrebbe aver lanciato enable-virtualhost.sh.
+    //
+    // grep -qE con la stessa espressione dello script, cosi' i due non si
+    // contraddicono: cerca il nome preceduto da spazio e seguito da spazio o
+    // fine riga, su una riga non commentata.
+    NSString *command =
+        @"grep -qE '^[^#]*[[:space:]]virtualhost([[:space:]]|$)' /etc/hosts "
+        @"|| printf '\\n# VXOST\\n127.0.0.1\\tvirtualhost\\n::1\\t\\tvirtualhost\\n' >> /etc/hosts";
+
+    [XPTaskRunner runPrivilegedShell:command completion:^(XPTaskResult *result) {
+        BOOL ok = (result.status == 0);
+        self.statusLabel.textColor = ok ? [XPTheme textSoft] : [XPTheme danger];
+        self.statusLabel.stringValue = NSLocalizedString(
+            ok ? @"setup.hostname.done" : @"setup.hostname.failed", nil);
+        next();
     }];
 }
 

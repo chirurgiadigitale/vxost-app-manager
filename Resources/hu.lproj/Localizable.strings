@@ -397,6 +397,15 @@
 /* Nota: sta per chiedere la password di amministratore */
 "setup.finish.willAsk" = "Kettő ezek közül az alkalmazáson kívüli fájlokat módosít, ezért a macOS kérni fogja a jelszavad.";
 
+/* Stato: si sta aggiungendo il nome virtualhost a /etc/hosts */
+"setup.hostname.applying" = "A virtualhost név beállítása…";
+
+/* Esito: il nome ora risolve */
+"setup.hostname.done" = "A virtualhost név mostantól működik ezen a Macen.";
+
+/* Errore: il nome non e' stato aggiunto */
+"setup.hostname.failed" = "A név beállítása nem sikerült. A vezérlőpult a 127.0.0.1 címen marad.";
+
 /* Testo del passaggio lingua */
 "setup.language.body" = "A VXOST tizenöt nyelven beszél. Válaszd ki, melyiken szeretnéd.";
 

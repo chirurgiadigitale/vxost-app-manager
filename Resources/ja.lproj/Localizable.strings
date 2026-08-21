@@ -397,6 +397,15 @@
 /* Nota: sta per chiedere la password di amministratore */
 "setup.finish.willAsk" = "このうち二つはアプリの外のファイルを変更するため、macOS がパスワードを尋ねます。";
 
+/* Stato: si sta aggiungendo il nome virtualhost a /etc/hosts */
+"setup.hostname.applying" = "virtualhost の名前を設定しています…";
+
+/* Esito: il nome ora risolve */
+"setup.hostname.done" = "この Mac で virtualhost が使えるようになりました。";
+
+/* Errore: il nome non e' stato aggiunto */
+"setup.hostname.failed" = "名前を設定できませんでした。ダッシュボードは 127.0.0.1 のままです。";
+
 /* Testo del passaggio lingua */
 "setup.language.body" = "VXOST は 15 の言語に対応しています。使いたい言語を選んでください。";
 

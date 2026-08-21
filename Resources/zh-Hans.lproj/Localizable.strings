@@ -397,6 +397,15 @@
 /* Nota: sta per chiedere la password di amministratore */
 "setup.finish.willAsk" = "其中两项会改动应用之外的文件，所以 macOS 会要求输入你的密码。";
 
+/* Stato: si sta aggiungendo il nome virtualhost a /etc/hosts */
+"setup.hostname.applying" = "正在配置 virtualhost 名称…";
+
+/* Esito: il nome ora risolve */
+"setup.hostname.done" = "virtualhost 名称现在可以在这台 Mac 上使用。";
+
+/* Errore: il nome non e' stato aggiunto */
+"setup.hostname.failed" = "无法配置名称。控制面板仍在 127.0.0.1。";
+
 /* Testo del passaggio lingua */
 "setup.language.body" = "VXOST 支持十五种语言。选择你想使用的那一种。";
 

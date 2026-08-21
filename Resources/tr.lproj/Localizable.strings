@@ -397,6 +397,15 @@
 /* Nota: sta per chiedere la password di amministratore */
 "setup.finish.willAsk" = "Bunlardan ikisi uygulama dışındaki dosyaları değiştirir, bu yüzden macOS parolanızı soracak.";
 
+/* Stato: si sta aggiungendo il nome virtualhost a /etc/hosts */
+"setup.hostname.applying" = "virtualhost adı ayarlanıyor…";
+
+/* Esito: il nome ora risolve */
+"setup.hostname.done" = "virtualhost adı artık bu Mac'te çalışıyor.";
+
+/* Errore: il nome non e' stato aggiunto */
+"setup.hostname.failed" = "Ad ayarlanamadı. Pano 127.0.0.1 adresinde kalıyor.";
+
 /* Testo del passaggio lingua */
 "setup.language.body" = "VXOST on beş dil konuşuyor. İstediğinizi seçin.";
 

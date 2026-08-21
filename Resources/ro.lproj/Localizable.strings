@@ -397,6 +397,15 @@
 /* Nota: sta per chiedere la password di amministratore */
 "setup.finish.willAsk" = "Două dintre ele schimbă fișiere din afara aplicației, deci macOS îți va cere parola.";
 
+/* Stato: si sta aggiungendo il nome virtualhost a /etc/hosts */
+"setup.hostname.applying" = "Se configurează numele virtualhost…";
+
+/* Esito: il nome ora risolve */
+"setup.hostname.done" = "Numele virtualhost funcționează acum pe acest Mac.";
+
+/* Errore: il nome non e' stato aggiunto */
+"setup.hostname.failed" = "Numele nu a putut fi configurat. Panoul rămâne pe 127.0.0.1.";
+
 /* Testo del passaggio lingua */
 "setup.language.body" = "VXOST vorbește cincisprezece limbi. Alege-o pe cea pe care o vrei.";
 

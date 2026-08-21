@@ -397,6 +397,15 @@
 /* Nota: sta per chiedere la password di amministratore */
 "setup.finish.willAsk" = "Deux d'entre elles modifient des fichiers hors de l'app : macOS demandera votre mot de passe.";
 
+/* Stato: si sta aggiungendo il nome virtualhost a /etc/hosts */
+"setup.hostname.applying" = "Configuration du nom virtualhost…";
+
+/* Esito: il nome ora risolve */
+"setup.hostname.done" = "Le nom virtualhost fonctionne maintenant sur ce Mac.";
+
+/* Errore: il nome non e' stato aggiunto */
+"setup.hostname.failed" = "Impossible de configurer le nom. Le tableau de bord reste sur 127.0.0.1.";
+
 /* Testo del passaggio lingua */
 "setup.language.body" = "VXOST parle quinze langues. Choisissez celle que vous voulez.";
 
