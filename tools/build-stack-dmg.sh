@@ -27,8 +27,8 @@ VXOST Stack $VERSION for macOS
 Apache, MariaDB, PHP, Perl, ProFTPD and phpMyAdmin, with a redesigned
 dashboard and a native control app.
 
-This is an independent redistribution, not an official VXOST build.
-VXOST is their project: https://www.vxost.com
+A project of Equipe Digitale, released under the GNU GPL v2.
+https://www.vxost.com
 
 
 INSTALLING
