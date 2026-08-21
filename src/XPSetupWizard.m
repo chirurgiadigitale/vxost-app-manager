@@ -75,7 +75,22 @@ static XPSetupWizard *sOpen = nil;
 #pragma mark - Presentazione
 
 + (BOOL)hasRun {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:XPSetupDoneKey];
+    if (![[NSUserDefaults standardUserDefaults] boolForKey:XPSetupDoneKey]) return NO;
+
+    // Il contrassegno dice che il wizard e' stato aperto, non che sia servito
+    // a qualcosa. Se il nome virtualhost non risolve ancora, o la cartella
+    // dello stack e' ancora in quarantena, il lavoro non e' stato fatto e va
+    // riproposto: sono le due cose senza cui niente funziona, e l'utente non
+    // ha modo di sapere che gli mancano.
+    if (![[XPPaths localHostname] isEqualToString:@"virtualhost"]) return NO;
+
+    NSString *root = [XPPaths installRoot];
+    if (root.length > 0) {
+        XPTaskResult *quarantena = [XPTaskRunner run:@"/usr/bin/xattr"
+                                           arguments:@[@"-p", @"com.apple.quarantine", root]];
+        if (quarantena.status == 0) return NO;   // c'e' ancora
+    }
+    return YES;
 }
 
 + (void)presentIfNeeded {
@@ -737,6 +752,19 @@ static XPSetupWizard *sOpen = nil;
 - (void)windowWillClose:(NSNotification *)notification {
     // ⚠️ Chiudere dalla crocetta conta come "l'ho visto": senza questo, il
     // wizard tornerebbe a ogni avvio a chi ha deciso di non volerlo.
+    //
+    // 🔴 Ma "visto" non vuol dire "fatto", e la differenza si paga.
+    //
+    // Al primo avvio macOS blocca l'app - non e' notarizzata - e chi non sa
+    // cosa sia quell'avviso chiude tutto e riprova dopo aver capito. Quella
+    // chiusura segnava il wizard come concluso, e da li' in poi non tornava
+    // piu': l'utente restava senza il nome virtualhost e con la quarantena
+    // ancora addosso, cioe' senza le due cose che il wizard esiste per fare.
+    // Successo a un utente il 21/08/2026.
+    //
+    // Adesso si segna che e' stato visto, ma presentIfNeeded guarda se il
+    // lavoro e' stato fatto davvero. Un wizard chiuso a meta' torna una volta;
+    // uno completato non torna mai.
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:XPSetupDoneKey];
     sOpen = nil;
 }
