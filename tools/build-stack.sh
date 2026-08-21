@@ -311,6 +311,46 @@ open(path, "w", encoding="utf-8").write(text)
 PYEOF
 fi
 
+# The httpd binary carries a ServerRoot compiled into it, and it is still the
+# old one: /Applications/XAMPP/xamppfiles. Started without -d and -f, Apache
+# reads that config instead of ours — which on a machine coming from XAMPP is
+# still on disk. What follows looks like anything but a wrong path: the old
+# dashboard answers on port 80, a file dropped into www/ returns 404, and
+# vxostfiles/logs stays empty because the running server is logging somewhere
+# else entirely. Found on 21/08/2026 on the first migration done by someone
+# who was not us, after four hours of looking at the wrong things.
+#
+# The fix goes in apachectl, whose own comment describes HTTPD as "the path to
+# your httpd binary, including options if necessary". Everything that starts
+# Apache goes through it — the vxost script, the app, the tools — so one line
+# covers them all. The prefix is taken from the line itself rather than
+# written here, so this keeps working if the install path ever changes.
+if [ -f "$PAYLOAD/bin/apachectl" ]; then
+    perl -pi -e "s|^HTTPD='(.*)/bin/httpd'\s*$|HTTPD='\$1/bin/httpd -d \$1 -f \$1/etc/httpd.conf'\n|" \
+        "$PAYLOAD/bin/apachectl"
+
+    # lynx is not in the package and this URL is never fetched, but "localhost"
+    # in a shipped file is a name we no longer use anywhere.
+    sed -i '' 's|http://localhost:80/server-status|http://127.0.0.1:80/server-status|' \
+        "$PAYLOAD/bin/apachectl"
+
+    if grep -q "bin/httpd -d .* -f .*/etc/httpd.conf" "$PAYLOAD/bin/apachectl"; then
+        echo "  apachectl: ServerRoot and config passed explicitly"
+    else
+        echo "!! apachectl was not patched: Apache would read XAMPP's config" >&2
+        exit 1
+    fi
+fi
+
+# The syntax check in the control script calls httpd directly, so it needs the
+# same two options. Without them it validates one file and starts another,
+# which is worse than not checking at all: it reports Syntax OK for a config
+# that is not the one about to be used.
+if [ -f "$PAYLOAD/vxost" ]; then
+    perl -pi -e 's|\$VXOST_ROOT/bin/httpd -t \$apachedefines|\$VXOST_ROOT/bin/httpd -t -d "\$VXOST_ROOT" -f "\$VXOST_ROOT/etc/httpd.conf" \$apachedefines|' \
+        "$PAYLOAD/vxost"
+fi
+
 # MySQL must listen on TCP: a "security check" run once can leave this on and
 # every project connecting to 127.0.0.1:3306 then breaks.
 if [ -f "$PAYLOAD/etc/my.cnf" ]; then
