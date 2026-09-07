@@ -184,7 +184,15 @@ python3 "$HERE/tools/brand-stack.py" "$PAYLOAD" || exit 1
 
 step "Creating empty runtime folders"
 # Logs, sockets and databases are recreated on first launch, never inherited.
-mkdir -p "$PAYLOAD/logs" "$PAYLOAD/var" "$PAYLOAD/temp" "$PAYLOAD/backup"
+#
+# ⚠️ temp/mysql is not an empty folder like the others: my.cnf line 127 names
+# it as tmpdir, and MariaDB refuses to start when it is missing. The package
+# shipped temp/ empty until 04/09/2026, so on a clean install the daemon died
+# before it could open its own error log — and an error log that does not
+# exist reads as "MariaDB never even tried", which sends people rewriting
+# datadir in my.cnf. On a machine with migrated databases that is how you
+# lose them. mysql.server recreates it too, at every start (see below).
+mkdir -p "$PAYLOAD/logs" "$PAYLOAD/var" "$PAYLOAD/temp" "$PAYLOAD/temp/mysql" "$PAYLOAD/backup"
 touch "$PAYLOAD/logs/.gitkeep"
 
 # --------------------------------------------------------------- web root ---
@@ -192,15 +200,30 @@ touch "$PAYLOAD/logs/.gitkeep"
 step "Installing a clean web root"
 mkdir -p "$PAYLOAD/$WEBROOT"
 # Only the redesigned dashboard, never the projects sitting next to it.
+#
+# ⚠️ The landing page is index.php, not index.html. This list asked for the
+# .html one, which does not exist in the dashboard repo, so nothing was copied
+# and the shipped web root had no index at all: https://virtualhost/ answered
+# with a directory listing instead of the dashboard. Both names stay here —
+# the page may well go back to being static one day — and .htaccess comes
+# along because the redirects it carries are what makes the root work.
 copied=0
-for item in dashboard index.html favicon.ico README.md; do
+index_copied=0
+for item in dashboard index.php index.html .htaccess favicon.ico README.md; do
     if [ -e "$DASHBOARD_REPO/$item" ]; then
         cp -R "$DASHBOARD_REPO/$item" "$PAYLOAD/$WEBROOT/"
         copied=$((copied + 1))
+        case "$item" in index.*) index_copied=1 ;; esac
     fi
 done
 if [ "$copied" -eq 0 ]; then
     echo "Nothing copied from $DASHBOARD_REPO: the package would ship an empty web root." >&2
+    exit 1
+fi
+# Counting files is not enough: the dashboard folder alone satisfies the check
+# above while the root of the site stays empty.
+if [ "$index_copied" -eq 0 ]; then
+    echo "No index page in $DASHBOARD_REPO: https://virtualhost/ would serve a listing." >&2
     exit 1
 fi
 # The upstream dashboard ships backups of the framework it used to use.
@@ -340,6 +363,150 @@ if [ -f "$PAYLOAD/bin/apachectl" ]; then
         echo "!! apachectl was not patched: Apache would read XAMPP's config" >&2
         exit 1
     fi
+
+    # HTTPS needs a certificate, and no package can carry one. A certificate
+    # inside a DMG would be the same for everybody, private key in the clear:
+    # whoever pulled it out could intercept the local HTTPS of every other
+    # install. A shared key is not a key. So the two folders are excluded from
+    # the copy — and until 04/09/2026 nothing created them again, which is a
+    # different bug wearing the same clothes: httpd.conf starts with -DSSL,
+    # finds no certificate and stops on
+    #
+    #   SSLCertificateFile: file 'etc/ssl.crt/server.crt' does not exist
+    #
+    # before serving anything. It stayed hidden because the same package also
+    # read XAMPP's configuration, and XAMPP had certificates.
+    #
+    # It is generated here, on the machine that installs, the first time
+    # Apache starts. apachectl is the one gate every caller goes through, so
+    # this covers the app, the vxost script and the tools alike. The prefix
+    # comes from the HTTPD line, patched or not, never written by hand.
+    python3 - "$PAYLOAD/bin/apachectl" <<'PYEOF'
+import re, sys
+
+path = sys.argv[1]
+text = open(path, encoding="utf-8", errors="replace").read()
+
+if "VXOST_SSL_DIR" in text:          # already patched, nothing to do
+    sys.exit(0)
+
+match = re.search(r"^HTTPD='(.*?)/bin/httpd", text, re.MULTILINE)
+if not match:
+    sys.stderr.write("!! apachectl: no HTTPD line, cannot add the certificate step\n")
+    sys.exit(1)
+prefix = match.group(1)
+
+block = f"""
+# Generate the SSL certificate the first time, on this Mac.
+# Self-signed, CN=virtualhost, ten years. Nothing here leaves the machine.
+VXOST_SSL_DIR='{prefix}/etc'
+if [ ! -s "$VXOST_SSL_DIR/ssl.crt/server.crt" ] || [ ! -s "$VXOST_SSL_DIR/ssl.key/server.key" ]; then
+  mkdir -p "$VXOST_SSL_DIR/ssl.crt" "$VXOST_SSL_DIR/ssl.key"
+  '{prefix}/bin/openssl' req -new -x509 -nodes -newkey rsa:2048 \\
+    -keyout "$VXOST_SSL_DIR/ssl.key/server.key" \\
+    -out "$VXOST_SSL_DIR/ssl.crt/server.crt" \\
+    -days 3650 -subj '/CN=virtualhost' >/dev/null 2>&1
+  chmod 600 "$VXOST_SSL_DIR/ssl.key/server.key"
+  chmod 644 "$VXOST_SSL_DIR/ssl.crt/server.crt"
+fi
+"""
+
+# After the envvars block, so the generated certificate is in place before any
+# command runs — start, restart and configtest alike.
+anchor = re.search(r"^if test -f .*?/bin/envvars; then\n.*?\nfi\n", text, re.MULTILINE | re.DOTALL)
+if anchor:
+    at = anchor.end()
+else:                                 # no envvars here: right after the HTTPD line
+    at = text.index("\n", match.end()) + 1
+open(path, "w", encoding="utf-8").write(text[:at] + block + text[at:])
+PYEOF
+
+    if grep -q "CN=virtualhost" "$PAYLOAD/bin/apachectl"; then
+        echo "  apachectl: certificate generated on first start"
+    else
+        echo "!! apachectl has no certificate step: Apache would not start with -DSSL" >&2
+        exit 1
+    fi
+fi
+
+# my.cnf names temp/mysql as tmpdir. The folder lives under temp/, and anything
+# under temp/ is fair game for deletion, so creating it once at build time is
+# not enough: mysql.server makes sure it is there at every start. This is the
+# same reasoning as apachectl above — one gate, every caller.
+MYSQL_SERVER="$PAYLOAD/share/mysql/mysql.server"
+if [ -f "$MYSQL_SERVER" ]; then
+    python3 - "$MYSQL_SERVER" <<'PYEOF'
+import sys
+
+path = sys.argv[1]
+text = open(path, encoding="utf-8", errors="replace").read()
+
+if "temp/mysql" in text:              # already patched
+    sys.exit(0)
+
+needle = '$bindir/mysqld_safe --datadir='
+at = text.find(needle)
+if at < 0:
+    sys.stderr.write("!! mysql.server: no mysqld_safe call, cannot add the tmpdir step\n")
+    sys.exit(1)
+
+# mysqld_safe is started without saying which configuration to read, so mysqld
+# falls back to the paths compiled into it — and those still say XAMPP. On a
+# Mac that has XAMPP for real it reads XAMPP's my.cnf, and then announces
+#
+#   socket: '/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock'
+#   Can't open shared library '/Applications/XAMPP/.../plugin/auth_socket.so'
+#
+# while serving our data directory. Exactly the ServerRoot problem Apache had,
+# in the other daemon. It cannot be seen on a machine where /Applications/XAMPP
+# is the compatibility symlink, because there both names lead to the same file:
+# it needs a Mac with a real XAMPP next door, which is the common case among
+# the people migrating. Found on a customer Mac on 04/09/2026.
+text = text.replace(needle, '$bindir/mysqld_safe --defaults-file="$basedir/etc/my.cnf" --datadir=', 1)
+at = text.find('$bindir/mysqld_safe --defaults-file=')
+
+line_start = text.rfind("\n", 0, at) + 1
+indent = text[line_start:at].replace(text[line_start:at].strip(), "")
+
+block = (
+    f'{indent}# my.cnf points tmpdir at temp/mysql. Without it MariaDB stops\n'
+    f'{indent}# before it can write its own error log, and a missing log looks\n'
+    f'{indent}# like a missing datadir to whoever debugs it next.\n'
+    f'{indent}if [ ! -d "$basedir/temp/mysql" ]; then\n'
+    f'{indent}  mkdir -p "$basedir/temp/mysql"\n'
+    f'{indent}  chmod 755 "$basedir/temp/mysql"\n'
+    f'{indent}fi\n'
+    f'{indent}# The package is installed by dragging it in the Finder, which\n'
+    f'{indent}# gives every file to whoever dragged it. mysqld runs as mysql,\n'
+    f'{indent}# so on a fresh install it cannot write anything in its own data\n'
+    f'{indent}# directory — not even the log that would say so. What you see\n'
+    f'{indent}# instead is "Starting MySQL...ok." and nothing listening on\n'
+    f'{indent}# 3306. Seen on a customer Mac on 04/09/2026, after three days\n'
+    f'{indent}# spent looking for a log that could never have been written.\n'
+    f'{indent}# Ownership is fixed here rather than in the package because a\n'
+    f'{indent}# DMG cannot carry it: the Finder rewrites it on copy.\n'
+    f'{indent}_owner=`stat -f "%Su" "$datadir" 2>/dev/null`\n'
+    f'{indent}case "$_owner" in\n'
+    f'{indent}  mysql|_mysql) : ;;\n'
+    f'{indent}  *) chown -R mysql "$datadir" "$basedir/temp/mysql" 2>/dev/null || true ;;\n'
+    f'{indent}esac\n'
+)
+open(path, "w", encoding="utf-8").write(text[:line_start] + block + text[line_start:])
+PYEOF
+
+    if grep -q 'temp/mysql' "$MYSQL_SERVER"; then
+        echo "  mysql.server: tmpdir created and ownership repaired before start"
+    else
+        echo "!! mysql.server has no tmpdir step: MariaDB would not start" >&2
+        exit 1
+    fi
+
+    if grep -q 'mysqld_safe --defaults-file=' "$MYSQL_SERVER"; then
+        echo "  mysql.server: configuration passed explicitly"
+    else
+        echo "!! mysql.server was not patched: MariaDB would read XAMPP's my.cnf" >&2
+        exit 1
+    fi
 fi
 
 # The diagnose script announces one file and reads another: "Last 10 lines of
@@ -364,6 +531,138 @@ fi
 if [ -f "$PAYLOAD/vxost" ]; then
     perl -pi -e 's|\$VXOST_ROOT/bin/httpd -t \$apachedefines|\$VXOST_ROOT/bin/httpd -t -d "\$VXOST_ROOT" -f "\$VXOST_ROOT/etc/httpd.conf" \$apachedefines|' \
         "$PAYLOAD/vxost"
+
+    # ⛔ E qui sta il difetto che e' costato piu' di ogni altro: lo script
+    # annuncia "ok." su avvii che non sono avvenuti e su arresti che non hanno
+    # fermato niente.
+    #
+    #   $VXOST_ROOT/bin/mysql.server start > /dev/null &
+    #   if test $? -ne 0
+    #
+    # Il comando e' in background: quel $? e' l'esito del *lancio*, sempre
+    # zero. Il 05/09/2026, sul Mac di un cliente, MariaDB ha stampato "ok." e
+    # trentadue secondi dopo e' morta su un lock; per quattro giorni ogni
+    # tentativo di diagnosi e' partito dal presupposto che fosse avviata.
+    #
+    # E il controllo che avrebbe dovuto accorgersi dell'istanza gia' viva
+    # guardava la porta 3308, mentre MariaDB sta sulla 3306: non ha mai
+    # protetto nessuno.
+    #
+    # ⛔ Un messaggio di esito che non verifica l'esito e' peggio del silenzio:
+    # manda a cercare la causa ovunque tranne dove sta.
+    python3 - "$PAYLOAD/vxost" <<'PYEOF'
+import re, sys
+
+path = sys.argv[1]
+text = open(path, encoding="utf-8", errors="replace").read()
+prima = text
+
+# 1. La porta sbagliata. MariaDB ascolta sulla 3306, e my.cnf lo conferma.
+text = text.replace("if testport 3308", "if testport 3306", 1)
+
+# 2. L'avvio: si aspetta che la porta risponda davvero prima di dire ok.
+#    Sessanta secondi perche' un recovery InnoDB dopo un arresto brusco ci
+#    mette molto piu' dei pochi secondi che uno si aspetta.
+avvio_vecchio = re.search(
+    r"([ \t]*)\$VXOST_ROOT/bin/mysql\.server start > /dev/null &\s*\n"
+    r".*?\n[ \t]*\$GETTEXT -s \"ok\.\"\s*\n[ \t]*return 0\s*\n",
+    text, re.DOTALL)
+if not avvio_vecchio:
+    sys.stderr.write("!! vxost: startMySQL non ha la forma attesa, non lo tocco\n")
+    sys.exit(1)
+
+avvio_nuovo = '''\t$VXOST_ROOT/bin/mysql.server start > /dev/null 2>&1 &
+
+\t# Il comando e' in background: il suo codice di uscita non dice niente.
+\t# L'unica prova che MariaDB e' partita e' che risponda sulla sua porta.
+\tatteso=0
+\twhile test $atteso -lt 60
+\tdo
+\t\tif testport 3306
+\t\tthen
+\t\t\t$GETTEXT -s "ok."
+\t\t\treturn 0
+\t\tfi
+\t\tsleep 1
+\t\tatteso=$((atteso + 1))
+\tdone
+
+\t$GETTEXT -s "fail."
+
+\t# Il log porta il nome della macchina, e quel nome puo' non combaciare:
+\t# se non c'e', si prende il piu' recente invece di tacere.
+\tmysqllog="$VXOST_ROOT/var/mysql/$(hostname).err"
+\ttest -f "$mysqllog" || mysqllog="$(ls -t "$VXOST_ROOT/var/mysql/"*.err 2>/dev/null | head -1)"
+\tif test -n "$mysqllog" && test -f "$mysqllog"
+\tthen
+\t\tprintf "$($GETTEXT -s 'Last 10 lines of \\"%s\\":')\\n" "$mysqllog"
+\t\ttail -n 10 "$mysqllog"
+\tfi
+\treturn 1
+'''
+text = text[:avvio_vecchio.start()] + avvio_nuovo + text[avvio_vecchio.end():]
+
+# 3. L'arresto: "ok." solo quando la porta e' libera davvero.
+arresto_vecchio = re.search(
+    r"([ \t]*)\$VXOST_ROOT/bin/mysql\.server stop > /dev/null 2>&1\s*\n"
+    r"[ \t]*error=\$\?\s*\n"
+    r".*?\n[ \t]*\$GETTEXT -s \"ok\.\"\s*\n[ \t]*return 0\s*\n",
+    text, re.DOTALL)
+if not arresto_vecchio:
+    sys.stderr.write("!! vxost: stopMySQL non ha la forma attesa, non lo tocco\n")
+    sys.exit(1)
+
+arresto_nuovo = '''\t$VXOST_ROOT/bin/mysql.server stop > /dev/null 2>&1
+
+\t# mysql.server torna con successo anche quando ha mandato il segnale a un
+\t# pid gia' morto. Fermo vuol dire che la porta non risponde piu'.
+\tatteso=0
+\twhile test $atteso -lt 30
+\tdo
+\t\tif testport 3306
+\t\tthen
+\t\t\tsleep 1
+\t\t\tatteso=$((atteso + 1))
+\t\telse
+\t\t\t$GETTEXT -s "ok."
+\t\t\treturn 0
+\t\tfi
+\tdone
+
+\t$GETTEXT -s "fail."
+\techo "VXOST: " $($GETTEXT 'MySQL is still listening on port 3306.')
+\treturn 1
+'''
+text = text[:arresto_vecchio.start()] + arresto_nuovo + text[arresto_vecchio.end():]
+
+# 4. proftpd riceve la propria configurazione: quella compilata dentro punta
+#    ancora al vecchio nome, e con -c non viene nemmeno guardata.
+text = text.replace(
+    "$VXOST_ROOT/sbin/proftpd > $VXOST_ROOT/var/proftpd/start.err 2>&1",
+    '$VXOST_ROOT/sbin/proftpd -c "$VXOST_ROOT/etc/proftpd.conf" > $VXOST_ROOT/var/proftpd/start.err 2>&1',
+    1)
+
+if text == prima:
+    sys.stderr.write("!! vxost: nessuna patch applicata\n")
+    sys.exit(1)
+open(path, "w", encoding="utf-8").write(text)
+PYEOF
+
+    # ⚠️ Nessun '$' nelle stringhe cercate: fra le virgolette la shell lo
+    # espanderebbe, il grep cercherebbe una riga che non esiste e il controllo
+    # direbbe di no su una patch entrata benissimo. Verificato: e' successo.
+    for _atteso in "testport 3306" "atteso -lt 60" "MySQL is still listening" "proftpd -c"; do
+        grep -q "$_atteso" "$PAYLOAD/vxost" || {
+            echo "!! vxost was not patched: '$_atteso' is missing" >&2
+            exit 1
+        }
+    done
+    echo "  vxost: start and stop now check before saying ok"
+
+    if ! bash -n "$PAYLOAD/vxost"; then
+        echo "!! the patched vxost is not valid shell" >&2
+        exit 1
+    fi
 fi
 
 # MySQL must listen on TCP: a "security check" run once can leave this on and
@@ -475,6 +774,162 @@ rm -f "$STAGE/db-init.sql" "$STAGE/init-my.cnf"
 # primo avvio dell'app: quello serve un account Apple. Ma toglie di mezzo il
 # caso peggiore, il binario che muore senza spiegazioni, e rende la quarantena
 # una cosa che si toglie una volta invece che un muro.
+# ------------------------------------------------------- the old name inside ---
+
+step "Cutting the last tie to the old name"
+# Questo script non compila niente: copia uno stack gia' installato, lo
+# rimarchia e lo impacchetta. I binari restano quelli dell'installer del 2018,
+# e dentro ogni Mach-O l'install name delle librerie e' un percorso assoluto
+# che dice ancora XAMPP:
+#
+#   $ otool -L bin/httpd
+#     /Applications/XAMPP/xamppfiles/lib/libpcre.1.dylib
+#
+# Misurato sul DMG 9.26.1: 190 binari su 313 e 55 librerie su 60. Finche' quei
+# percorsi restano, VXOST non sta in piedi da solo — regge solo grazie al
+# symlink /Applications/XAMPP creato dalla migrazione. Su un Mac dove quel
+# percorso non esiste, dyld ferma tutto con "Library not loaded" e i comandi
+# muoiono con Abort trap: 6. E' successo il 05/09/2026 sul Mac di un cliente
+# che aveva rinominato XAMPP: MariaDB ha smesso di partire all'istante.
+#
+# Si riscrivono qui, una volta, per tutti quelli che scaricheranno il
+# pacchetto: nessun utente deve lanciare niente, e nessuna installazione ha
+# piu' bisogno di quel symlink. Prima della firma, perche' install_name_tool
+# invalida la firma di quello che tocca.
+#
+# ⚠️ Serve il percorso di INSTALLAZIONE, non quello di build: i binari devono
+# puntare a dove finiranno, non allo staging. Si legge dal ServerRoot che il
+# branding ha gia' scritto, invece di ripeterlo qui: un percorso scritto a
+# mano in due punti e' un percorso che prima o poi diverge.
+NUOVA_RADICE="$(grep -m1 -E '^\s*ServerRoot' "$PAYLOAD/etc/httpd.conf" 2>/dev/null | sed -E 's/.*"(.*)".*/\1/')"
+if [ -z "$NUOVA_RADICE" ]; then
+    echo "!! no ServerRoot in httpd.conf: cannot tell where the binaries will live" >&2
+    exit 1
+fi
+VECCHIA_RADICE="/Applications/XAMPP/xamppfiles"
+echo "  $VECCHIA_RADICE -> $NUOVA_RADICE"
+
+# ⚠️ I due prefissi sono lunghi uguali, 30 caratteri, e non e' un caso: e' la
+# ragione per cui questa operazione e' sicura. install_name_tool riscrive in
+# loco senza riallocare i load command, che e' il modo classico in cui questo
+# strumento corrompe un binario.
+if [ ${#VECCHIA_RADICE} -ne ${#NUOVA_RADICE} ]; then
+    echo "!! the two paths have different lengths (${#VECCHIA_RADICE} vs ${#NUOVA_RADICE})." >&2
+    echo "   install_name_tool would have to reallocate the load commands: stopping here." >&2
+    exit 1
+fi
+
+# ⚠️ Da qui in giu' ogni comando porta il suo `|| true`, e non e' pigrizia.
+# Lo script gira con `set -euo pipefail`: `otool` che esce diverso da zero su
+# un file qualsiasi, o un `grep -q` che semplicemente non trova niente — cioe'
+# il caso normale su mille file puliti — basta a terminare il build in
+# silenzio. E' successo al primo lancio: si e' fermato subito dopo aver
+# stampato i due percorsi, senza un errore, e `tail` in fondo alla pipe
+# restituiva 0 facendolo sembrare riuscito.
+RISCRITTI=0
+while IFS= read -r macho; do
+    # Le librerie portano anche il proprio nome, e va cambiato per primo:
+    # lasciarlo indietro fa credere a dyld di avere due copie della stessa
+    # libreria a percorsi diversi.
+    PROPRIO="$(otool -D "$macho" 2>/dev/null | sed -n 2p || true)"
+    case "$PROPRIO" in
+        "$VECCHIA_RADICE"/*)
+            install_name_tool -id "$NUOVA_RADICE/${PROPRIO#$VECCHIA_RADICE/}" "$macho" 2>/dev/null
+            ;;
+    esac
+
+    otool -L "$macho" 2>/dev/null | grep -oE "$VECCHIA_RADICE/[^ ]+" | sort -u | \
+    while IFS= read -r vecchio; do
+        install_name_tool -change "$vecchio" "$NUOVA_RADICE/${vecchio#$VECCHIA_RADICE/}" "$macho" 2>/dev/null || true
+    done || true
+
+    # ⚠️ E gli rpath, che sono un'altra cosa e che -change non tocca.
+    # httpd, mysqld, mysql e proftpd hanno un LC_RPATH verso la lib del vecchio
+    # nome: e' il percorso in cui dyld cerca quando l'install name e' relativo.
+    # Riscrivere solo le dipendenze e lasciare l'rpath sarebbe la peggiore
+    # delle riuscite parziali — tutto sembra a posto a un otool -L, e il
+    # pacchetto continua a dipendere da una cartella che vogliamo togliere.
+    otool -l "$macho" 2>/dev/null | grep -A2 LC_RPATH | grep "^ *path " | \
+    sed -E 's/^ *path (.*) \(offset.*/\1/' | while IFS= read -r rpath; do
+        case "$rpath" in
+            "$VECCHIA_RADICE"/*)
+                install_name_tool -rpath "$rpath" "$NUOVA_RADICE/${rpath#$VECCHIA_RADICE/}" "$macho" 2>/dev/null || true
+                ;;
+        esac
+    done || true
+    RISCRITTI=$((RISCRITTI + 1))
+# Stesso criterio della firma qui sotto: cosa il file e', non dove sta. E si
+# guardano anche i file non eseguibili, perche' le .dylib e i .so non hanno il
+# bit di esecuzione e sono la meta' del problema.
+done < <(find "$PAYLOAD" -type f 2>/dev/null | while read -r f; do
+    file -b "$f" 2>/dev/null | grep -q "Mach-O" || continue
+    if otool -L "$f" 2>/dev/null | grep -q "$VECCHIA_RADICE" ||
+       otool -l "$f" 2>/dev/null | grep -A2 LC_RPATH | grep -q "$VECCHIA_RADICE"; then
+        echo "$f"
+    fi
+done || true)
+echo "  $RISCRITTI binaries repointed"
+
+# La prova che chiude: nemmeno un riferimento deve restare, ne' fra le
+# dipendenze ne' fra gli rpath. Un conteggio, non un campione: e' l'unico
+# controllo che distingue "l'ho fatto" da "funziona".
+RESIDUI="$(find "$PAYLOAD" -type f 2>/dev/null | while read -r f; do
+    file -b "$f" 2>/dev/null | grep -q "Mach-O" || continue
+    if otool -L "$f" 2>/dev/null | grep -q "$VECCHIA_RADICE" ||
+       otool -l "$f" 2>/dev/null | grep -A2 LC_RPATH | grep -q "$VECCHIA_RADICE"; then
+        echo "$f"
+    fi
+done | wc -l | xargs || true)"
+if [ "$RESIDUI" != "0" ]; then
+    echo "!! $RESIDUI binaries still point at the old name: the package would need that folder" >&2
+    exit 1
+fi
+echo "  no binary looks for the old name any more"
+
+# ⚠️ Restano dentro i binari delle stringhe con il vecchio nome, e vanno
+# distinte da quelle appena tolte perche' il rimedio e' diverso:
+#
+#   - i flag di compilazione, che proftpd -V stampa e nessuno apre: innocui;
+#   - i percorsi di default — HTTPD_ROOT, il PidFile di proftpd, il datadir
+#     di mysqld — che il binario usa davvero quando nessuno gliene passa uno.
+#
+# Quelli non si riscrivono: si scavalcano dicendo al demone quale file usare.
+# httpd riceve -d e -f da apachectl, mysqld --defaults-file da mysql.server, e
+# proftpd -c piu' PidFile qui sotto. E' il motivo per cui quelle tre patch non
+# sono facoltative: senza, il pacchetto ha ancora bisogno della vecchia
+# cartella anche con tutti gli install name a posto.
+if [ -f "$PAYLOAD/etc/proftpd.conf" ] && ! grep -q "^PidFile" "$PAYLOAD/etc/proftpd.conf"; then
+    cat >> "$PAYLOAD/etc/proftpd.conf" <<PROFTPD
+
+# I due percorsi che proftpd si porta compilati dentro puntano al vecchio nome.
+# Scritti qui, valgono piu' di quelli.
+PidFile         "$NUOVA_RADICE/var/proftpd.pid"
+ScoreboardFile  "$NUOVA_RADICE/var/proftpd.scoreboard"
+PROFTPD
+    echo "  proftpd: pid and scoreboard written down explicitly"
+fi
+
+# ⚠️ E infine i file che portano il vecchio nome nel PROPRIO nome. Il branding
+# riscrive quello che sta dentro i file e rinomina le cartelle, ma questi tre
+# erano rimasti: la cartella si chiama gia' vxost-control-panel e i file dentro
+# no. Sono il pannello di controllo GTK del 2006, Python 2, scritto per Linux:
+# su un prodotto solo per macOS che ha la sua app nativa non serve a niente, e
+# l'unica cosa che fa e' mettere il vecchio nome dentro il pacchetto.
+#
+# ⛔ Si toglie un elenco deciso, non "tutto quello che si chiama cosi'": un
+# find -delete su un nome fa fuori anche cio' che serve, e qui dentro c'e'
+# anche la licenza GPL di terzi, che non si cancella mai.
+rm -rf "$PAYLOAD/share/vxost-control-panel" 2>/dev/null || true
+rm -f  "$PAYLOAD/etc/extra/httpd-xampp.conf~" 2>/dev/null || true
+
+RESTI="$(find "$PAYLOAD" -iname "*xampp*" 2>/dev/null | wc -l | xargs)"
+if [ "$RESTI" != "0" ]; then
+    echo "!! $RESTI files still carry the old name in their own filename:" >&2
+    find "$PAYLOAD" -iname "*xampp*" 2>/dev/null | sed "s|$PAYLOAD|  …|" >&2
+    exit 1
+fi
+echo "  no file carries the old name any more"
+
 step "Signing the binaries"
 FIRMATI=0
 while IFS= read -r eseguibile; do
@@ -574,6 +1029,43 @@ else
     tail -5 /tmp/configtest.log >&2
     exit 1
 fi
+
+# What follows are the three things that only break on a machine that has never
+# had XAMPP on it. None of them can be caught by reading the config: they are
+# folders and files that either exist or do not, and on the machine that builds
+# the package they always do.
+step "Checking a clean install would actually start"
+
+# tmpdir, named by my.cnf and needed before MariaDB can even log why it failed.
+tmpdir="$(grep -oE '^[[:space:]]*tmpdir[[:space:]]*=[[:space:]]*\S+' "$PAYLOAD/etc/my.cnf" 2>/dev/null | head -1 | sed -E 's/.*=[[:space:]]*//')"
+if [ -n "$tmpdir" ]; then
+    case "$tmpdir" in
+        */temp/*) rel="temp/${tmpdir##*/temp/}" ;;
+        *)        rel="" ;;
+    esac
+    if [ -n "$rel" ] && [ ! -d "$PAYLOAD/$rel" ]; then
+        echo "  my.cnf wants $tmpdir but $rel is not in the package: MariaDB would not start" >&2
+        exit 1
+    fi
+    echo "  MariaDB tmpdir: $rel present"
+fi
+
+# An index at the root of the web root, whatever its extension.
+if ! ls "$PAYLOAD/$WEBROOT"/index.* >/dev/null 2>&1; then
+    echo "  no index page in $WEBROOT: https://virtualhost/ would serve a listing" >&2
+    exit 1
+fi
+echo "  web root index: $(basename "$(ls "$PAYLOAD/$WEBROOT"/index.* | head -1)")"
+
+# And the error pages the config points at. They live beside the web root, not
+# inside it: the Alias in httpd-multilang-errordoc.conf sends /error/ to
+# vxostfiles/error/. Looking for them under www/ finds nothing and diagnoses a
+# fault that is not there — which is exactly what happened on 04/09/2026.
+if [ ! -f "$PAYLOAD/error/HTTP_NOT_FOUND.html.var" ]; then
+    echo "  error/ pages missing: every ErrorDocument would point at nothing" >&2
+    exit 1
+fi
+echo "  error pages: $(ls "$PAYLOAD/error"/*.html.var 2>/dev/null | wc -l | xargs) files"
 
 step "Done"
 du -sh "$STAGE" | awk '{print "  staged:", $1}'
