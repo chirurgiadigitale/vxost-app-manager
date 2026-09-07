@@ -23,3 +23,9 @@ tools/forbidden.local.txt
 *.md
 !README.md
 !CONTRIBUTING.md
+
+# Cache di Python: si rigenera a ogni build, non descrive il progetto.
+# Nel repository del sito era finita tracciata, ed erano 48 KB di binario che
+# cambiavano a ogni esecuzione senza dire niente a nessuno.
+tools/__pycache__/
+*.pyc

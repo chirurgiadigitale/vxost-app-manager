@@ -106,6 +106,13 @@ static NSString *const XPLoopback = @"127.0.0.1";
 
 #pragma mark - Riscrittura
 
++ (NSString *)listenDirectiveForPort:(NSInteger)port scope:(XPExposureScope)scope {
+    if (scope == XPExposureScopeThisMac) {
+        return [NSString stringWithFormat:@"Listen %@:%ld", XPLoopback, (long)port];
+    }
+    return [NSString stringWithFormat:@"Listen %ld", (long)port];
+}
+
 + (NSString *)rewrite:(NSString *)configuration toScope:(XPExposureScope)scope {
     if (scope != XPExposureScopeThisMac && scope != XPExposureScopeLocalNetwork) {
         return nil;

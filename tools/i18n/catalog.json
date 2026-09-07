@@ -2816,6 +2816,24 @@
     "zh-Hans": "Apache 拒绝了该配置。一切已还原，没有任何改动。",
     "zh-Hant": "Apache 拒絕了該設定。一切已還原，沒有任何改動。"
   },
+  "wizard.failed.restart": {
+    "comment": "Errore: sintassi valida ma Apache non e' ripartito, ripristinato",
+    "en": "The configuration was valid, but Apache did not come back up. The port may already be in use. Everything was put back as it was.",
+    "it": "La configurazione era valida, ma Apache non è ripartito. La porta potrebbe essere già occupata. È stato rimesso tutto com'era.",
+    "de": "Die Konfiguration war gültig, aber Apache ist nicht wieder gestartet. Der Port ist möglicherweise schon belegt. Alles wurde zurückgesetzt.",
+    "es": "La configuración era válida, pero Apache no volvió a arrancar. Puede que el puerto ya esté ocupado. Se dejó todo como estaba.",
+    "fr": "La configuration était valide, mais Apache n'a pas redémarré. Le port est peut-être déjà occupé. Tout a été remis en place.",
+    "hu": "A beállítás érvényes volt, de az Apache nem indult újra. Lehet, hogy a port már foglalt. Minden visszaállt az eredeti állapotába.",
+    "ja": "設定は有効でしたが、Apache が再起動しませんでした。ポートがすでに使われている可能性があります。すべて元に戻されました。",
+    "pl": "Konfiguracja była poprawna, ale Apache nie uruchomił się ponownie. Port może być już zajęty. Wszystko przywrócono.",
+    "pt-BR": "A configuração era válida, mas o Apache não voltou a iniciar. A porta pode já estar em uso. Tudo foi restaurado como estava.",
+    "ro": "Configurația era validă, dar Apache nu a repornit. Portul ar putea fi deja ocupat. Totul a fost pus la loc.",
+    "ru": "Конфигурация верна, но Apache не запустился. Возможно, порт уже занят. Всё возвращено на место.",
+    "tr": "Yapılandırma geçerliydi, ancak Apache yeniden başlamadı. Bağlantı noktası kullanımda olabilir. Her şey eski hâline getirildi.",
+    "ur": "کنفیگریشن درست تھی، مگر Apache دوبارہ شروع نہیں ہوا۔ ممکن ہے پورٹ پہلے سے استعمال میں ہو۔ سب کچھ پہلے جیسا کر دیا گیا۔",
+    "zh-Hans": "配置有效，但 Apache 未能重新启动。端口可能已被占用。所有内容已恢复原状。",
+    "zh-Hant": "設定有效，但 Apache 未能重新啟動。連接埠可能已被佔用。所有內容已恢復原狀。"
+  },
   "wizard.failed.backup": {
     "comment": "Errore: non è stato possibile copiare i file di configurazione",
     "en": "The configuration files could not be copied. Nothing was written.",

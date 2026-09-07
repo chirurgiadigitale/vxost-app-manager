@@ -26,7 +26,14 @@ ICON    := Resources/AppIcon.icns
 # Building for one architecture only would silently exclude every Mac made
 # before 2020.
 ARCHS   := -arch arm64 -arch x86_64
-CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS)
+# ⚠️ Il minimo di sistema si legge dal plist, non si scrive qui. Senza questo
+# flag clang marca il binario con il minos dell'SDK installato: il 07/09/2026
+# era LC_BUILD_VERSION minos 16.0 su entrambe le slice, mentre il plist e il
+# sito promettevano macOS 13. Su un Mac con Ventura o Sonoma il sistema
+# rifiuta di avviare un binario che chiede piu' di quanto offre, quindi l'app
+# non partiva proprio sui Mac per cui era dichiarata.
+MIN_MACOS := $(shell /usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" Resources/Info.plist)
+CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS) -mmacosx-version-min=$(MIN_MACOS)
 # Security serve al portachiavi, dove sta la password di root di MySQL:
 # tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security

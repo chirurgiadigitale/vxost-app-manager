@@ -9,6 +9,7 @@
 #import "XPDatabase.h"
 #import "XPPhpVersion.h"
 #import "XPUpdateCheck.h"
+#import "XPExposure.h"
 
 NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
@@ -543,6 +544,8 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
             message = NSLocalizedString(@"wizard.failed.backup", nil);
         } else if ([result.output containsString:@"VXOST_CONFIGTEST_FAILED"]) {
             message = NSLocalizedString(@"wizard.failed.configtest", nil);
+        } else if ([result.output containsString:@"VXOST_RESTART_FAILED"]) {
+            message = NSLocalizedString(@"wizard.failed.restart", nil);
         } else if ([result.output containsString:@"VXOST_OK"]) {
             ok = YES;
             message = [NSString stringWithFormat:
@@ -596,6 +599,81 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 /// ⚠️ Esce sempre con 0 e comunica l'esito con un marcatore stampato:
 /// `do shell script` di AppleScript trasforma un'uscita diversa da zero in un
 /// errore proprio, e il codice vero non arriverebbe mai fin qui.
+/// Il pezzo di script che riavvia Apache e **guarda se e' ripartito**.
+///
+/// ⚠️ Perche' non basta chiamare restartapache. Il controllo di sintassi dice
+/// che la configurazione e' scritta bene, non che Apache riesca a usarla: una
+/// porta gia' occupata supera "Syntax OK" e poi impedisce l'avvio. Prima di
+/// questa verifica lo script stampava VXOST_OK in quel caso, quindi l'app
+/// annunciava un progetto pronto mentre il server era giu' — e con lui tutti
+/// gli altri progetti, non solo quello appena creato.
+///
+/// Apache scrive il proprio pid solo quando e' partito davvero, quindi la
+/// prova e' quella: il file esiste e il processo che nomina e' vivo. Quando si
+/// conosce anche la porta del progetto si controlla che qualcuno la stia
+/// ascoltando, perche' un master rimasto in piedi con la configurazione
+/// precedente supererebbe la prova del pid.
+///
+/// @param port La porta da verificare, o 0 per fermarsi al pid.
+/// @param restore I comandi che rimettono i file com'erano, gia' indentati.
+static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
+    NSMutableString *block = [NSMutableString string];
+
+    [block appendString:@"OUT=$(mktemp /tmp/vxost-apache.XXXXXX)\n"];
+    [block appendString:@"if pgrep -x httpd >/dev/null 2>&1; then\n"];
+    [block appendString:@"    \"$CTL\" restartapache > \"$OUT\" 2>&1 || true\n"];
+    [block appendString:@"else\n"];
+    [block appendString:@"    \"$CTL\" startapache > \"$OUT\" 2>&1 || true\n"];
+    [block appendString:@"fi\n"];
+    [block appendString:@"\n"];
+    [block appendString:@"# Il pid c'e' solo se Apache e' partito davvero.\n"];
+    [block appendString:@"avviato=0\n"];
+    [block appendString:@"attesa=0\n"];
+    [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
+    [block appendString:@"    pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
+    [block appendString:@"    if [ -n \"$pid\" ] && kill -0 \"$pid\" 2>/dev/null; then\n"];
+    [block appendString:@"        avviato=1\n"];
+    [block appendString:@"        break\n"];
+    [block appendString:@"    fi\n"];
+    [block appendString:@"    sleep 1\n"];
+    [block appendString:@"    attesa=$((attesa + 1))\n"];
+    [block appendString:@"done\n"];
+
+    if (port > 0) {
+        [block appendString:@"\n"];
+        [block appendString:@"# Vivo non basta: deve ascoltare la porta del progetto nuovo.\n"];
+        [block appendFormat:@"if [ $avviato -eq 1 ]; then\n"];
+        [block appendString:@"    inascolto=0\n"];
+        [block appendString:@"    attesa=0\n"];
+        [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
+        [block appendFormat:@"        if /usr/sbin/lsof -nP -iTCP:%ld -sTCP:LISTEN >/dev/null 2>&1; then\n",
+                            (long)port];
+        [block appendString:@"            inascolto=1\n"];
+        [block appendString:@"            break\n"];
+        [block appendString:@"        fi\n"];
+        [block appendString:@"        sleep 1\n"];
+        [block appendString:@"        attesa=$((attesa + 1))\n"];
+        [block appendString:@"    done\n"];
+        [block appendString:@"    [ $inascolto -eq 1 ] || avviato=0\n"];
+        [block appendString:@"fi\n"];
+    }
+
+    [block appendString:@"\n"];
+    [block appendString:@"if [ $avviato -eq 1 ]; then\n"];
+    [block appendString:@"    rm -f \"$OUT\"\n"];
+    [block appendString:@"    echo VXOST_OK\n"];
+    [block appendString:@"else\n"];
+    [block appendString:@"    # Si torna indietro e si rimette su quello che c'era: il danno\n"];
+    [block appendString:@"    # peggiore non e' il progetto mancato, e' Apache giu' per tutti.\n"];
+    [block appendString:restore];
+    [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
+    [block appendString:@"    cat \"$OUT\" 2>/dev/null || true\n"];
+    [block appendString:@"    rm -f \"$OUT\"\n"];
+    [block appendString:@"    echo VXOST_RESTART_FAILED\n"];
+    [block appendString:@"fi\n"];
+    return block;
+}
+
 - (NSString *)privilegedScriptForProject:(NSString *)project
                                  summary:(NSString *)summary
                                  docroot:(NSString *)docroot
@@ -625,6 +703,21 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 
     NSString *phpBlock = phpVersion ? [phpVersion virtualHostDirective] : @"";
 
+    // ⚠️ Un progetto nuovo nasce come sta l'installazione, non sempre aperto.
+    // Lo scope si legge dai file, e solo la Listen cambia: il VirtualHost
+    // resta su `*` di proposito, perche' e' la Listen l'unica direttiva che
+    // XPExposure riscrive quando si cambia esposizione. Legando il VirtualHost
+    // a 127.0.0.1 il progetto resterebbe irraggiungibile dalla rete anche
+    // dopo averla riaperta, e nessuno saprebbe perche'.
+    NSString *listenLine =
+        [XPExposure listenDirectiveForPort:port scope:[XPExposure currentScope]];
+
+    // Il riavvio verificato, con i comandi che rimettono i file com'erano se
+    // Apache non riparte.
+    NSString *restart = XPApacheRestartBlock(port,
+        @"    cp \"$HTTPD.vxost-$STAMP.bak\"  \"$HTTPD\"\n"
+        @"    cp \"$VHOSTS.vxost-$STAMP.bak\" \"$VHOSTS\"\n");
+
     return [NSString stringWithFormat:
         @"#!/bin/sh\n"
         @"# Generato da VXOST per il progetto %1$@. Si cancella da solo.\n"
@@ -644,7 +737,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"cat >> \"$HTTPD\" <<'VXOST_EOF_LISTEN'\n"
         @"\n"
         @"# VXOST wizard: %1$@\n"
-        @"Listen %4$ld\n"
+        @"%9$@\n"
         @"VXOST_EOF_LISTEN\n"
         @"\n"
         @"cat >> \"$VHOSTS\" <<'VXOST_EOF_VHOST'\n"
@@ -668,12 +761,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"# Il controllo prima del riavvio: una configurazione malformata non\n"
         @"# lascerebbe giù solo il progetto nuovo, ma tutti quelli che ci sono.\n"
         @"if \"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" 2>&1 | grep -qi 'Syntax OK'; then\n"
-        @"    if pgrep -x httpd >/dev/null 2>&1; then\n"
-        @"        \"$CTL\" restartapache >/dev/null 2>&1\n"
-        @"    else\n"
-        @"        \"$CTL\" startapache >/dev/null 2>&1\n"
-        @"    fi\n"
-        @"    echo VXOST_OK\n"
+        @"%10$@"
         @"else\n"
         @"    cp \"$HTTPD.vxost-$STAMP.bak\"  \"$HTTPD\"\n"
         @"    cp \"$VHOSTS.vxost-$STAMP.bak\" \"$VHOSTS\"\n"
@@ -681,7 +769,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         @"fi\n"
         @"exit 0\n",
         project, root, control, (long)port, docroot, [XPPaths localHostname],
-        comment, phpBlock];
+        comment, phpBlock, listenLine, restart];
 }
 
 #pragma mark - Messaggi
@@ -819,18 +907,23 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
 
     [script appendString:@"\n# Il controllo prima del riavvio: una configurazione malformata non\n"];
     [script appendString:@"# lascerebbe giu' un progetto, li lascerebbe giu' tutti.\n"];
-    [script appendString:@"if \"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" 2>&1 | grep -qi 'Syntax OK'; then\n"];
-    [script appendString:@"    if pgrep -x httpd >/dev/null 2>&1; then\n"];
-    [script appendString:@"        \"$CTL\" restartapache >/dev/null 2>&1\n"];
-    [script appendString:@"    else\n"];
-    [script appendString:@"        \"$CTL\" startapache >/dev/null 2>&1\n"];
-    [script appendString:@"    fi\n"];
-    [script appendString:@"    echo VXOST_OK\n"];
-    [script appendString:@"else\n"];
+    // I comandi che rimettono i file com'erano servono in due rami: se la
+    // sintassi non passa, e se Apache non riparte lo stesso. Si scrivono una
+    // volta sola, perche' due elenchi di ripristino divergono al primo file
+    // aggiunto e il secondo ramo ne rimetterebbe indietro solo una parte.
+    NSMutableString *restore = [NSMutableString string];
     for (NSUInteger i = 0; i < sources.count; i++) {
-        [script appendFormat:@"    cp \"$F%lu.vxost-$STAMP.bak\" \"$F%lu\"\n",
+        [restore appendFormat:@"    cp \"$F%lu.vxost-$STAMP.bak\" \"$F%lu\"\n",
          (unsigned long)i, (unsigned long)i];
     }
+
+    [script appendString:@"if \"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" 2>&1 | grep -qi 'Syntax OK'; then\n"];
+    // Qui la porta non si conosce: si riscrivono file di configurazione, non
+    // si crea un progetto. Il controllo si ferma al pid, che e' comunque
+    // quello che manca quando Apache non riparte.
+    [script appendString:XPApacheRestartBlock(0, restore)];
+    [script appendString:@"else\n"];
+    [script appendString:restore];
     [script appendString:@"    echo VXOST_CONFIGTEST_FAILED\n"];
     [script appendString:@"fi\n"];
     // ⚠️ Esce sempre con 0: `do shell script` trasforma un'uscita diversa da
@@ -878,6 +971,8 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
             message = NSLocalizedString(@"wizard.failed.backup", nil);
         } else if ([result.output containsString:@"VXOST_CONFIGTEST_FAILED"]) {
             message = NSLocalizedString(@"wizard.failed.configtest", nil);
+        } else if ([result.output containsString:@"VXOST_RESTART_FAILED"]) {
+            message = NSLocalizedString(@"wizard.failed.restart", nil);
         } else if ([result.output containsString:@"VXOST_OK"]) {
             ok = YES;
             message = success;

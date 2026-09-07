@@ -33,6 +33,13 @@
 /// Il pool sta girando adesso?
 @property (nonatomic, assign, readonly) BOOL poolIsRunning;
 
+/// Se il socket del pool e' chiuso agli altri utenti di questo Mac.
+///
+/// Ha senso solo dopo startPool. Vale NO quando php-fpm e' stato compilato
+/// senza supporto ACL: in quel caso il pool gira con il socket aperto, ed e'
+/// una cosa che vale la pena poter dire a chi usa una macchina condivisa.
+@property (nonatomic, assign, readonly) BOOL socketIsRestricted;
+
 /// Tutte quelle utilizzabili, la bundled per prima.
 /// Da chiamare fuori dal main thread: interroga i binari.
 + (NSArray<XPPhpVersion *> *)available;

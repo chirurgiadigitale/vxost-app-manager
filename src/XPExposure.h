@@ -66,6 +66,18 @@ typedef NS_ENUM(NSInteger, XPExposureScope) {
 + (void)applyScope:(XPExposureScope)scope completion:(void (^)(BOOL ok))completion;
 
 /// Il nome da mostrare.
+/// La riga `Listen` per una porta nuova, coerente con lo scope indicato.
+///
+/// ⚠️ Serve al wizard, che prima scriveva sempre `Listen <porta>`: chi aveva
+/// chiuso l'installazione a questo Mac vedeva ogni progetto nuovo nascere
+/// aperto alla rete locale, senza che nulla glielo dicesse. L'indirizzo di
+/// loopback sta scritto qui dentro una volta sola.
+///
+/// Con scope Mixed si comporta come prima e lascia la porta aperta: le Listen
+/// non concordano gia' fra loro, quindi non c'e' una scelta dell'utente da
+/// rispettare, e chiudere d'ufficio sarebbe una decisione presa al posto suo.
++ (NSString *)listenDirectiveForPort:(NSInteger)port scope:(XPExposureScope)scope;
+
 + (NSString *)nameForScope:(XPExposureScope)scope;
 
 @end

@@ -106,6 +106,18 @@ static NSArray<NSNumber *> *PortsFromConfig(NSString *path, NSString *directive)
 @end
 
 
+/// Esegue sul thread principale, subito se ci siamo gia'.
+///
+/// Serve a tenere su un solo thread ogni scrittura di `state`: e' l'unico
+/// modo perche' il confronto con XPServiceStateBusy significhi qualcosa.
+static void XPApplyOnMain(dispatch_block_t block) {
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
+}
+
 @implementation XPService
 
 + (BOOL)portIsListening:(uint16_t)port timeout:(NSTimeInterval)timeout {
@@ -169,12 +181,30 @@ static NSArray<NSNumber *> *PortsFromConfig(NSString *path, NSString *directive)
         if (candidate > 0) { found = candidate; break; }
     }
 
-    self.pid = found;
-    // Non sovrascrive lo stato "busy": una transizione in corso ha la precedenza
-    // finché il comando non è tornato.
-    if (self.state != XPServiceStateBusy) {
-        self.state = (found > 0) ? XPServiceStateRunning : XPServiceStateStopped;
-    }
+    // ⚠️ Leggere e scrivere lo stato da qui non e' sicuro.
+    //
+    // Questo metodo gira sulla coda di background del monitor, mentre
+    // performAction: scrive XPServiceStateBusy sul thread principale. Le
+    // proprieta' sono nonatomic, e fra il confronto qui sotto e
+    // l'assegnazione c'e' spazio perche' il main thread scriva Busy: la
+    // scrittura di questa riga arriva dopo e se lo mangia. Il pulsante torna
+    // attivo mentre l'avvio e' ancora in corso, e chi lo preme una seconda
+    // volta manda due comandi allo stesso servizio.
+    //
+    // Il controllo e l'assegnazione vanno fatti dove Busy viene scritto, cioe'
+    // sul main thread, e li' diventano indivisibili rispetto ad esso. La
+    // notifica del monitor e' accodata sulla stessa coda subito dopo, quindi
+    // arriva a valori gia' aggiornati.
+    XPServiceState calcolato = (found > 0) ? XPServiceStateRunning
+                                           : XPServiceStateStopped;
+    XPApplyOnMain(^{
+        self.pid = found;
+        // Non sovrascrive lo stato "busy": una transizione in corso ha la
+        // precedenza finché il comando non è tornato.
+        if (self.state != XPServiceStateBusy) {
+            self.state = calcolato;
+        }
+    });
 }
 
 - (void)refreshPorts {

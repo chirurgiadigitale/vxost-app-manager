@@ -22,7 +22,12 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
 @end
 
 
-@interface XPTracker ()
+@interface XPTracker () {
+    /// Il file esiste ma non si e' riusciti a leggerlo. Finche' vale YES non
+    /// si salva niente: riscrivere quel file vorrebbe dire completare una
+    /// perdita di dati invece di limitarla.
+    BOOL _storageUnusable;
+}
 @property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *openEntries;
 @property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *entries;
 @property (nonatomic, strong) NSMutableArray<XPTrackableProject *> *customProjects;
@@ -208,9 +213,22 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 
 - (void)systemWillSleep:(NSNotification *)note {
     for (XPTimeEntry *entry in self.openEntries) {
+        // ⚠️ Una pausa che attraversa un sonno non si riprende da sola, e per
+        // questo NON entra in automaticallyPaused.
+        //
+        // Ci entrava, e la promessa di systemDidWake — "chi torna al Mac dopo
+        // ore decide lui se quel tempo era lavoro" — durava fino al primo
+        // movimento del mouse: checkIdle riprende ogni sessione che trova in
+        // quell'insieme appena l'inattività scende sotto la soglia. Il
+        // risveglio la fa scendere sempre. Il conteggio restava giusto, ma il
+        // cronometro ripartiva senza che nessuno lo avesse chiesto, ed e' la
+        // differenza fra un tempo misurato e un tempo supposto.
+        //
+        // Vale anche per chi era gia' in pausa automatica: da qui in poi
+        // quella pausa ha attraversato un sonno, e diventa una scelta.
+        [self.automaticallyPaused removeObject:entry.identifier];
         if (entry.isPaused) continue;
         entry.pauseStartedAt = [NSDate date];
-        [self.automaticallyPaused addObject:entry.identifier];
     }
     [self save];
 }
@@ -441,6 +459,21 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 #pragma mark - Persistenza
 
 - (NSString *)storagePath {
+    // ⚠️ La via d'uscita per i test, e solo per loro.
+    //
+    // trackertest usa XPTracker.shared, quindi senza questo scriveva nello
+    // storico vero: creava sessioni, le cancellava alla fine, e se falliva a
+    // meta' le lasciava li'. Peggio, girando mentre l'app e' aperta, l'ultimo
+    // salvataggio dell'una sovrascriveva quello dell'altro, e le ore perse
+    // non tornano.
+    NSString *override = NSProcessInfo.processInfo.environment[@"VXOST_TRACKER_STORE"];
+    if (override.length > 0) {
+        [[NSFileManager defaultManager]
+            createDirectoryAtPath:[override stringByDeletingLastPathComponent]
+      withIntermediateDirectories:YES attributes:nil error:NULL];
+        return override;
+    }
+
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,
                                                          NSUserDomainMask, YES);
     NSString *support = paths.firstObject;
@@ -476,11 +509,45 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 }
 
 - (void)load {
-    NSData *data = [NSData dataWithContentsOfFile:[self storagePath]];
-    if (!data) return;
+    NSString *path = [self storagePath];
+    NSFileManager *fm = [NSFileManager defaultManager];
 
-    NSDictionary *root = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
-    if (![root isKindOfClass:[NSDictionary class]]) return;
+    // Nessun file: primo avvio. È l'unico caso in cui "storico vuoto" è la
+    // lettura giusta, e va distinto da tutti gli altri.
+    if (![fm fileExistsAtPath:path]) return;
+
+    NSError *error = nil;
+    NSData *data = [NSData dataWithContentsOfFile:path options:0 error:&error];
+    if (!data) {
+        // ⛔ Il file c'è ma non si legge. Continuare vorrebbe dire partire con
+        // lo storico vuoto e riscriverlo vuoto al primo salvataggio, cioè
+        // cancellare mesi di ore per un permesso sbagliato o un disco che fa
+        // i capricci. Meglio non avere niente da mostrare che perdere tutto.
+        NSLog(@"VXOST: lo storico esiste ma non si legge (%@). "
+              @"Non verrà sovrascritto.", error.localizedDescription);
+        _storageUnusable = YES;
+        return;
+    }
+
+    NSDictionary *root = [NSJSONSerialization JSONObjectWithData:data
+                                                         options:0 error:&error];
+    if (![root isKindOfClass:[NSDictionary class]]) {
+        // JSON rotto: si mette da parte con la data, invece di lasciarlo
+        // sovrascrivere. Quello che c'è dentro è spesso ancora leggibile a
+        // mano, e comunque non tocca a noi decidere di buttarlo.
+        NSString *stamp = [@(time(NULL)) stringValue];
+        NSString *quarantine = [path stringByAppendingFormat:@".corrupt-%@", stamp];
+        if ([fm moveItemAtPath:path toPath:quarantine error:&error]) {
+            NSLog(@"VXOST: lo storico non è JSON valido. Messo da parte in %@, "
+                  @"si riparte da zero senza perdere il file.", quarantine);
+        } else {
+            NSLog(@"VXOST: lo storico non è JSON valido e non si riesce a "
+                  @"metterlo da parte (%@). Non verrà sovrascritto.",
+                  error.localizedDescription);
+            _storageUnusable = YES;
+        }
+        return;
+    }
 
     for (NSDictionary *raw in root[@"entries"]) {
         XPTimeEntry *entry = [XPTimeEntry entryFromDictionary:raw];
@@ -529,12 +596,35 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     }
     root[@"open"] = open;
 
+    // Se il file esisteva e non si è riusciti a leggerlo, non lo si tocca:
+    // sovrascriverlo con quello che c'è in memoria vorrebbe dire completare
+    // la perdita invece di limitarla.
+    if (_storageUnusable) {
+        NSLog(@"VXOST: salvataggio saltato, lo storico su disco non è leggibile.");
+        return;
+    }
+
+    NSError *error = nil;
     NSData *data = [NSJSONSerialization dataWithJSONObject:root
                                                    options:NSJSONWritingPrettyPrinted
-                                                     error:NULL];
+                                                     error:&error];
+    if (!data) {
+        NSLog(@"VXOST: le ore non si riescono a convertire in JSON (%@). "
+              @"Niente è stato scritto.", error.localizedDescription);
+        return;
+    }
+
     // Scrittura atomica: un'interruzione a metà lascerebbe il file dei tempi
     // troncato, e sono ore di lavoro.
-    [data writeToFile:[self storagePath] atomically:YES];
+    //
+    // ⚠️ L'esito si guarda. Disco pieno, cartella senza permessi, volume
+    // smontato: senza questo controllo l'app continua a mostrare le ore in
+    // finestra come se fossero al sicuro, e non lo sono.
+    if (![data writeToFile:[self storagePath] options:NSDataWritingAtomic
+                     error:&error]) {
+        NSLog(@"VXOST: le ore non sono state salvate (%@)",
+              error.localizedDescription);
+    }
 }
 
 - (void)notifyChange {

@@ -8,11 +8,19 @@
 //  che è sbagliato. È il tipo di difetto che si scopre mesi dopo, quando non
 //  si ricorda più quante ore erano davvero.
 //
-//  Il file dei dati veri non viene toccato: il tracker scrive in Application
-//  Support, e il test lavora sulle voci che crea lui e che rimuove alla fine.
+//  ⚠️ Il file dei dati veri non viene toccato, ma non perché il test stia
+//  attento: perché lo storico è dirottato altrove prima ancora di creare il
+//  tracker. Fino al 07/09/2026 questo commento diceva il contrario di quello
+//  che il codice faceva — XPTracker.shared scrive in Application Support, che
+//  è esattamente il file vero — e la pulizia finale non era una garanzia:
+//  bastava che un controllo fallisse a metà per lasciare sessioni finte nello
+//  storico, e girando mentre l'app era aperta i due salvataggi si
+//  sovrascrivevano a vicenda.
 //
 
 #import <Cocoa/Cocoa.h>
+#include <stdlib.h>             // setenv
+#include <unistd.h>             // getpid
 #import "XPTracker.h"
 #import "XPTimeEntry.h"
 #import "XPPaths.h"
@@ -52,7 +60,16 @@ static XPTrackableProject *fakeProject(void) {
 }
 
 int main(void) { @autoreleasepool {
+    // ⛔ Prima di ogni altra cosa, e prima di toccare XPTracker.shared: il
+    // singleton legge lo storico appena viene creato, quindi dopo sarebbe
+    // tardi. Il percorso è temporaneo e vive quanto il test.
+    NSString *store = [NSTemporaryDirectory() stringByAppendingPathComponent:
+                       [NSString stringWithFormat:@"vxost-trackertest-%d/timesheet.json",
+                        getpid()]];
+    setenv("VXOST_TRACKER_STORE", store.UTF8String, 1);
+
     printf("\n\033[1mLo storico, corretto a mano\033[0m\n");
+    printf("  storico di prova: %s\n", store.UTF8String);
 
     XPTracker *tracker = [XPTracker shared];
     NSMutableArray<XPTimeEntry *> *creati = [NSMutableArray array];
@@ -166,6 +183,10 @@ int main(void) { @autoreleasepool {
     }
     check([tracker totalForProjectKey:@"test:trackertest" onDay:oggi] < 1,
           @"il test non lascia sessioni dietro di sé");
+
+    // La cartella di prova non serve piu' a nessuno.
+    [[NSFileManager defaultManager]
+        removeItemAtPath:[store stringByDeletingLastPathComponent] error:NULL];
 
     printf("\n\033[1m%d passati, %d falliti\033[0m\n\n", sPassed, sFailed);
     return sFailed == 0 ? 0 : 1;

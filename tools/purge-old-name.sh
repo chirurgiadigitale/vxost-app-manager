@@ -78,6 +78,14 @@ done
 [ "$found_dead" -eq 0 ] && echo "  nothing left to remove"
 
 say "What is going to be rewritten"
+# ⛔ var, temp e logs restano fuori: dentro var/mysql ci sono i database.
+#
+# Una tabella in formato CSV e' testo a tutti gli effetti, quindi supera il
+# controllo di `file` qui sotto, e una riga che contenesse la parola del
+# vecchio nome verrebbe riscritta: non un percorso in un commento, un dato di
+# chi usa lo stack. Lo stesso vale per un dump .sql lasciato li'. I dati non
+# si bonificano, si lasciano stare.
+#
 # ⚠️ Il tipo si chiede a `file`, non all'estensione.
 #
 # La prima versione filtrava per estensione e il commento diceva "si controlla
@@ -86,7 +94,7 @@ say "What is going to be rewritten"
 # il resoconto finale li chiamava binari. Ora si guarda cosa sono davvero.
 TEXT_FILES="$(mktemp)"
 grep -rli "xampp" "$ROOT" \
-     --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
+     --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses --exclude-dir=var --exclude-dir=temp --exclude-dir=logs \
      --exclude-dir=backup 2>/dev/null \
 | while IFS= read -r f; do
     [ -f "$f" ] || continue
@@ -118,8 +126,14 @@ mkdir -p "$BACKUP"
 while IFS= read -r f; do
     [ -n "$f" ] || continue
     rel="${f#$ROOT/}"
-    mkdir -p "$BACKUP/$(dirname "$rel")"
-    cp "$f" "$BACKUP/$rel"
+    # ⛔ L'esito della copia si guarda. Senza, un disco pieno o una cartella
+    # senza permessi lasciava proseguire la riscrittura con una rete di
+    # sicurezza che non c'era: il rollback avrebbe rimesso a posto i file
+    # copiati e lasciato riscritti gli altri, che e' peggio di non averlo.
+    if ! mkdir -p "$BACKUP/$(dirname "$rel")" || ! cp "$f" "$BACKUP/$rel"; then
+        fail "could not back up $rel: nothing has been rewritten"
+        exit 1
+    fi
 done < "$TEXT_FILES"
 ok "$BACKUP"
 
@@ -202,12 +216,12 @@ else
 fi
 
 say "What is left"
-left=$(grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
+left=$(grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses --exclude-dir=var --exclude-dir=temp --exclude-dir=logs \
        --exclude-dir=backup 2>/dev/null | wc -l | tr -d ' ')
 echo "  $left files still mention it. Checking what they are:"
 still_text=0
-for f in $(grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=licenses \
-           --exclude-dir=backup 2>/dev/null | head -200); do
+for f in $(grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
+           --exclude-dir=var --exclude-dir=temp --exclude-dir=logs --exclude-dir=backup 2>/dev/null | head -200); do
     case "$(file -b "$f" 2>/dev/null)" in
         *text*|*script*|*source*) still_text=$((still_text + 1)) ;;
     esac
@@ -217,7 +231,7 @@ if [ "$still_text" -gt 0 ]; then
 else
     ok "they are compiled binaries, which only a rebuild can change"
 fi
-grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses \
+grep -rli "xampp" "$ROOT" --exclude-dir=www --exclude-dir=htdocs --exclude-dir=licenses --exclude-dir=var --exclude-dir=temp --exclude-dir=logs \
      --exclude-dir=backup 2>/dev/null | head -6 | sed "s|$ROOT/|      |"
 
 say "Done"

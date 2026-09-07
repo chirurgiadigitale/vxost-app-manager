@@ -100,12 +100,13 @@ start)
     # socket, Operation not permitted". Non e' un permesso mancante da
     # aggiungere, e' la conseguenza di una scelta.
     #
-    # Apache gira come daemon e non condivide alcun gruppo con l'utente,
-    # quindi il socket e' 0666. Su una macchina di sviluppo con un utente solo
-    # e' accettabile; su una macchina condivisa vorrebbe dire che chiunque puo'
-    # far eseguire PHP con i permessi di chi ha avviato il pool, ed e' il
-    # motivo per cui il socket sta in /tmp e non nel web root.
-    cat > "$CONF" <<CONF
+    # ⛔ Ma 0666 in /tmp vuol dire che qualunque altro utente di questo Mac
+    # puo' aprire il socket e parlare FastCGI al pool, cioe' far eseguire PHP
+    # con l'identita' di chi lo ha avviato: i suoi file, le sue chiavi, i suoi
+    # database. Prima si prova a chiuderlo con una ACL, che php-fpm sa mettere
+    # da se' senza essere root, e si riapre solo se non ce la fa.
+    scrivi_conf() {
+        cat > "$CONF" <<CONF
 ; Generato da VXOST. Si puo' cancellare, viene riscritto al prossimo avvio.
 [global]
 pid = $PIDF
@@ -114,7 +115,7 @@ daemonize = yes
 
 [vxost]
 listen = $SOCK
-listen.mode = 0666
+$1
 
 pm = dynamic
 pm.max_children = 10
@@ -122,15 +123,29 @@ pm.start_servers = 2
 pm.min_spare_servers = 1
 pm.max_spare_servers = 3
 CONF
+    }
+
+    # daemon e' l'utente di Apache nello stack, come da httpd.conf.
+    scrivi_conf "listen.mode = 0600
+listen.acl_users = daemon"
     ok "$CONF"
 
     say "Starting"
     # L'output non si butta via: se fallisce, il motivo serve.
-    output="$("$FPM" --fpm-config "$CONF" 2>&1)" || {
-        fail "php-fpm refused to start:"
-        printf '%s\n' "$output" | head -6 | sed 's/^/      /'
-        exit 1
-    }
+    if ! output="$("$FPM" --fpm-config "$CONF" 2>&1)"; then
+        # php-fpm compilato senza --with-fpm-acl rifiuta la direttiva e non
+        # parte. Fra un pool esposto e nessun pool il primo almeno funziona,
+        # ma la rinuncia si dice, non si nasconde.
+        fail "this php-fpm does not support ACLs on the socket:"
+        printf '%s\n' "$output" | head -3 | sed 's/^/      /'
+        fail "falling back to a socket every user of this Mac can open"
+        scrivi_conf "listen.mode = 0666"
+        output="$("$FPM" --fpm-config "$CONF" 2>&1)" || {
+            fail "php-fpm refused to start:"
+            printf '%s\n' "$output" | head -6 | sed 's/^/      /'
+            exit 1
+        }
+    fi
 
     # Il socket compare un istante dopo il fork.
     i=0
@@ -163,6 +178,19 @@ stop)
         pid="$(cat "$PIDF" 2>/dev/null || true)"
         if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
             kill -QUIT "$pid" 2>/dev/null
+            # ⚠️ QUIT e' un arresto garbato: php-fpm finisce le richieste in
+            # corso e poi esce. Annunciarlo fermo subito, e togliergli il
+            # socket da sotto, vuol dire far fallire proprio quelle richieste
+            # e lasciare in giro un processo che l'app non trova piu'.
+            atteso=0
+            while [ $atteso -lt 15 ] && kill -0 "$pid" 2>/dev/null; do
+                sleep 1
+                atteso=$((atteso + 1))
+            done
+            if kill -0 "$pid" 2>/dev/null; then
+                fail "php $v did not stop within 15s (pid $pid), left as it is"
+                continue
+            fi
             ok "php $v stopped"
             stopped=$((stopped + 1))
         fi

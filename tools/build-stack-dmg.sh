@@ -85,7 +85,7 @@ Press "New project" in the app: give it a name, optionally the address
 of a GitHub repository, and a port. VXOST creates the folder, writes the
 virtual host and restarts Apache.
 
-You can still do it by hand. Put the project in vxostfiles/htdocs/projects/
+You can still do it by hand. Put the project in vxostfiles/www/projects/
 and add a virtual host in vxostfiles/etc/extra/httpd-vhosts.conf, with a
 matching "Listen" line in vxostfiles/etc/httpd.conf. The app then shows
 every project with the port it answers on, and the repository it belongs to.

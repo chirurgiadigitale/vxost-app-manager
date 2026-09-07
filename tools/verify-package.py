@@ -79,10 +79,22 @@ def leaks_in(data, words):
     return found
 
 
+UNREADABLE = []
+
+
 def scan(path, words):
+    """Le parole vietate dentro un file.
+
+    ⚠️ Gli errori di lettura non valgono "niente trovato". Prima ogni OSError
+    tornava un insieme vuoto, indistinguibile dall'esito di un file esaminato
+    e pulito: il conteggio finale diceva "nothing found in N files" anche se
+    di quegli N una parte non era stata letta affatto. Un file che non si
+    riesce ad aprire e' un file di cui non si sa niente, e va detto.
+    """
     try:
         size = os.path.getsize(path)
-    except OSError:
+    except OSError as error:
+        UNREADABLE.append((path, str(error)))
         return set()
 
     found = set()
@@ -98,7 +110,8 @@ def scan(path, words):
                     break
                 found |= leaks_in((tail + block).lower(), words)
                 tail = block[-OVERLAP:]
-    except OSError:
+    except OSError as error:
+        UNREADABLE.append((path, str(error)))
         return found
     return found
 
@@ -131,6 +144,16 @@ def main():
             for word in scan(path, words):
                 hits.setdefault(word.decode("utf-8", "replace"), []).append(
                     os.path.relpath(path, stage))
+
+    if UNREADABLE:
+        print(f"  {len(UNREADABLE)} files could not be read, so they were not "
+              "checked at all:")
+        for path, why in UNREADABLE[:5]:
+            print(f"      {os.path.relpath(path, stage)}: {why}")
+        if len(UNREADABLE) > 5:
+            print(f"      and {len(UNREADABLE) - 5} more")
+        print("  A package is not verified while part of it is unread.")
+        return 1
 
     if not hits:
         print(f"  nothing found in {files} files")

@@ -40,6 +40,56 @@ say()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
 fail() { printf '  \033[31m✗ %s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✓ %s\033[0m\n' "$*"; }
 
+# ⛔ Ogni segnale va ai processi di QUESTA installazione, e a nessun altro.
+#
+# `pkill -x httpd` prende ogni httpd della macchina: quello di sistema di
+# macOS, un MAMP, un altro stack, l'Apache di chi condivide il Mac. Fermare il
+# server di qualcun altro e' gia' brutto di suo; farlo con mysqld, che ha
+# pagine da scaricare su disco, gli lascia un recupero da crash al prossimo
+# avvio e nel caso peggiore dei dati indietro.
+#
+# Su macOS `ps -o comm=` restituisce il percorso completo dell'eseguibile:
+# i nostri sono quelli che girano dai binari sotto $ROOT.
+pids_ours() {
+    _nome="$1"
+    pgrep -x "$_nome" 2>/dev/null | while read -r _pid; do
+        case "$(ps -p "$_pid" -o comm= 2>/dev/null)" in
+            "$ROOT"/*) printf '%s\n' "$_pid" ;;
+        esac
+    done
+}
+
+# Per chi non si riconosce dal nome: mysqld_safe e' uno script di shell, e il
+# suo comm e' /bin/sh. Li' l'installazione si legge dagli argomenti.
+pids_ours_args() {
+    _pattern="$1"
+    pgrep -f "$_pattern" 2>/dev/null | while read -r _pid; do
+        case "$(ps -p "$_pid" -o args= 2>/dev/null)" in
+            *"$ROOT"/*) printf '%s\n' "$_pid" ;;
+        esac
+    done
+}
+
+running_ours()      { [ -n "$(pids_ours "$1")" ]; }
+running_ours_args() { [ -n "$(pids_ours_args "$1")" ]; }
+
+# Manda un segnale ai nostri e dice se ne ha raggiunto almeno uno.
+signal_ours() {
+    _sig="$1"; _nome="$2"; _mandati=0
+    for _pid in $(pids_ours "$_nome"); do
+        kill "-$_sig" "$_pid" 2>/dev/null && _mandati=$((_mandati + 1))
+    done
+    [ "$_mandati" -gt 0 ]
+}
+
+signal_ours_args() {
+    _sig="$1"; _pattern="$2"; _mandati=0
+    for _pid in $(pids_ours_args "$_pattern"); do
+        kill "-$_sig" "$_pid" 2>/dev/null && _mandati=$((_mandati + 1))
+    done
+    [ "$_mandati" -gt 0 ]
+}
+
 if [ "$(id -u)" -ne 0 ]; then
     fail "run this with sudo"
     exit 1
@@ -73,17 +123,17 @@ if [ "${1:-}" = "resume" ]; then
     say "Verifica, dalla tabella dei processi"
     i=0
     while [ $i -lt 20 ]; do
-        pgrep -x httpd >/dev/null 2>&1 && pgrep -x mysqld >/dev/null 2>&1 && break
+        running_ours httpd && running_ours mysqld && break
         sleep 1
         i=$((i + 1))
     done
     for p in httpd mysqld; do
-        pgrep -x "$p" >/dev/null 2>&1 && ok "$p gira" || fail "$p non e' partito"
+        running_ours "$p" && ok "$p gira" || fail "$p non e' partito"
     done
     # ⚠️ ProFTPD non parte con gli altri, ed e' voluto: lo stack lo avvia solo
     # se esiste etc/vxost/startftp, che si crea premendo Avvia sull'app o con
     # `vxost startftp`. Fuori da quel caso non e' un guasto, e' spento.
-    if pgrep -x proftpd >/dev/null 2>&1; then
+    if running_ours proftpd; then
         ok "proftpd gira"
     elif [ -f "$ROOT/etc/vxost/startftp" ]; then
         fail "proftpd doveva partire e non e' partito"
@@ -97,7 +147,7 @@ fi
 wait_gone() {
     local pattern="$1" label="$2" seconds="${3:-20}" i=0
     while [ $i -lt "$seconds" ]; do
-        pgrep -x "$pattern" >/dev/null 2>&1 || return 0
+        running_ours "$pattern" || return 0
         sleep 1
         i=$((i + 1))
     done
@@ -115,7 +165,7 @@ if [ -f "$PLIST" ] && launchctl list 2>/dev/null | grep -q "com.equipedigitale.v
 fi
 
 say "Apache"
-if pgrep -x httpd >/dev/null 2>&1; then
+if running_ours httpd; then
     # ⚠️ Il segnale va al processo PADRE, letto dal suo file pid, non ad
     # apachectl.
     #
@@ -128,12 +178,15 @@ if pgrep -x httpd >/dev/null 2>&1; then
     if [ -f "$ROOT/logs/httpd.pid" ]; then
         candidate="$(cat "$ROOT/logs/httpd.pid" 2>/dev/null | tr -d ' \n')"
         # Il file puo' essere vecchio e puntare a un pid riciclato da un altro
-        # programma: si controlla che quel processo sia davvero httpd.
+        # programma: si controlla che quel processo sia davvero httpd, e che
+        # sia il NOSTRO. Il pattern era *httpd, che accetta anche
+        # /usr/sbin/httpd: un pid riciclato dall'Apache di sistema sarebbe
+        # passato, e il SIGTERM sarebbe andato a lui.
         case "$(ps -p "$candidate" -o comm= 2>/dev/null)" in
-            *httpd) master="$candidate" ;;
+            "$ROOT"/*httpd) master="$candidate" ;;
         esac
     fi
-    [ -n "$master" ] || master="$(pgrep -x httpd | head -1)"
+    [ -n "$master" ] || master="$(pids_ours httpd | head -1)"
 
     if [ -n "$master" ]; then
         echo "  parent process: $master"
@@ -155,7 +208,7 @@ if pgrep -x httpd >/dev/null 2>&1; then
         # running", che e' la cosa gia' ovvia. Stesso errore fatto con mkcert
         # poche ore prima.
         "$ROOT/bin/apachectl" -k stop 2>&1 | sed 's/^/      /'
-        pkill -TERM -x httpd 2>/dev/null
+        signal_ours TERM httpd
         if wait_gone httpd "Apache" 10; then
             ok "stopped"
         else
@@ -172,7 +225,7 @@ if pgrep -x httpd >/dev/null 2>&1; then
             # opzione: il server va giu' comunque.
             echo "  three SIGTERMs ignored, using SIGKILL"
             echo "  it is safe here: a web server has nothing to flush to disk"
-            pkill -KILL -x httpd 2>/dev/null
+            signal_ours KILL httpd
             if wait_gone httpd "Apache" 10; then
                 ok "stopped"
                 echo "      note: it took SIGKILL. Worth looking into, but not now."
@@ -188,17 +241,17 @@ else
 fi
 
 say "MySQL"
-if pgrep -x mysqld >/dev/null 2>&1 || pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
+if running_ours mysqld || running_ours_args "bin/mysqld_safe"; then
     # ⚠️ L'ordine e' questo e non un altro.
     #
     # mysqld_safe va segnalato per primo, altrimenti fa ripartire il figlio.
     # Ma non si puo' aspettare che se ne vada prima di toccare mysqld: il
     # guardiano resta in attesa proprio del figlio, e i due si aspettano a
     # vicenda. Si segnalano entrambi, poi si aspetta.
-    pkill -f "bin/mysqld_safe" 2>/dev/null && ok "mysqld_safe signalled"
+    signal_ours_args TERM "bin/mysqld_safe" && ok "mysqld_safe signalled"
 
-    if pgrep -x mysqld >/dev/null 2>&1; then
-        pkill -TERM -x mysqld 2>/dev/null
+    if running_ours mysqld; then
+        signal_ours TERM mysqld
         echo "  waiting for InnoDB to flush, this can take a while on big databases"
     fi
 
@@ -212,11 +265,11 @@ if pgrep -x mysqld >/dev/null 2>&1 || pgrep -f "bin/mysqld_safe" >/dev/null 2>&1
 
     # Ora che il figlio non c'e' piu', il guardiano esce da solo in un istante.
     i=0
-    while [ $i -lt 15 ] && pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; do
+    while [ $i -lt 15 ] && running_ours_args "bin/mysqld_safe"; do
         sleep 1
         i=$((i + 1))
     done
-    if pgrep -f "bin/mysqld_safe" >/dev/null 2>&1; then
+    if running_ours_args "bin/mysqld_safe"; then
         fail "mysqld_safe is still there"
     else
         ok "mysqld_safe gone"
@@ -226,8 +279,8 @@ else
 fi
 
 say "ProFTPD"
-if pgrep -x proftpd >/dev/null 2>&1; then
-    pkill -TERM -x proftpd 2>/dev/null
+if running_ours proftpd; then
+    signal_ours TERM proftpd
     wait_gone proftpd "ProFTPD" 10 && ok "stopped" || fail "ProFTPD is still running"
 else
     ok "already stopped"
@@ -236,9 +289,9 @@ fi
 say "Checking, from the process table and not from a message"
 still=""
 for p in httpd mysqld proftpd; do
-    pgrep -x "$p" >/dev/null 2>&1 && still="$still $p"
+    running_ours "$p" && still="$still $p"
 done
-pgrep -f "bin/mysqld_safe" >/dev/null 2>&1 && still="$still mysqld_safe"
+running_ours_args "bin/mysqld_safe" && still="$still mysqld_safe"
 
 if [ -n "$still" ]; then
     fail "still running:$still"

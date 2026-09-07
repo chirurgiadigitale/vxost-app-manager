@@ -144,13 +144,22 @@ for dir in bin sbin lib libexec modules share etc man licenses phpmyadmin cgi-bi
           "$SOURCE/$dir" "$PAYLOAD/" 2>/dev/null || \
     cp -R "$SOURCE/$dir" "$PAYLOAD/"
 
-    # Il ripiego con cp non conosce le esclusioni: se e' scattato, si tolgono
-    # a mano. Senza questo, un rsync fallito farebbe uscire le chiavi.
+    # Il ripiego con cp non conosce le esclusioni: si rifanno a mano, tutte.
+    #
+    # ⚠️ Fino al 07/09/2026 questa pulizia ne copriva tre su nove: chiavi e
+    # backup. Restavano fuori tmp/, i .log, i .err, i socket e i pid, cioe'
+    # esattamente i file che raccontano la macchina di chi ha costruito il
+    # pacchetto — percorsi, nomi di database, a volte query intere dentro un
+    # error_log. Un rsync fallito e' silenzioso: `|| cp` non stampa niente, e
+    # il pacchetto sarebbe uscito lo stesso.
     rm -rf "$PAYLOAD/$dir/ssl.key" "$PAYLOAD/$dir/ssl.crt"
+    find "$PAYLOAD/$dir" -type d -name tmp -prune -exec rm -rf {} + 2>/dev/null || true
 
     # A stray backup is enough to leak every virtual host ever configured.
     find "$PAYLOAD/$dir" \( -name "*.bak*" -o -name "*.orig" -o -name "*.save" \
-         -o -name "*.old" -o -name "*~" \) -delete 2>/dev/null || true
+         -o -name "*.old" -o -name "*~" -o -name "*.backup" \
+         -o -name "*.log" -o -name "*.err" \
+         -o -name "*.sock" -o -name "*.pid" \) -delete 2>/dev/null || true
 done
 
 printf "  control scripts\n"
@@ -181,6 +190,38 @@ python3 "$HERE/tools/brand-stack.py" "$PAYLOAD" || exit 1
 [ -f "$SOURCE/lib/VERSION" ] && cp "$SOURCE/lib/VERSION" "$PAYLOAD/lib/VERSION"
 
 # ------------------------------------------------------------------ state ---
+
+# ⛔ I flag di stato sono della macchina che ha costruito, non del pacchetto.
+#
+# etc/vxost/ raccoglie file vuoti che dicono allo script cosa fare al prossimo
+# avvio. Due di questi, nello staging del 05/09, erano rimasti dalla macchina
+# di chi ha costruito:
+#
+#   startftp      ProFTPD partirebbe su ogni installazione, senza che nessuno
+#                 lo abbia chiesto. Un server FTP acceso e' una porta aperta,
+#                 e la scelta di aprirla non la si eredita da uno sconosciuto.
+#   rights_fixed  dice "i permessi sono gia' a posto" e fa saltare la
+#                 riparazione al primo avvio. E' esattamente la riparazione
+#                 che serve dopo il trascinamento nel Finder, che assegna
+#                 tutto a chi ha trascinato: senza, mysqld non puo' scrivere
+#                 nella propria cartella dati.
+#
+# startssl invece resta: e' quello che accende HTTPS, il certificato se lo
+# genera la macchina che installa, e senza il file la porta 443 non
+# risponderebbe piu' a nessuno.
+step "Clearing the build machine's state flags"
+for _flag in startftp rights_fixed; do
+    if [ -e "$PAYLOAD/etc/vxost/$_flag" ]; then
+        rm -f "$PAYLOAD/etc/vxost/$_flag"
+        echo "  removed etc/vxost/$_flag"
+    fi
+done
+for _flag in startftp rights_fixed; do
+    if [ -e "$PAYLOAD/etc/vxost/$_flag" ]; then
+        echo "!! etc/vxost/$_flag survived: it would ship with the package" >&2
+        exit 1
+    fi
+done
 
 step "Creating empty runtime folders"
 # Logs, sockets and databases are recreated on first launch, never inherited.
@@ -348,6 +389,94 @@ fi
 # Apache goes through it — the vxost script, the app, the tools — so one line
 # covers them all. The prefix is taken from the line itself rather than
 # written here, so this keeps working if the install path ever changes.
+# ---------------------------------------------------------- certificato ---
+#
+# ⚠️ Perche' e' uno script a se' e non due blocchi copiati. Il certificato
+# serve a due chiamanti diversi, e in un ordine preciso:
+#
+#   1. lo script vxost, che in startApache() controlla la sintassi con
+#      httpd -t -DSSL PRIMA di chiamare apachectl;
+#   2. apachectl, per chiunque avvii Apache senza passare da li'.
+#
+# Finche' la generazione stava solo dentro apachectl, il punto 1 falliva per
+# primo: etc/vxost/startssl arriva da upstream ed e' presente nel pacchetto,
+# quindi -DSSL c'e' sempre, il controllo di sintassi non trovava
+# etc/ssl.crt/server.crt, startApache tornava 1 e apachectl non veniva
+# raggiunto mai. Su un Mac senza XAMPP installato Apache non partiva affatto,
+# e il certificato che avrebbe risolto restava dietro la porta che non si
+# apriva.
+#
+# La radice si deduce dal percorso dello script, non si scrive dentro: il
+# pacchetto viene trascinato dal Finder e non e' detto che finisca dove
+# pensava chi lo ha costruito.
+# ⚠️ Una patch si verifica sulle righe attive, non sul testo del file.
+#
+# I controlli erano `grep -q "stringa" file`, e la stringa cercata compare
+# anche nei commenti che la patch stessa inserisce: un `grep -q 'temp/mysql'`
+# passa perche' la spiegazione qui sopra nomina temp/mysql, non perche' il
+# mkdir ci sia. La verifica confermava se stessa, ed e' il tipo di controllo
+# che da' sicurezza senza darne.
+#
+# Qui le righe commentate si tolgono prima di cercare.
+has_active() {
+    grep -v '^[[:space:]]*#' "$2" 2>/dev/null | grep -q -- "$1"
+}
+
+step "Installing the certificate generator"
+cat > "$PAYLOAD/bin/vxost-ssl-init" <<'SSLEOF'
+#!/bin/sh
+# Genera il certificato di questa macchina, la prima volta che serve.
+#
+# Autofirmato, CN=virtualhost, dieci anni. Non esce niente da qui: un
+# certificato dentro il pacchetto sarebbe lo stesso per tutti, chiave privata
+# in chiaro, e chi la estraesse potrebbe intercettare l'HTTPS locale di ogni
+# altra installazione. Una chiave condivisa non e' una chiave.
+set -u
+
+ROOT=$(cd "$(dirname "$0")/.." 2>/dev/null && pwd) || exit 1
+CRT="$ROOT/etc/ssl.crt/server.crt"
+KEY="$ROOT/etc/ssl.key/server.key"
+
+# -s: un file vuoto non e' un certificato. Un tentativo interrotto lascia il
+# file creato e vuoto, e senza questo controllo non verrebbe mai rifatto.
+if [ -s "$CRT" ] && [ -s "$KEY" ]; then
+    exit 0
+fi
+
+mkdir -p "$ROOT/etc/ssl.crt" "$ROOT/etc/ssl.key" || exit 1
+
+OPENSSL="$ROOT/bin/openssl"
+[ -x "$OPENSSL" ] || OPENSSL=/usr/bin/openssl
+[ -x "$OPENSSL" ] || {
+    echo "vxost-ssl-init: no openssl available" >&2
+    exit 1
+}
+
+# Su un file temporaneo, poi spostato: se openssl fallisce a meta' non resta
+# mezzo certificato che il controllo qui sopra scambierebbe per buono.
+TMPCRT="$CRT.tmp.$$"
+TMPKEY="$KEY.tmp.$$"
+if ! "$OPENSSL" req -new -x509 -nodes -newkey rsa:2048 \
+        -keyout "$TMPKEY" -out "$TMPCRT" \
+        -days 3650 -subj '/CN=virtualhost' >/dev/null 2>&1; then
+    rm -f "$TMPCRT" "$TMPKEY"
+    echo "vxost-ssl-init: could not create the certificate" >&2
+    exit 1
+fi
+
+chmod 600 "$TMPKEY"
+chmod 644 "$TMPCRT"
+mv "$TMPKEY" "$KEY" || exit 1
+mv "$TMPCRT" "$CRT" || exit 1
+exit 0
+SSLEOF
+chmod 755 "$PAYLOAD/bin/vxost-ssl-init"
+if [ ! -x "$PAYLOAD/bin/vxost-ssl-init" ]; then
+    echo "!! vxost-ssl-init was not installed: Apache would not start with -DSSL" >&2
+    exit 1
+fi
+echo "  vxost-ssl-init installed"
+
 if [ -f "$PAYLOAD/bin/apachectl" ]; then
     perl -pi -e "s|^HTTPD='(.*)/bin/httpd'\s*$|HTTPD='\$1/bin/httpd -d \$1 -f \$1/etc/httpd.conf'\n|" \
         "$PAYLOAD/bin/apachectl"
@@ -357,7 +486,7 @@ if [ -f "$PAYLOAD/bin/apachectl" ]; then
     sed -i '' 's|http://localhost:80/server-status|http://127.0.0.1:80/server-status|' \
         "$PAYLOAD/bin/apachectl"
 
-    if grep -q "bin/httpd -d .* -f .*/etc/httpd.conf" "$PAYLOAD/bin/apachectl"; then
+    if has_active "bin/httpd -d .* -f .*/etc/httpd.conf" "$PAYLOAD/bin/apachectl"; then
         echo "  apachectl: ServerRoot and config passed explicitly"
     else
         echo "!! apachectl was not patched: Apache would read XAMPP's config" >&2
@@ -397,18 +526,10 @@ if not match:
 prefix = match.group(1)
 
 block = f"""
-# Generate the SSL certificate the first time, on this Mac.
-# Self-signed, CN=virtualhost, ten years. Nothing here leaves the machine.
-VXOST_SSL_DIR='{prefix}/etc'
-if [ ! -s "$VXOST_SSL_DIR/ssl.crt/server.crt" ] || [ ! -s "$VXOST_SSL_DIR/ssl.key/server.key" ]; then
-  mkdir -p "$VXOST_SSL_DIR/ssl.crt" "$VXOST_SSL_DIR/ssl.key"
-  '{prefix}/bin/openssl' req -new -x509 -nodes -newkey rsa:2048 \\
-    -keyout "$VXOST_SSL_DIR/ssl.key/server.key" \\
-    -out "$VXOST_SSL_DIR/ssl.crt/server.crt" \\
-    -days 3650 -subj '/CN=virtualhost' >/dev/null 2>&1
-  chmod 600 "$VXOST_SSL_DIR/ssl.key/server.key"
-  chmod 644 "$VXOST_SSL_DIR/ssl.crt/server.crt"
-fi
+# Il certificato di questa macchina, se manca. Lo stesso script viene chiamato
+# dallo script vxost prima del suo controllo di sintassi: qui serve per
+# chiunque avvii Apache senza passare di li'.
+'{prefix}/bin/vxost-ssl-init' || true
 """
 
 # After the envvars block, so the generated certificate is in place before any
@@ -421,7 +542,7 @@ else:                                 # no envvars here: right after the HTTPD l
 open(path, "w", encoding="utf-8").write(text[:at] + block + text[at:])
 PYEOF
 
-    if grep -q "CN=virtualhost" "$PAYLOAD/bin/apachectl"; then
+    if has_active "bin/vxost-ssl-init" "$PAYLOAD/bin/apachectl"; then
         echo "  apachectl: certificate generated on first start"
     else
         echo "!! apachectl has no certificate step: Apache would not start with -DSSL" >&2
@@ -488,20 +609,32 @@ block = (
     f'{indent}_owner=`stat -f "%Su" "$datadir" 2>/dev/null`\n'
     f'{indent}case "$_owner" in\n'
     f'{indent}  mysql|_mysql) : ;;\n'
-    f'{indent}  *) chown -R mysql "$datadir" "$basedir/temp/mysql" 2>/dev/null || true ;;\n'
+    f'{indent}  *) chown -R mysql "$datadir" 2>/dev/null || true ;;\n'
+    f'{indent}esac\n'
+    f'{indent}# ⚠️ La cartella temporanea si controlla per conto suo.\n'
+    f'{indent}# Prima il suo chown era attaccato a quello del datadir: se il\n'
+    f'{indent}# datadir era gia\' di mysql il ramo non scattava, e temp/mysql,\n'
+    f'{indent}# appena creata qui sopra da root, restava di root. mysqld gira\n'
+    f'{indent}# come mysql e non ci puo\' scrivere: tmpdir non scrivibile, e\n'
+    f'{indent}# ogni tabella temporanea fallisce a partire dalla prima query\n'
+    f'{indent}# un po\' grossa. Due cartelle diverse, due controlli diversi.\n'
+    f'{indent}_tmpowner=`stat -f "%Su" "$basedir/temp/mysql" 2>/dev/null`\n'
+    f'{indent}case "$_tmpowner" in\n'
+    f'{indent}  mysql|_mysql) : ;;\n'
+    f'{indent}  *) chown -R mysql "$basedir/temp/mysql" 2>/dev/null || true ;;\n'
     f'{indent}esac\n'
 )
 open(path, "w", encoding="utf-8").write(text[:line_start] + block + text[line_start:])
 PYEOF
 
-    if grep -q 'temp/mysql' "$MYSQL_SERVER"; then
+    if has_active 'mkdir -p "$basedir/temp/mysql"' "$MYSQL_SERVER"; then
         echo "  mysql.server: tmpdir created and ownership repaired before start"
     else
         echo "!! mysql.server has no tmpdir step: MariaDB would not start" >&2
         exit 1
     fi
 
-    if grep -q 'mysqld_safe --defaults-file=' "$MYSQL_SERVER"; then
+    if has_active 'mysqld_safe --defaults-file=' "$MYSQL_SERVER"; then
         echo "  mysql.server: configuration passed explicitly"
     else
         echo "!! mysql.server was not patched: MariaDB would read XAMPP's my.cnf" >&2
@@ -517,7 +650,7 @@ fi
 # that was already hard enough to read.
 if [ -f "$PAYLOAD/share/vxost/diagnose" ]; then
     sed -i '' 's|logs/error\.log|logs/error_log|g' "$PAYLOAD/share/vxost/diagnose"
-    if grep -q 'logs/error\.log' "$PAYLOAD/share/vxost/diagnose"; then
+    if has_active 'logs/error\.log' "$PAYLOAD/share/vxost/diagnose"; then
         echo "!! diagnose still points at logs/error.log" >&2
         exit 1
     fi
@@ -557,6 +690,33 @@ path = sys.argv[1]
 text = open(path, encoding="utf-8", errors="replace").read()
 prima = text
 
+# 0. Il certificato, prima del controllo di sintassi.
+#
+# ⛔ Senza questo, tutto il resto non serve. startApache() aggiunge -DSSL
+# quando trova etc/vxost/startssl, che nel pacchetto c'e' sempre perche'
+# arriva da upstream. Con -DSSL httpd -t si ferma su
+#
+#   SSLCertificateFile: file 'etc/ssl.crt/server.crt' does not exist
+#
+# e la funzione torna 1 tre righe prima di arrivare ad apachectl, che e' dove
+# il certificato verrebbe generato. Su un Mac che non ha mai avuto XAMPP,
+# Apache non parte affatto: il rimedio sta dietro la porta che non si apre.
+ancora_ssl = "\tsyntaxCheckMessage=$("
+if ancora_ssl not in text:
+    sys.stderr.write("!! vxost: startApache non ha la forma attesa, non lo tocco\n")
+    sys.exit(1)
+if "vxost-ssl-init" not in text:
+    text = text.replace(ancora_ssl, (
+        "\t# Il certificato di questa macchina, se manca. Deve stare prima del\n"
+        "\t# controllo di sintassi: con -DSSL, httpd -t senza certificato\n"
+        "\t# fallisce e apachectl non viene raggiunto mai.\n"
+        "\tif test $ssl -eq 1\n"
+        "\tthen\n"
+        "\t\t\"$VXOST_ROOT/bin/vxost-ssl-init\" || true\n"
+        "\tfi\n"
+        "\n"
+    ) + ancora_ssl, 1)
+
 # 1. La porta sbagliata. MariaDB ascolta sulla 3306, e my.cnf lo conferma.
 text = text.replace("if testport 3308", "if testport 3306", 1)
 
@@ -567,11 +727,25 @@ avvio_vecchio = re.search(
     r"([ \t]*)\$VXOST_ROOT/bin/mysql\.server start > /dev/null &\s*\n"
     r".*?\n[ \t]*\$GETTEXT -s \"ok\.\"\s*\n[ \t]*return 0\s*\n",
     text, re.DOTALL)
+# ⚠️ Tre esiti, non due.
+#
+# SOURCE e' /Applications/VXOST/vxostfiles quando c'e', cioe' l'installazione
+# gia' fatta con un pacchetto precedente: il suo script e' gia' patchato, la
+# forma vecchia non esiste piu', e questo ramo faceva uscire 1. Con
+# set -euo pipefail la ricostruzione del pacchetto si fermava, dicendo "non ha
+# la forma attesa" di uno script che aveva esattamente la forma giusta.
+#
+# Applicata / gia' applicata / incompatibile sono tre cose diverse, e solo la
+# terza e' un errore.
 if not avvio_vecchio:
-    sys.stderr.write("!! vxost: startMySQL non ha la forma attesa, non lo tocco\n")
-    sys.exit(1)
+    if "atteso -lt 60" in text and "testport 3306" in text:
+        print("  vxost: startMySQL gia' patchato, lasciato com'e'")
+    else:
+        sys.stderr.write("!! vxost: startMySQL non ha la forma attesa, non lo tocco\n")
+        sys.exit(1)
+else:
 
-avvio_nuovo = '''\t$VXOST_ROOT/bin/mysql.server start > /dev/null 2>&1 &
+    avvio_nuovo = '''\t$VXOST_ROOT/bin/mysql.server start > /dev/null 2>&1 &
 
 \t# Il comando e' in background: il suo codice di uscita non dice niente.
 \t# L'unica prova che MariaDB e' partita e' che risponda sulla sua porta.
@@ -600,19 +774,44 @@ avvio_nuovo = '''\t$VXOST_ROOT/bin/mysql.server start > /dev/null 2>&1 &
 \tfi
 \treturn 1
 '''
-text = text[:avvio_vecchio.start()] + avvio_nuovo + text[avvio_vecchio.end():]
+    text = text[:avvio_vecchio.start()] + avvio_nuovo + text[avvio_vecchio.end():]
 
 # 3. L'arresto: "ok." solo quando la porta e' libera davvero.
+# 3b. Il ramo che dichiara MySQL fermo senza guardare se lo e'.
+#
+# ⚠️ Il file pid porta il nome della macchina: var/mysql/$(hostname).pid. Quel
+# nome cambia quando si rinomina il Mac, quando si passa da una rete che
+# assegna il nome DHCP a un'altra, o semplicemente se qualcuno ha cancellato
+# il file. In tutti quei casi MariaDB sta girando e la funzione rispondeva
+# "not running." tornando 0: l'app la crede ferma, il pulsante di avvio
+# riparte, e l'errore che si vede alla fine parla di una porta occupata da
+# nessuno. Si guarda anche la porta prima di dirlo.
+non_gira = re.search(
+    r'\tif ! test -f "\$VXOST_ROOT/var/mysql/\$\(hostname\)\.pid"\n'
+    r'\tthen\n\t\t\$GETTEXT -s "not running\."\n\t\treturn 0\n\tfi\n',
+    text)
+if non_gira and "testport 3306" not in text[non_gira.start():non_gira.end()]:
+    text = (text[:non_gira.start()] +
+            '\t# Il file pid porta il nome della macchina, e quel nome puo\' non\n'
+            '\t# combaciare piu\'. Fermo vuol dire che la porta non risponde.\n'
+            '\tif ! test -f "$VXOST_ROOT/var/mysql/$(hostname).pid" && ! testport 3306\n'
+            '\tthen\n\t\t$GETTEXT -s "not running."\n\t\treturn 0\n\tfi\n' +
+            text[non_gira.end():])
+
 arresto_vecchio = re.search(
     r"([ \t]*)\$VXOST_ROOT/bin/mysql\.server stop > /dev/null 2>&1\s*\n"
     r"[ \t]*error=\$\?\s*\n"
     r".*?\n[ \t]*\$GETTEXT -s \"ok\.\"\s*\n[ \t]*return 0\s*\n",
     text, re.DOTALL)
 if not arresto_vecchio:
-    sys.stderr.write("!! vxost: stopMySQL non ha la forma attesa, non lo tocco\n")
-    sys.exit(1)
+    if "MySQL is still listening" in text:
+        print("  vxost: stopMySQL gia' patchato, lasciato com'e'")
+    else:
+        sys.stderr.write("!! vxost: stopMySQL non ha la forma attesa, non lo tocco\n")
+        sys.exit(1)
+else:
 
-arresto_nuovo = '''\t$VXOST_ROOT/bin/mysql.server stop > /dev/null 2>&1
+    arresto_nuovo = '''\t$VXOST_ROOT/bin/mysql.server stop > /dev/null 2>&1
 
 \t# mysql.server torna con successo anche quando ha mandato il segnale a un
 \t# pid gia' morto. Fermo vuol dire che la porta non risponde piu'.
@@ -633,7 +832,7 @@ arresto_nuovo = '''\t$VXOST_ROOT/bin/mysql.server stop > /dev/null 2>&1
 \techo "VXOST: " $($GETTEXT 'MySQL is still listening on port 3306.')
 \treturn 1
 '''
-text = text[:arresto_vecchio.start()] + arresto_nuovo + text[arresto_vecchio.end():]
+    text = text[:arresto_vecchio.start()] + arresto_nuovo + text[arresto_vecchio.end():]
 
 # 4. proftpd riceve la propria configurazione: quella compilata dentro punta
 #    ancora al vecchio nome, e con -c non viene nemmeno guardata.
@@ -643,16 +842,18 @@ text = text.replace(
     1)
 
 if text == prima:
-    sys.stderr.write("!! vxost: nessuna patch applicata\n")
-    sys.exit(1)
+    # Niente da cambiare perche' era gia' tutto a posto: si esce bene. Era un
+    # errore, e bastava ricostruire il pacchetto due volte di fila per vederlo.
+    print("  vxost: nessuna modifica necessaria, era gia' tutto applicato")
+    sys.exit(0)
 open(path, "w", encoding="utf-8").write(text)
 PYEOF
 
     # ⚠️ Nessun '$' nelle stringhe cercate: fra le virgolette la shell lo
     # espanderebbe, il grep cercherebbe una riga che non esiste e il controllo
     # direbbe di no su una patch entrata benissimo. Verificato: e' successo.
-    for _atteso in "testport 3306" "atteso -lt 60" "MySQL is still listening" "proftpd -c"; do
-        grep -q "$_atteso" "$PAYLOAD/vxost" || {
+    for _atteso in "testport 3306" "atteso -lt 60" "MySQL is still listening" "proftpd -c" "vxost-ssl-init"; do
+        has_active "$_atteso" "$PAYLOAD/vxost" || {
             echo "!! vxost was not patched: '$_atteso' is missing" >&2
             exit 1
         }
@@ -668,14 +869,28 @@ fi
 # MySQL must listen on TCP: a "security check" run once can leave this on and
 # every project connecting to 127.0.0.1:3306 then breaks.
 if [ -f "$PAYLOAD/etc/my.cnf" ]; then
-    sed -i '' -E 's/^skip-networking/#skip-networking/' "$PAYLOAD/etc/my.cnf"
+    # ⚠️ Anche indentato. Una direttiva preceduta da spazi resta attiva, e la
+    # vecchia espressione, ancorata a inizio riga, la lasciava passare.
+    sed -i '' -E 's/^([[:space:]]*)skip-networking/\1#skip-networking/' "$PAYLOAD/etc/my.cnf"
 
     # It must listen on loopback only, though. Without bind-address MariaDB
     # answers on every interface, so anyone on the same wifi can reach the
     # database of a machine that was only meant to serve itself. This is the
     # protection the old security check was reaching for when it reached for
     # skip-networking instead and broke every project on the machine.
-    if ! grep -qE '^[[:space:]]*bind-address' "$PAYLOAD/etc/my.cnf"; then
+    #
+    # ⛔ Una bind-address che c'e' gia' si riscrive, non si rispetta.
+    #
+    # Prima il blocco veniva saltato appena ne trovava una qualsiasi, e
+    # "qualsiasi" comprende bind-address=0.0.0.0, cioe' l'opposto di quello
+    # che serve: il pacchetto sarebbe uscito con il database raggiungibile da
+    # tutta la rete, e il controllo qui sopra avrebbe stampato che era tutto
+    # a posto proprio perche' la riga c'era.
+    if grep -qE '^[[:space:]]*bind-address' "$PAYLOAD/etc/my.cnf"; then
+        sed -i '' -E 's/^([[:space:]]*)bind-address[[:space:]]*=.*/\1bind-address=127.0.0.1/' \
+            "$PAYLOAD/etc/my.cnf"
+        printf "  MySQL bind-address rewritten to 127.0.0.1\n"
+    else
         perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
             $_ .= "\n# Reachable from this computer only. Do not replace this with\n";
             $_ .= "# skip-networking, which would cut off every project that\n";
@@ -684,6 +899,21 @@ if [ -f "$PAYLOAD/etc/my.cnf" ]; then
             $done = 1;
         }' "$PAYLOAD/etc/my.cnf"
         printf "  MySQL restricted to 127.0.0.1\n"
+    fi
+
+    # La postcondizione: senza [mysqld] il perl non avrebbe inserito niente e
+    # non lo avrebbe detto. Una direttiva che si crede scritta e non c'e' e'
+    # peggio di una che manca e basta.
+    if ! grep -qE '^[[:space:]]*bind-address[[:space:]]*=[[:space:]]*127\.0\.0\.1' \
+            "$PAYLOAD/etc/my.cnf"; then
+        echo "!! my.cnf has no active bind-address=127.0.0.1: the database would" >&2
+        echo "   answer on every interface of the machine that installs it" >&2
+        exit 1
+    fi
+    if grep -qE '^[[:space:]]*skip-networking' "$PAYLOAD/etc/my.cnf"; then
+        echo "!! my.cnf still has an active skip-networking: every project that" >&2
+        echo "   connects to 127.0.0.1:3306 would stop working" >&2
+        exit 1
     fi
 fi
 
@@ -728,26 +958,85 @@ FLUSH PRIVILEGES;
 SQL
 sed -i '' "s/BUILDUSER/$(whoami)/; s/BUILDHOST/$(hostname | tr '[:upper:]' '[:lower:]')/" "$STAGE/db-init.sql"
 
+# ⚠️ Niente attese a occhio, e nessun esito buttato via.
+#
+# Prima erano `sleep 8`, poi un `mysql -e ... || true`: su una macchina lenta,
+# o con un antivirus di mezzo, il server non era ancora pronto e il comando
+# falliva in silenzio. Il pacchetto usciva lo stesso, con la password di root
+# non impostata — mentre il sito documenta root/root — e con l'hostname della
+# macchina che lo aveva costruito ancora dentro le tabelle dei privilegi.
+# Nessuno se ne accorgeva finche' qualcuno non provava ad accedere.
 "$PAYLOAD/sbin/mysqld" --defaults-file="$STAGE/init-my.cnf" \
-    --init-file="$STAGE/db-init.sql" --skip-networking > /dev/null 2>&1 &
-sleep 8
+    --init-file="$STAGE/db-init.sql" --skip-networking > "$STAGE/mysqld-init.log" 2>&1 &
+_mysqld_pid=$!
+
+_socket="$PAYLOAD/var/mysql/mysql.sock"
+_atteso=0
+while [ $_atteso -lt 60 ] && [ ! -S "$_socket" ]; do
+    sleep 1
+    _atteso=$((_atteso + 1))
+done
+if [ ! -S "$_socket" ]; then
+    echo "!! mysqld never opened its socket: the database would ship uninitialised" >&2
+    tail -10 "$STAGE/mysqld-init.log" >&2
+    kill "$_mysqld_pid" 2>/dev/null || true
+    exit 1
+fi
+
+# La prova che l'init-file e' passato davvero: se root/root non entra, tutto
+# quello che viene dopo lavora su un database che non e' quello che credevamo.
+if ! "$PAYLOAD/bin/mysql" --socket="$_socket" -u root -proot \
+        -e "SELECT 1" > /dev/null 2>&1; then
+    echo "!! root/root does not work: the init file did not run" >&2
+    tail -10 "$STAGE/mysqld-init.log" >&2
+    "$PAYLOAD/bin/mysqladmin" --socket="$_socket" -u root -proot shutdown >/dev/null 2>&1 || \
+        kill "$_mysqld_pid" 2>/dev/null || true
+    exit 1
+fi
+echo "  root account ready"
 
 # Dropping the accounts is not enough: the hostname survives in the Aria
 # transaction logs and inside the privilege tables until they are rebuilt.
 printf "  rebuilding privilege tables\n"
-"$PAYLOAD/bin/mysql" --socket="$PAYLOAD/var/mysql/mysql.sock" -u root -proot -e "
+if ! "$PAYLOAD/bin/mysql" --socket="$_socket" -u root -proot -e "
     INSERT INTO mysql.proxies_priv (Host, User, Proxied_host, Proxied_user, With_grant)
         VALUES ('localhost','root','','',1)
         ON DUPLICATE KEY UPDATE With_grant=1;
     OPTIMIZE TABLE mysql.proxies_priv, mysql.global_priv, mysql.db,
                    mysql.tables_priv, mysql.columns_priv, mysql.procs_priv;
-    FLUSH PRIVILEGES;" > /dev/null 2>&1 || true
+    FLUSH PRIVILEGES;" > "$STAGE/priv-rebuild.log" 2>&1; then
+    echo "!! the privilege tables were not rebuilt: the build machine's hostname" >&2
+    echo "   would ship inside them" >&2
+    tail -5 "$STAGE/priv-rebuild.log" >&2
+    exit 1
+fi
 
-"$PAYLOAD/bin/mysqladmin" --socket="$PAYLOAD/var/mysql/mysql.sock" \
+"$PAYLOAD/bin/mysqladmin" --socket="$_socket" \
     -u root -proot shutdown > /dev/null 2>&1 || true
-sleep 4
-pkill -f "$PAYLOAD/sbin/mysqld" 2>/dev/null || true
-sleep 2
+
+# ⛔ Si aspetta che il processo sia uscito davvero prima di toccare i log di
+# Aria. Cancellarli mentre mysqld e' ancora vivo vuol dire togliergli il
+# giornale delle transazioni da sotto i piedi, e il datadir che finisce nel
+# pacchetto e' quello che ne esce.
+_atteso=0
+while [ $_atteso -lt 60 ] && kill -0 "$_mysqld_pid" 2>/dev/null; do
+    sleep 1
+    _atteso=$((_atteso + 1))
+done
+if kill -0 "$_mysqld_pid" 2>/dev/null; then
+    echo "  shutdown ignored, asking again"
+    kill -TERM "$_mysqld_pid" 2>/dev/null || true
+    _atteso=0
+    while [ $_atteso -lt 30 ] && kill -0 "$_mysqld_pid" 2>/dev/null; do
+        sleep 1
+        _atteso=$((_atteso + 1))
+    done
+fi
+if kill -0 "$_mysqld_pid" 2>/dev/null; then
+    echo "!! mysqld is still running: the Aria logs must not be removed under it" >&2
+    exit 1
+fi
+echo "  database stopped cleanly"
 
 # Transaction logs are regenerated on first start and carry the old hostname.
 rm -f "$PAYLOAD/var/mysql/aria_log."* "$PAYLOAD/var/mysql/aria_log_control" \
@@ -931,18 +1220,48 @@ fi
 echo "  no file carries the old name any more"
 
 step "Signing the binaries"
-FIRMATI=0
-while IFS= read -r eseguibile; do
-    codesign --force --sign - --timestamp=none "$eseguibile" 2>/dev/null && \
-        FIRMATI=$((FIRMATI + 1))
 # ⚠️ Si cerca in tutto il payload e non in un elenco di cartelle: un plugin
 # di MariaDB stava sotto share/, fuori da ogni cartella che uno si aspetta, e
 # un elenco scritto a mano lo saltava. Il criterio giusto e' cosa il file e',
 # non dove sta.
-done < <(find "$PAYLOAD" -type f -perm +111 2>/dev/null | while read -r f; do
-    file "$f" 2>/dev/null | grep -q "Mach-O" && echo "$f"
-done)
+#
+# ⛔ E nemmeno il bit di esecuzione. Le librerie — .dylib, i moduli di Apache,
+# i plugin di MariaDB — spesso non ce l'hanno, quindi `-perm +111` le
+# saltava: restavano senza firma, e Gatekeeper le blocca esattamente come
+# blocca un eseguibile. Un Apache firmato che carica un modulo non firmato
+# non parte, e l'errore parla del modulo, non della firma.
+mach_o_files() {
+    find "$PAYLOAD" -type f 2>/dev/null | while read -r f; do
+        file "$f" 2>/dev/null | grep -q "Mach-O" && echo "$f"
+    done
+}
+
+FIRMATI=0
+FALLITI=0
+NONFIRMATI=""
+while IFS= read -r eseguibile; do
+    if codesign --force --sign - --timestamp=none "$eseguibile" 2>/dev/null; then
+        FIRMATI=$((FIRMATI + 1))
+    else
+        FALLITI=$((FALLITI + 1))
+        NONFIRMATI="$NONFIRMATI  ${eseguibile#$PAYLOAD/}
+"
+    fi
+done < <(mach_o_files)
 echo "  $FIRMATI binaries signed ad-hoc"
+
+# ⛔ Una firma fallita fermava il conteggio e non la build.
+#
+# Il file usciva nel pacchetto senza firma, e sul Mac di chi scarica
+# l'attributo di quarantena piu' l'assenza di firma vuol dire SIGKILL: il
+# componente muore all'avvio e nel Terminale si legge soltanto "Killed: 9".
+if [ "$FALLITI" -ne 0 ]; then
+    echo "!! $FALLITI binaries could not be signed:" >&2
+    printf '%s' "$NONFIRMATI" >&2
+    echo "   Unsigned binaries are killed by Gatekeeper on any Mac that" >&2
+    echo "   downloads the package." >&2
+    exit 1
+fi
 
 # La prova che conta: un binario preso a caso deve risultare firmato.
 #
@@ -958,11 +1277,26 @@ echo "  $FIRMATI binaries signed ad-hoc"
 # firma c'era, e diceva "still unsigned" su binari firmati benissimo.
 #
 # L'output si raccoglie prima e si guarda dopo: nessuna pipe da chiudere.
-FIRMA="$(codesign -dv "$PAYLOAD/bin/mysql" 2>&1 || true)"
-case "$FIRMA" in
-    *adhoc*) echo "  verified on bin/mysql" ;;
-    *)       echo "  ⚠ bin/mysql is still unsigned" >&2; exit 1 ;;
-esac
+# ⚠️ Si verificano tutti, non uno.
+#
+# Prima la prova era su bin/mysql soltanto: bastava a dire che codesign
+# funzionava su questa macchina, non che il pacchetto fosse a posto. Un
+# qualsiasi altro binario rimasto indietro sarebbe uscito lo stesso.
+NONVERIFICATI=0
+while IFS= read -r binario; do
+    FIRMA="$(codesign -dv "$binario" 2>&1 || true)"
+    case "$FIRMA" in
+        *adhoc*) ;;
+        *) NONVERIFICATI=$((NONVERIFICATI + 1))
+           echo "  ⚠ unsigned: ${binario#$PAYLOAD/}" >&2 ;;
+    esac
+done < <(mach_o_files)
+
+if [ "$NONVERIFICATI" -ne 0 ]; then
+    echo "!! $NONVERIFICATI binaries are still unsigned" >&2
+    exit 1
+fi
+echo "  all $FIRMATI verified"
 
 step "Adding the VXOST app"
 cp -R "$HERE/build/VXOST.app" "$STAGE/" 2>/dev/null || {
@@ -993,10 +1327,26 @@ fi
 # perche' sanno leggere le chiavi, e le pagine di manuale di OpenSSL perche'
 # le spiegano. Parlare di una chiave non e' esserlo. Una chiave vera e' un
 # file piccolo che *comincia* con quel marcatore.
+#
+# ⚠️ Due criteri, perche' uno solo non basta.
+#
+#   1. il marcatore PEM all'inizio di una riga, nei primi 4 KB. Erano 200
+#      byte, e non bastano: una chiave esportata da openssl puo' portarsi
+#      davanti Bag Attributes o un blocco di intestazione, e il marcatore
+#      finisce piu' in basso. L'ancora a inizio riga tiene fuori i manuali,
+#      dove il marcatore compare indentato dentro un esempio.
+#   2. l'estensione. Una chiave in formato DER e' binaria e non contiene
+#      nessun marcatore: il primo criterio non la vedrebbe mai, per quanto si
+#      allarghi la finestra. Il nome e' l'unica cosa che resta.
+#
+# Nessuno dei due dimostra l'assenza di una chiave: dimostrano l'assenza
+# delle chiavi che sappiamo riconoscere. E' un controllo, non una garanzia.
 step "Checking no private key got in"
 LEAKED="$(find "$STAGE" -type f -size -100k 2>/dev/null | while IFS= read -r f; do
-    head -c 200 "$f" 2>/dev/null | grep -q -- "-----BEGIN .*PRIVATE KEY-----" && echo "$f"
+    head -c 4096 "$f" 2>/dev/null | grep -qE '^-----BEGIN [A-Z ]*PRIVATE KEY-----' && echo "$f"
 done || true)"
+LEAKED="$LEAKED$(find "$STAGE" -type f \( -name "*.key" -o -name "*.pem" \
+    -o -name "*.p12" -o -name "*.pfx" -o -name "*.der" \) 2>/dev/null || true)"
 if [ -n "$LEAKED" ]; then
     echo "$LEAKED" | sed 's|^|  |'
     echo
@@ -1029,6 +1379,54 @@ else
     tail -5 /tmp/configtest.log >&2
     exit 1
 fi
+
+# Lo stesso controllo, con le opzioni con cui Apache parte davvero.
+#
+# ⚠️ Quello qui sopra valida una configurazione che nessuno usera' mai:
+# startApache() aggiunge -DSSL (etc/vxost/startssl c'e' sempre, viene da
+# upstream) e -DPHP, e i blocchi <IfDefine SSL> restano fuori dal controllo
+# senza quelle opzioni. Un errore li' dentro passava la build e si presentava
+# al primo avvio sul Mac di chi installa.
+#
+# Il certificato non puo' stare nel pacchetto — sarebbe lo stesso per tutti,
+# con la chiave privata leggibile — quindi se ne genera uno qui, si controlla
+# la configurazione, e lo si cancella subito. Il trap serve al caso in cui il
+# controllo si interrompa: senza, un'uscita a meta' lascerebbe la chiave
+# dentro il payload e finirebbe nel DMG.
+if [ -e "$PAYLOAD/etc/ssl.key" ] || [ -e "$PAYLOAD/etc/ssl.crt" ]; then
+    echo "!! the payload already carries a certificate: it would be the same for" >&2
+    echo "   every install, with the private key in the clear. Stopping here." >&2
+    exit 1
+fi
+
+_ssl_test_cleanup() {
+    rm -rf "$PAYLOAD/etc/ssl.crt" "$PAYLOAD/etc/ssl.key"
+}
+trap _ssl_test_cleanup EXIT INT TERM
+
+if ! "$PAYLOAD/bin/vxost-ssl-init"; then
+    echo "!! could not generate a test certificate: cannot validate the SSL config" >&2
+    exit 1
+fi
+
+if "$PAYLOAD/bin/httpd" -t -d "$PAYLOAD" -f "$PAYLOAD/etc/httpd.conf" \
+        -DSSL -DPHP > /tmp/configtest-ssl.log 2>&1; then
+    echo "  Apache configuration valid with -DSSL -DPHP"
+else
+    echo "  Apache configuration is broken with -DSSL -DPHP:" >&2
+    tail -5 /tmp/configtest-ssl.log >&2
+    exit 1
+fi
+
+_ssl_test_cleanup
+trap - EXIT INT TERM
+
+# La verifica che conta: il certificato di prova non deve sopravvivere.
+if [ -e "$PAYLOAD/etc/ssl.key" ] || [ -e "$PAYLOAD/etc/ssl.crt" ]; then
+    echo "!! the test certificate is still in the payload: it must not ship" >&2
+    exit 1
+fi
+echo "  test certificate removed"
 
 # What follows are the three things that only break on a machine that has never
 # had XAMPP on it. None of them can be caught by reading the config: they are
