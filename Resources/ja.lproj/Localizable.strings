@@ -117,7 +117,7 @@
 /* Ambito: la configurazione non concorda con se stessa */
 "exposure.mixed" = "手動で設定済み";
 
-/* Ambito: anche gli altri dispositivi in rete */
+/* Ambito: anche gli altri dispositivi in rete. Solo Apache: MariaDB e FTP restano su loopback, e l'etichetta lo dice (rilievo S dell'11/09/2026) */
 "exposure.network" = "この Mac とローカルネットワーク（Web サーバーのみ）";
 
 /* Esito: era già così */
@@ -645,6 +645,9 @@
 
 /* Errore: progetto creato ma database no. %@ è il motivo */
 "wizard.failed.database" = "プロジェクトはできましたが、データベースは作成されませんでした: %@";
+
+/* Errore: sintassi valida ma Apache non e' ripartito, ripristinato */
+"wizard.failed.restart" = "設定は有効でしたが、Apache が再起動しませんでした。ポートがすでに使われている可能性があります。すべて元に戻されました。";
 
 /* Casella di spunta: creare anche il database */
 "wizard.field.db" = "データベースを作成";

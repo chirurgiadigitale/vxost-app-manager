@@ -117,7 +117,7 @@
 /* Ambito: la configurazione non concorda con se stessa */
 "exposure.mixed" = "Ustawione ręcznie";
 
-/* Ambito: anche gli altri dispositivi in rete */
+/* Ambito: anche gli altri dispositivi in rete. Solo Apache: MariaDB e FTP restano su loopback, e l'etichetta lo dice (rilievo S dell'11/09/2026) */
 "exposure.network" = "Ten Mac i sieć lokalna (tylko serwer WWW)";
 
 /* Esito: era già così */
@@ -645,6 +645,9 @@
 
 /* Errore: progetto creato ma database no. %@ è il motivo */
 "wizard.failed.database" = "Projekt jest gotowy, ale baza danych nie została utworzona: %@";
+
+/* Errore: sintassi valida ma Apache non e' ripartito, ripristinato */
+"wizard.failed.restart" = "Konfiguracja była poprawna, ale Apache nie uruchomił się ponownie. Port może być już zajęty. Wszystko przywrócono.";
 
 /* Casella di spunta: creare anche il database */
 "wizard.field.db" = "Utwórz bazę danych";

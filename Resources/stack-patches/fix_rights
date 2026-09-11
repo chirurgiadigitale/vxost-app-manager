@@ -40,8 +40,19 @@ mysql_user="$(sed -nE 's/^[[:space:]]*user[[:space:]]*=[[:space:]]*([^[:space:]#
 [ -n "$mysql_user" ] || mysql_user="mysql"
 id "$mysql_user" >/dev/null 2>&1 || mysql_user="_mysql"
 
-run chown -R root:admin "$BASE"
-run chmod -R ug+rwX,a+X "$BASE"
+# ⚠️ Nothing recursive above vxostfiles. BASE is its parent, and a parent is
+# whatever folder the user dropped vxostfiles into: with -R, everything else
+# in there (other apps, other folders) would change owner and mode. The
+# parent gets the one non-recursive touch it needs, and only when it is the
+# VXOST folder the package creates; a stranger parent is left alone.
+if [ "$(basename "$BASE")" = "VXOST" ]; then
+    run chown root:admin "$BASE"
+    run chmod ug+rwX,a+X "$BASE"
+else
+    echo "fix_rights: $BASE is not the VXOST folder, leaving the parent alone" >&2
+fi
+run chown -R root:admin "$BASEX"
+run chmod -R ug+rwX,a+X "$BASEX"
 for d in bin lib share sbin; do
     [ -d "$BASEX/$d" ] && run chmod -R og-w "$BASEX/$d"
 done

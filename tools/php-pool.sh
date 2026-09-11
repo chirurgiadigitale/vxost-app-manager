@@ -87,10 +87,26 @@ start)
     CONF="$(conf_for "$VERSION")"
     PIDF="$(pid_for "$VERSION")"
 
-    if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null; then
-        ok "already running on $SOCK"
-        exit 0
+    # "Already running" wants three things, not one: a live pid, a process
+    # that is THIS pool (php-fpm with our configuration file in its arguments,
+    # not any php-fpm and not whatever inherited the number), and the socket
+    # on disk. A stale pid file with a live stranger behind it used to end
+    # here with a success and no socket.
+    pid="$(cat "$PIDF" 2>/dev/null || true)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        case "$(ps -p "$pid" -o args= 2>/dev/null)" in
+            *php-fpm*"$CONF"*)
+                if [ -S "$SOCK" ]; then
+                    ok "already running on $SOCK"
+                    exit 0
+                fi
+                fail "php-fpm $VERSION (pid $pid) is running but $SOCK is missing: restarting it"
+                kill -QUIT "$pid" 2>/dev/null; sleep 1 ;;
+            *)
+                fail "pid $pid in $(basename "$PIDF") is not this pool: stale file, removed" ;;
+        esac
     fi
+    rm -f "$PIDF"
 
     say "Writing the pool configuration"
     # ⚠️ Niente listen.owner e listen.group.
@@ -199,10 +215,12 @@ stop)
             # Il pid deve essere un php-fpm: un file pid vecchio puo' puntare
             # a qualunque processo abbia ereditato quel numero, e a quello
             # non si manda niente.
-            case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
-                *php-fpm*) ;;
+            # This pool, not any php-fpm: the master keeps its configuration
+            # file in its arguments, and that file is ours.
+            case "$(ps -p "$pid" -o args= 2>/dev/null)" in
+                *php-fpm*"$RUNTIME/vxost-php$v.conf"*) ;;
                 *)
-                    fail "pid $pid in $(basename "$PIDF") is not php-fpm: stale file, removed"
+                    fail "pid $pid in $(basename "$PIDF") is not this pool: stale file, removed"
                     rm -f "$PIDF" "$RUNTIME/vxost-php$v.sock" "$RUNTIME/vxost-php$v.conf"
                     continue ;;
             esac

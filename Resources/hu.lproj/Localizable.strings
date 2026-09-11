@@ -117,7 +117,7 @@
 /* Ambito: la configurazione non concorda con se stessa */
 "exposure.mixed" = "Kézzel beállítva";
 
-/* Ambito: anche gli altri dispositivi in rete */
+/* Ambito: anche gli altri dispositivi in rete. Solo Apache: MariaDB e FTP restano su loopback, e l'etichetta lo dice (rilievo S dell'11/09/2026) */
 "exposure.network" = "Ez a Mac és a helyi hálózat (csak a webkiszolgáló)";
 
 /* Esito: era già così */
@@ -645,6 +645,9 @@
 
 /* Errore: progetto creato ma database no. %@ è il motivo */
 "wizard.failed.database" = "A projekt kész, az adatbázis viszont nem jött létre: %@";
+
+/* Errore: sintassi valida ma Apache non e' ripartito, ripristinato */
+"wizard.failed.restart" = "A beállítás érvényes volt, de az Apache nem indult újra. Lehet, hogy a port már foglalt. Minden visszaállt az eredeti állapotába.";
 
 /* Casella di spunta: creare anche il database */
 "wizard.field.db" = "Adatbázis létrehozása";

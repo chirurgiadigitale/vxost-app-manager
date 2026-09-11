@@ -117,7 +117,7 @@
 /* Ambito: la configurazione non concorda con se stessa */
 "exposure.mixed" = "Elle ayarlanmış";
 
-/* Ambito: anche gli altri dispositivi in rete */
+/* Ambito: anche gli altri dispositivi in rete. Solo Apache: MariaDB e FTP restano su loopback, e l'etichetta lo dice (rilievo S dell'11/09/2026) */
 "exposure.network" = "Bu Mac ve yerel ağ (yalnızca web sunucusu)";
 
 /* Esito: era già così */
@@ -645,6 +645,9 @@
 
 /* Errore: progetto creato ma database no. %@ è il motivo */
 "wizard.failed.database" = "Proje hazır, ancak veritabanı oluşturulmadı: %@";
+
+/* Errore: sintassi valida ma Apache non e' ripartito, ripristinato */
+"wizard.failed.restart" = "Yapılandırma geçerliydi, ancak Apache yeniden başlamadı. Bağlantı noktası kullanımda olabilir. Her şey eski hâline getirildi.";
 
 /* Casella di spunta: creare anche il database */
 "wizard.field.db" = "Veritabanı oluştur";

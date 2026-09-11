@@ -869,6 +869,60 @@ text = text.replace(
 #    programma), segnale mandato, arresto verificato aspettando che il
 #    processo sparisca. Il pid vale solo se il suo eseguibile sta sotto
 #    $VXOST_ROOT: un pid riciclato da /usr/sbin/httpd non e' nostro.
+# I due aiutanti che le funzioni di arresto usano. Inseriti una volta sola,
+# prima di startProFTPD, che e' la prima funzione di servizio del file.
+#
+# ⚠️ `case "$cmd" in "$VXOST_ROOT"/*httpd)` accettava anche
+# $VXOST_ROOT/bin/nothttpd: l'asterisco copre le barre e qualunque prefisso.
+# Il nome si confronta per basename esatto, e il percorso deve stare sotto la
+# nostra radice. Sono due condizioni, non un motivo solo.
+AIUTANTI = '''
+# --- aggiunti da VXOST: identificare i propri processi ---------------------
+
+# Vero se $1 e' un processo vivo il cui eseguibile e' $VXOST_ROOT/.../$2.
+function vxostProcessIsOurs() {
+\tvxpid="$1"
+\tvxname="$2"
+\ttest -n "$vxpid" || return 1
+\tkill -0 "$vxpid" 2>/dev/null || return 1
+\tvxcmd=$(ps -p "$vxpid" -o comm= 2>/dev/null)
+\ttest -n "$vxcmd" || return 1
+\t# Basename esatto: "nothttpd" non e' "httpd".
+\ttest "${vxcmd##*/}" = "$vxname" || return 1
+\tcase "$vxcmd" in
+\t\t"$VXOST_ROOT"/*) return 0 ;;
+\tesac
+\treturn 1
+}
+
+# I pid dei nostri processi di nome $1, senza passare dal file pid. Esce 1 se
+# non si riesce nemmeno a elencare i processi: non sapere e' diverso da sapere
+# che non ce ne sono.
+function vxostOurPids() {
+\tvxname="$1"
+\tcommand -v pgrep > /dev/null 2>&1 || return 1
+\tfor vxp in $(pgrep -f "$VXOST_ROOT" 2>/dev/null)
+\tdo
+\t\tif vxostProcessIsOurs "$vxp" "$vxname"
+\t\tthen
+\t\t\techo "$vxp"
+\t\tfi
+\tdone
+\treturn 0
+}
+
+'''
+
+if "vxostProcessIsOurs" not in text:
+    inizio = text.find("function startProFTPD() {")
+    if inizio < 0:
+        sys.stderr.write("!! vxost: startProFTPD non trovata, non so dove mettere gli aiutanti\n")
+        sys.exit(1)
+    text = text[:inizio] + AIUTANTI + text[inizio:]
+else:
+    print("  vxost: aiutanti gia' presenti")
+
+
 def sostituisci_funzione(text, nome, corpo, marcatore):
     m = re.search(r"function " + nome + r"\(\) \{\n.*?\n\}\n", text, re.S)
     if not m:
@@ -883,31 +937,41 @@ stop_apache = '''function stopApache() {
 	
 	printf "VXOST: $($GETTEXT 'Stopping %s...')" "Apache"
 
-	# Quattro esiti, non due: file pid assente, processo assente, segnale
-	# mandato, arresto verificato. Il file pid da solo non dice niente.
-	pidfile="$VXOST_ROOT/logs/httpd.pid"
+	# Quattro esiti, non due: fermo davvero, segnale mandato e verificato,
+	# fallito, e "non lo so". L'ultimo esisteva e veniva riportato come
+	# successo: senza file pid la funzione diceva "not running." e usciva 0
+	# mentre Apache serviva le pagine. Il file pid manca ogni volta che e'
+	# stato cancellato a mano, che il processo e' partito altrove, o che la
+	# cartella logs e' stata svuotata.
 	pid=""
-	test -f "$pidfile" && pid=$(tr -d ' \\n' < "$pidfile" 2>/dev/null)
-
-	# Il pid deve essere il NOSTRO httpd: un pid riciclato da un altro
-	# programma, o l'Apache di sistema, non si toccano.
-	ours=0
-	if test -n "$pid"
+	pidfile="$VXOST_ROOT/logs/httpd.pid"
+	if test -f "$pidfile"
 	then
-		case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
-			"$VXOST_ROOT"/*httpd) ours=1 ;;
-		esac
+		candidato=$(tr -d ' \\n' < "$pidfile" 2>/dev/null)
+		if vxostProcessIsOurs "$candidato" httpd
+		then
+			pid="$candidato"
+		else
+			# Vecchio, o riciclato da un altro programma: non dice niente,
+			# e non si segnala nessuno sulla sua parola.
+			rm -f "$pidfile"
+		fi
 	fi
 
-	if test $ours -eq 0
+	if test -z "$pid"
 	then
-		if test -n "$pid"
+		if ! elenco=$(vxostOurPids httpd)
 		then
-			rm -f "$pidfile"
-			$GETTEXT -s "not running (stale pid file removed)."
-		else
-			$GETTEXT -s "not running."
+			$GETTEXT -s "unverified."
+			echo "VXOST: " $($GETTEXT 'No usable pid file and no way to list processes: whether Apache is running is unknown.')
+			return 1
 		fi
+		pid=$(echo "$elenco" | head -1)
+	fi
+
+	if test -z "$pid"
+	then
+		$GETTEXT -s "not running."
 		return 0
 	fi
 
@@ -918,7 +982,7 @@ stop_apache = '''function stopApache() {
 	apachedefines="$apachedefines -DPHP"
 
 	# apachectl puo' uscire in errore prima di segnalare: il suo esito si
-	# tiene per il messaggio, l'arresto si verifica sul padre.
+	# tiene per il messaggio, l'arresto si verifica sul processo.
 	$VXOST_ROOT/bin/apachectl -k stop $apachedefines > /dev/null 2>&1
 	ctl=$?
 	kill -0 "$pid" 2>/dev/null && kill -TERM "$pid" 2>/dev/null
@@ -946,27 +1010,33 @@ stop_proftpd = '''function stopProFTPD() {
 	
 	printf "VXOST: $($GETTEXT 'Stopping %s...')" "ProFTPD"
 
-	pidfile="$VXOST_ROOT/var/proftpd.pid"
 	pid=""
-	test -f "$pidfile" && pid=$(tr -d ' \\n' < "$pidfile" 2>/dev/null)
-
-	ours=0
-	if test -n "$pid"
+	pidfile="$VXOST_ROOT/var/proftpd.pid"
+	if test -f "$pidfile"
 	then
-		case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
-			"$VXOST_ROOT"/*proftpd) ours=1 ;;
-		esac
+		candidato=$(tr -d ' \\n' < "$pidfile" 2>/dev/null)
+		if vxostProcessIsOurs "$candidato" proftpd
+		then
+			pid="$candidato"
+		else
+			rm -f "$pidfile"
+		fi
 	fi
 
-	if test $ours -eq 0
+	if test -z "$pid"
 	then
-		if test -n "$pid"
+		if ! elenco=$(vxostOurPids proftpd)
 		then
-			rm -f "$pidfile"
-			$GETTEXT -s "not running (stale pid file removed)."
-		else
-			$GETTEXT -s "not running."
+			$GETTEXT -s "unverified."
+			echo "VXOST: " $($GETTEXT 'No usable pid file and no way to list processes: whether ProFTPD is running is unknown.')
+			return 1
 		fi
+		pid=$(echo "$elenco" | head -1)
+	fi
+
+	if test -z "$pid"
+	then
+		$GETTEXT -s "not running."
 		return 0
 	fi
 
@@ -996,8 +1066,9 @@ stop_proftpd = '''function stopProFTPD() {
 	return 0
 }
 '''
-text = sostituisci_funzione(text, "stopApache", stop_apache, "stale pid file removed")
-text = sostituisci_funzione(text, "stopProFTPD", stop_proftpd, "stale pid file removed")
+
+text = sostituisci_funzione(text, "stopApache", stop_apache, "vxostProcessIsOurs")
+text = sostituisci_funzione(text, "stopProFTPD", stop_proftpd, "vxostProcessIsOurs")
 
 if text == prima:
     # Niente da cambiare perche' era gia' tutto a posto: si esce bene. Era un
@@ -1010,7 +1081,7 @@ PYEOF
     # ⚠️ Nessun '$' nelle stringhe cercate: fra le virgolette la shell lo
     # espanderebbe, il grep cercherebbe una riga che non esiste e il controllo
     # direbbe di no su una patch entrata benissimo. Verificato: e' successo.
-    for _atteso in "testport 3306" "atteso -lt 60" "MySQL is still listening" "proftpd -c" "vxost-ssl-init" "stale pid file removed" "still running after 20 seconds"; do
+    for _atteso in "testport 3306" "atteso -lt 60" "MySQL is still listening" "proftpd -c" "vxost-ssl-init" "vxostProcessIsOurs" "vxostOurPids" "is unknown" "still running after 20 seconds"; do
         has_active "$_atteso" "$PAYLOAD/vxost" || {
             echo "!! vxost was not patched: '$_atteso' is missing" >&2
             exit 1
@@ -1799,7 +1870,24 @@ if [ -n "$_outside" ]; then
     printf '%s\n' "$_outside" | sed 's/^/     /' >&2
     exit 1
 fi
-echo "  $(printf '%s\n' "$_read" | wc -l | xargs) configuration files read, all inside the package"
+echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files read, all inside the package"
+
+# ⚠️ DUMP_INCLUDES elenca gli Include, e nient'altro: moduli, DocumentRoot,
+# certificati e log non compaiono. Una configurazione che carica un modulo da
+# fuori lo supera senza una parola, provato. E i binari portano scritto dentro
+# il percorso assoluto delle librerie, quindi avviarli dallo specchio carica
+# comunque quelle dell'installazione vera: "ha funzionato in prova" non
+# dimostra che il pacchetto sia completo. Le due cose che si possono davvero
+# dimostrare le verifica questo:
+#
+#   - ogni direttiva che nomina un percorso punta dentro il pacchetto o a una
+#     cartella di sistema;
+#   - ogni dipendenza non di sistema di ogni Mach-O sta dentro il pacchetto,
+#     quindi dopo l'installazione quel percorso esistera'.
+if ! python3 "$HERE/tools/verify-isolation.py" "$MIRROR" "$PAYLOAD" "$NUOVA_RADICE"; then
+    echo "!! the package leans on something outside itself" >&2
+    exit 1
+fi
 
 _mirror_cleanup
 trap - EXIT INT TERM
@@ -1863,7 +1951,26 @@ echo "  projects index: index.php"
 # Il timbro: build-stack-dmg.sh confeziona solo uno staging che e' arrivato
 # fin qui, e che nessuno ha toccato dopo. Sta nella radice dello staging,
 # fuori da vxostfiles/ e dall'app, quindi non finisce nel disco.
-date -u +%Y-%m-%dT%H:%M:%SZ > "$STAGE/.verified"
+#
+# ⚠️ Non una data. Il primo timbro era l'ora, e il confezionamento si fidava
+# di `find -newer`: basta cambiare un file e rimettergli la data di prima con
+# `touch -t` perche' non trovi niente. Qui si scrive l'impronta del
+# CONTENUTO, file per file, piu' la versione: un byte cambiato, un file
+# aggiunto o tolto, un permesso diverso, un link che punta altrove o una
+# release diversa e il disco non si costruisce. Costa un minuto di lettura,
+# che su un rilascio e' niente.
+step "Stamping the staging with what it contains"
+if ! python3 "$HERE/tools/stage-manifest.py" "$STAGE" > "$STAGE/.verified.manifest"; then
+    echo "!! could not read the staging in full: it cannot be stamped" >&2
+    exit 1
+fi
+{
+    echo "version=$VERSION"
+    echo "manifest=$(shasum -a 256 "$STAGE/.verified.manifest" | cut -d" " -f1)"
+    echo "files=$(wc -l < "$STAGE/.verified.manifest" | xargs)"
+    echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} > "$STAGE/.verified"
+echo "  $(wc -l < "$STAGE/.verified.manifest" | xargs) entries, version $VERSION"
 
 step "Done"
 du -sh "$STAGE" | awk '{print "  staged:", $1}'

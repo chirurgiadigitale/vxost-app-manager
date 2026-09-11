@@ -61,82 +61,181 @@ fi
 
 # 2. The real hardening: listen on loopback only.
 #
-# ⚠️ The value and the section count, not the presence of a line. The first
-# version of this script called any bind-address "safe", so bind-address=0.0.0.0
-# under [mysqld] printed "not reachable from the network. Good." while the
-# database answered to the whole wifi; and a correct line under [client] is
-# a client setting, not a server one.
+# ⚠️ Two things get confused here, and the script used to confuse both.
+#
+# THE GROUP. MariaDB does not read [mysqld] alone: [server], [mariadb],
+# [mariadbd], [mysqld-X.Y], [mariadb-X.Y] and [client-server] are read too,
+# and the LAST value wins. This file passed the check while the database
+# answered the whole network:
+#
+#     [mysqld]
+#     bind-address=127.0.0.1
+#     [mariadb]
+#     bind-address=0.0.0.0
+#
+# THE DAEMON. A correct file is not a protected server: MariaDB keeps the
+# listener it opened at startup until it restarts. The old early return said
+# "not reachable from the network. Good." without ever looking at a socket.
+# File and daemon are two answers, and both get reported.
+
+# The value of bind-address in the last server group that sets it. Empty if
+# no server group sets it at all.
 bind_value=$(awk '
-	/^[[:space:]]*\[/ { section=$0; gsub(/[[:space:]]/, "", section) }
-	section == "[mysqld]" && /^[[:space:]]*bind-address[[:space:]]*=/ {
-		v=$0; sub(/^[^=]*=[[:space:]]*/, "", v); sub(/[[:space:]#].*$/, "", v); value=v
+	/^[[:space:]]*\[/ {
+		g = $0
+		sub(/^[[:space:]]*\[/, "", g)
+		sub(/\].*$/, "", g)
+		gsub(/[[:space:]]/, "", g)
+		g = tolower(g)
+		next
+	}
+	/^[[:space:]]*bind-address[[:space:]]*=/ {
+		if (g == "mysqld" || g == "server" || g == "mariadb" || g == "mariadbd" \
+		    || g == "client-server" || g ~ /^mysqld-[0-9]/ || g ~ /^mariadb-[0-9]/) {
+			v = $0
+			sub(/^[^=]*=[[:space:]]*/, "", v)
+			sub(/[[:space:]#].*$/, "", v)
+			value = v
+		}
 	}
 	END { print value }' "$f")
 
-if test "$bind_value" = "127.0.0.1"
-then
-	$check && exit 0
-	echo "VXOST: " $($GETTEXT 'MySQL is not reachable from the network. Good.')
-	exit 0
-fi
+# !include porta altre opzioni da un altro file: da qui non si vede cosa
+# dicono, e dire "a posto" guardando solo questo sarebbe una risposta data
+# senza aver guardato.
+altrove=$(grep -c '^[[:space:]]*!include' "$f")
 
-$check && exit 1
+# Le due forme di netstat, che non sono la stessa su tutti i sistemi:
+# 127.0.0.1.3306 su macOS, 127.0.0.1:3306 altrove.
+mysql_listen_lines() {
+	netstat -an 2>/dev/null | egrep "[.:]3306[[:space:]].*LISTEN"
+}
 
-if test -z "$bind_value"
-then
-	echo "VXOST: ${bon}" $($GETTEXT 'MySQL listens on every network interface.') "${boff}"
-else
-	echo "VXOST: ${bon}" $($GETTEXT "MySQL has bind-address=$bind_value: reachable from the network.") "${boff}"
-fi
+# Vero se il demone ascolta su qualcosa che non e' il loopback.
+mysql_listens_wide() {
+	mysql_listen_lines | egrep -v "127\.0\.0\.1[.:]3306|\[?::1\]?[.:]3306" | grep -q .
+}
 
-if asky $($GETTEXT "Restrict it to this computer only? Your projects keep working.")
+# Vero se il demone ascolta, da qualche parte.
+mysql_listens() {
+	mysql_listen_lines | grep -q .
+}
+
+file_ok="false"
+test "$bind_value" = "127.0.0.1" && test "$altrove" -eq 0 && file_ok="true"
+
+daemon_ok="unknown"
+if mysql_listens
 then
-	if test -n "$bind_value"
+	if mysql_listens_wide
 	then
-		# A wrong value is rewritten in place, whatever it was.
-		perl -pi -e 'BEGIN{$s=""} if (/^\s*\[/) { ($s=$_) =~ s/\s//g } if ($s eq "[mysqld]" && /^(\s*)bind-address\s*=/) { $_ = "$1bind-address=127.0.0.1\n" }' "$f"
+		daemon_ok="false"
 	else
-		# Written right after [mysqld], where the section it belongs to starts.
-		perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
-			$_ .= "\n# Added by vxost security: reachable from this computer only.\n";
-			$_ .= "# Do not replace this with skip-networking, which would cut off\n";
-			$_ .= "# every project connecting to 127.0.0.1:3306.\n";
-			$_ .= "bind-address=127.0.0.1\n";
-			$done = 1;
-		}' "$f"
+		daemon_ok="true"
+	fi
+else
+	daemon_ok="stopped"
+fi
+
+if test "$check" = "true"
+then
+	# In modalita' check si esce 0 solo se non c'e' niente da fare: il file
+	# giusto E il demone che non ascolta oltre il loopback.
+	if test "$file_ok" = "true" && test "$daemon_ok" != "false"
+	then
+		exit 0
+	fi
+	exit 1
+fi
+
+if test "$file_ok" = "true"
+then
+	echo "VXOST: " $($GETTEXT 'my.cnf says bind-address=127.0.0.1.')
+else
+	if test "$altrove" -gt 0
+	then
+		echo "VXOST: ${bon}" $($GETTEXT 'my.cnf pulls in other files with !include: what bind-address ends up being cannot be read from here.') "${boff}"
+	elif test -z "$bind_value"
+	then
+		echo "VXOST: ${bon}" $($GETTEXT 'No server group in my.cnf sets bind-address: MySQL listens on every network interface.') "${boff}"
+	else
+		echo "VXOST: ${bon}" $($GETTEXT 'The last server group in my.cnf sets bind-address to something other than 127.0.0.1: reachable from the network.') "${boff}"
+		echo "VXOST: " "bind-address=$bind_value"
 	fi
 
-	# The file, checked the same way it was read: a perl that found no
-	# [mysqld] section writes nothing and says nothing.
-	written=$(awk '
-		/^[[:space:]]*\[/ { section=$0; gsub(/[[:space:]]/, "", section) }
-		section == "[mysqld]" && /^[[:space:]]*bind-address[[:space:]]*=[[:space:]]*127\.0\.0\.1([[:space:]]|$)/ { found=1 }
-		END { print found+0 }' "$f")
-	if test "$written" -ne 1
+	if asky $($GETTEXT "Restrict it to this computer only? Your projects keep working.")
 	then
-		echo "VXOST: " $($GETTEXT 'Could not write bind-address under [mysqld]: is there a [mysqld] section in my.cnf?')
-		exit 1
-	fi
-	echo "VXOST: " $($GETTEXT 'my.cnf now says bind-address=127.0.0.1.')
-
-	# ⚠️ The file is not the daemon. A running MariaDB keeps the old
-	# listener until it restarts, and the restart is verified on the port,
-	# not assumed from the commands.
-	if testrun "$VXOST_ROOT/var/mysql/$(hostname).pid" mysqld || testport 3306
-	then
-		$VXOST_ROOT/vxost stopmysql
-		sleep 2
-		$VXOST_ROOT/vxost startmysql
-		sleep 3
-		if netstat -an | egrep '^tcp[46]? .*127\.0\.0\.1[.:]3306 .*LISTEN' > /dev/null \
-		   && ! netstat -an | egrep '^tcp[46]? .*\*[.:]3306 .*LISTEN' > /dev/null
+		if test -n "$bind_value"
 		then
-			echo "VXOST: " $($GETTEXT 'MySQL now listens on 127.0.0.1 only.')
+			# Un valore sbagliato si riscrive dov'e', qualunque fosse, e
+			# in tutti i gruppi di server che lo impostano: lasciarne uno
+			# indietro vuol dire che vince quello.
+			perl -pi -e 'BEGIN { $g = "" }
+				if (/^\s*\[/) { ($g = $_) =~ s/^\s*\[//; $g =~ s/\].*$//s; $g =~ s/\s//g; $g = lc $g }
+				if (($g eq "mysqld" || $g eq "server" || $g eq "mariadb" || $g eq "mariadbd"
+				     || $g eq "client-server" || $g =~ /^mysqld-[0-9]/ || $g =~ /^mariadb-[0-9]/)
+				    && /^(\s*)bind-address\s*=/) { $_ = "$1bind-address=127.0.0.1\n" }' "$f"
 		else
-			echo "VXOST: " $($GETTEXT 'The file is right but the running MySQL still listens elsewhere: restart it and check with netstat -an | grep 3306.')
+			# Written right after [mysqld], where the section it belongs to starts.
+			perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
+				$_ .= "\n# Added by vxost security: reachable from this computer only.\n";
+				$_ .= "# Do not replace this with skip-networking, which would cut off\n";
+				$_ .= "# every project connecting to 127.0.0.1:3306.\n";
+				$_ .= "bind-address=127.0.0.1\n";
+				$done = 1;
+			}' "$f"
+		fi
+
+		# Il file si rilegge con lo stesso criterio con cui e' stato letto
+		# prima: un perl che non ha trovato nessun [mysqld] non scrive
+		# niente e non lo dice.
+		bind_value=$(awk '
+			/^[[:space:]]*\[/ { g = $0; sub(/^[[:space:]]*\[/, "", g); sub(/\].*$/, "", g); gsub(/[[:space:]]/, "", g); g = tolower(g); next }
+			/^[[:space:]]*bind-address[[:space:]]*=/ {
+				if (g == "mysqld" || g == "server" || g == "mariadb" || g == "mariadbd" \
+				    || g == "client-server" || g ~ /^mysqld-[0-9]/ || g ~ /^mariadb-[0-9]/) {
+					v = $0; sub(/^[^=]*=[[:space:]]*/, "", v); sub(/[[:space:]#].*$/, "", v); value = v
+				}
+			}
+			END { print value }' "$f")
+		if test "$bind_value" != "127.0.0.1"
+		then
+			echo "VXOST: " $($GETTEXT 'Could not write bind-address under a server group: is there a [mysqld] section in my.cnf?')
 			exit 1
 		fi
-	else
-		echo "VXOST: " $($GETTEXT 'MySQL is not running: the setting applies at the next start.')
+		echo "VXOST: " $($GETTEXT 'my.cnf now says bind-address=127.0.0.1.')
+		file_ok="true"
 	fi
+fi
+
+# ⚠️ Il file non e' il demone. Quello in esecuzione tiene il listener che
+# ha aperto all'avvio, e lo cambia solo riavviando: il riavvio si fa, e poi
+# si guarda la porta invece di darlo per fatto.
+if test "$daemon_ok" = "false" && test "$file_ok" = "true"
+then
+	echo "VXOST: " $($GETTEXT 'The running MySQL still listens beyond this computer. Restarting it.')
+	$VXOST_ROOT/vxost stopmysql
+	sleep 2
+	$VXOST_ROOT/vxost startmysql
+	sleep 3
+
+	if mysql_listens_wide
+	then
+		echo "VXOST: ${bon}" $($GETTEXT 'MySQL still listens beyond this computer after the restart.') "${boff}"
+		echo "VXOST: " $($GETTEXT 'Check with: netstat -an | grep 3306')
+		exit 1
+	fi
+	if mysql_listens
+	then
+		echo "VXOST: " $($GETTEXT 'MySQL now listens on 127.0.0.1 only.')
+	else
+		echo "VXOST: " $($GETTEXT 'MySQL did not come back up after the restart: start it from the app.')
+		exit 1
+	fi
+elif test "$daemon_ok" = "true"
+then
+	echo "VXOST: " $($GETTEXT 'The running MySQL listens on 127.0.0.1 only.')
+elif test "$daemon_ok" = "stopped"
+then
+	echo "VXOST: " $($GETTEXT 'MySQL is not running: the setting applies at the next start.')
 fi

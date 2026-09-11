@@ -624,27 +624,58 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // vivo (rilievo K). Un restart e' un SIGHUP: il padre resta lo stesso, e
     // "vivo" era vero anche a restart fallito, con il vecchio processo che
     // continuava a servire la configurazione vecchia. Apache scrive AH00163,
-    // "resuming normal operations", solo quando ha riletto la configurazione
-    // e riaperto le porte, e lo scrive a ogni livello di log: si segna dove
-    // era il log prima, e si cerca quella riga DOPO. E l'esito del comando
-    // non si butta piu' via con "|| true": finisce nel messaggio.
-    [block appendString:@"LOG=\"$R/logs/error_log\"\n"];
-    [block appendString:@"prima=$(wc -l < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
-    [block appendString:@"[ -n \"$prima\" ] || prima=0\n"];
+    // "resuming normal operations", quando ha riletto la configurazione e
+    // riaperto le porte.
+    //
+    // ⚠️ Dove scrive lo dice Apache, non noi: ErrorLog si sposta, e un
+    // percorso indovinato fa dichiarare fallito un riavvio riuscito. Se non
+    // e' un file ordinario (syslog, o un programma dietro una pipe) la riga
+    // non si puo' leggere: in quel caso valgono il pid e la porta, e non si
+    // pretende di aver letto un log che non esiste.
+    [block appendString:@"LOG=$(\"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" -D DUMP_RUN_CFG 2>/dev/null \\\n"];
+    [block appendString:@"      | sed -n 's/^Main ErrorLog: \"\\(.*\\)\"$/\\1/p' | head -1)\n"];
+    [block appendString:@"case \"$LOG\" in\n"];
+    [block appendString:@"    \"\")      LOG=\"$R/logs/error_log\" ;;\n"];
+    [block appendString:@"    syslog*) LOG='' ;;\n"];
+    [block appendString:@"    \"|\"*)    LOG='' ;;\n"];
+    [block appendString:@"    /*)      ;;\n"];
+    [block appendString:@"    *)       LOG=\"$R/$LOG\" ;;\n"];
+    [block appendString:@"esac\n"];
+    [block appendString:@"\n"];
+    // ⚠️ Il segno si prende in byte, non in righe. Con la rotazione il file
+    // riparte da zero e la riga nuova finisce alla riga 1: un "dalla riga 101
+    // in poi" non la vedrebbe mai, e il riavvio riuscito verrebbe annullato.
+    // Se il file si e' accorciato, si rilegge da capo.
+    [block appendString:@"prima=0\n"];
+    [block appendString:@"if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
+    [block appendString:@"    prima=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
+    [block appendString:@"    [ -n \"$prima\" ] || prima=0\n"];
+    [block appendString:@"fi\n"];
+    [block appendString:@"\n"];
+    // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
+    // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
+    // copie divergono alla prima correzione.
+    [block appendString:@"vxost_ripartito() {\n"];
+    [block appendString:@"    _da=\"$1\"\n"];
+    [block appendString:@"    _pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
+    [block appendString:@"    [ -n \"$_pid\" ] && kill -0 \"$_pid\" 2>/dev/null || return 1\n"];
+    [block appendString:@"    [ -n \"$LOG\" ] || return 0\n"];
+    [block appendString:@"    _dopo=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
+    [block appendString:@"    [ -n \"$_dopo\" ] || _dopo=0\n"];
+    [block appendString:@"    [ \"$_dopo\" -lt \"$_da\" ] && _da=0\n"];
+    [block appendString:@"    tail -c +$((_da + 1)) \"$LOG\" 2>/dev/null | grep -q 'resuming normal operations'\n"];
+    [block appendString:@"}\n"];
+    [block appendString:@"\n"];
     [block appendString:@"if pgrep -x httpd >/dev/null 2>&1; then\n"];
     [block appendString:@"    \"$CTL\" restartapache > \"$OUT\" 2>&1; ctl=$?\n"];
     [block appendString:@"else\n"];
     [block appendString:@"    \"$CTL\" startapache > \"$OUT\" 2>&1; ctl=$?\n"];
     [block appendString:@"fi\n"];
     [block appendString:@"\n"];
-    [block appendString:@"# Partito davvero: pid vivo E la riga di log che dice che ha riletto\n"];
-    [block appendString:@"# la configurazione, scritta dopo il punto in cui eravamo.\n"];
     [block appendString:@"avviato=0\n"];
     [block appendString:@"attesa=0\n"];
     [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"    pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"    if [ -n \"$pid\" ] && kill -0 \"$pid\" 2>/dev/null \\\n"];
-    [block appendString:@"       && tail -n +$((prima + 1)) \"$LOG\" 2>/dev/null | grep -q 'resuming normal operations'; then\n"];
+    [block appendString:@"    if vxost_ripartito \"$prima\"; then\n"];
     [block appendString:@"        avviato=1\n"];
     [block appendString:@"        break\n"];
     [block appendString:@"    fi\n"];
@@ -679,8 +710,34 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    # Si torna indietro e si rimette su quello che c'era: il danno\n"];
     [block appendString:@"    # peggiore non e' il progetto mancato, e' Apache giu' per tutti.\n"];
     [block appendString:restore];
+    // ⚠️ E il ritorno indietro si verifica come il riavvio: rimettere i file
+    // com'erano non serve a niente se poi Apache non risale. Quando non
+    // risale, la configurazione su disco e quella caricata non coincidono
+    // piu', e chi legge deve saperlo da subito, non dal primo 503.
+    [block appendString:@"    prima_rb=0\n"];
+    [block appendString:@"    if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
+    [block appendString:@"        prima_rb=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
+    [block appendString:@"        [ -n \"$prima_rb\" ] || prima_rb=0\n"];
+    [block appendString:@"    fi\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
+    [block appendString:@"    tornato=0\n"];
+    [block appendString:@"    attesa=0\n"];
+    [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
+    [block appendString:@"        if vxost_ripartito \"$prima_rb\"; then\n"];
+    [block appendString:@"            tornato=1\n"];
+    [block appendString:@"            break\n"];
+    [block appendString:@"        fi\n"];
+    [block appendString:@"        sleep 1\n"];
+    [block appendString:@"        attesa=$((attesa + 1))\n"];
+    [block appendString:@"    done\n"];
     [block appendString:@"    echo \"control script exit status: $ctl\"\n"];
+    [block appendString:@"    if [ $tornato -eq 1 ]; then\n"];
+    [block appendString:@"        echo \"the previous configuration is back and Apache is serving it\"\n"];
+    [block appendString:@"    else\n"];
+    [block appendString:@"        echo \"WARNING: the files were restored but Apache did not come back up.\"\n"];
+    [block appendString:@"        echo \"What is on disk and what is running no longer match. Start it by hand:\"\n"];
+    [block appendString:@"        echo \"  sudo $CTL startapache\"\n"];
+    [block appendString:@"    fi\n"];
     [block appendString:@"    cat \"$OUT\" 2>/dev/null || true\n"];
     [block appendString:@"    rm -f \"$OUT\"\n"];
     [block appendString:@"    echo VXOST_RESTART_FAILED\n"];

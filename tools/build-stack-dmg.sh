@@ -18,21 +18,43 @@ NAME="VXOST-Stack-$VERSION"
 
 # ⚠️ Esistere non basta (rilievo G). Uno staging c'e' anche quando
 # build-stack.sh e' morto a meta', quando e' di ieri, o quando qualcuno ci ha
-# messo le mani dopo i controlli: in tutti e tre i casi il disco esce
-# uguale, e nessuno se ne accorge finche' non lo installa. build-stack.sh
-# scrive un timbro solo se arriva in fondo a tutte le verifiche; qui si
-# esige il timbro, e che nessun file sia piu' recente di lui.
+# messo le mani dopo i controlli: in tutti e tre i casi il disco esce uguale,
+# e nessuno se ne accorge finche' non lo installa.
+#
+# ⚠️ E nemmeno le date bastano. Il primo controllo era `find -newer` sul
+# timbro, e si aggira senza volerlo: si cambia un file, si rimette la data di
+# prima con `touch -t`, e non trova niente. Qui si confronta il CONTENUTO con
+# il manifesto scritto da build-stack.sh, che elenca impronta, dimensione,
+# permessi e bersagli dei link. Si verifica anche la versione: uno staging
+# della release precedente non diventa il disco di questa.
 STAMP="$STAGE/.verified"
-if [ ! -f "$STAMP" ]; then
+MANIFEST="$STAGE/.verified.manifest"
+if [ ! -f "$STAMP" ] || [ ! -f "$MANIFEST" ]; then
     echo "The staging was never verified (no $STAMP): build-stack.sh did not finish. Run it again." >&2
     exit 1
 fi
-_touched="$(find "$STAGE/vxostfiles" "$STAGE/VXOST.app" -newer "$STAMP" -print -quit 2>/dev/null || true)"
-if [ -n "$_touched" ]; then
-    echo "The staging changed after it was verified (${_touched#$STAGE/}): run build-stack.sh again." >&2
+
+_stamped_version="$(sed -n 's/^version=//p' "$STAMP")"
+if [ "$_stamped_version" != "$VERSION" ]; then
+    echo "The staging is version ${_stamped_version:-unknown}, this disk would say $VERSION: run build-stack.sh again." >&2
     exit 1
 fi
-echo "Staging verified on $(cat "$STAMP"), untouched since"
+
+# Il manifesto stesso puo' essere stato riscritto: la sua impronta sta nel
+# timbro, e si controlla prima di credergli.
+_stamped_manifest="$(sed -n 's/^manifest=//p' "$STAMP")"
+_now_manifest="$(shasum -a 256 "$MANIFEST" | cut -d" " -f1)"
+if [ "$_stamped_manifest" != "$_now_manifest" ]; then
+    echo "The manifest does not match the stamp: one of the two was rewritten. Run build-stack.sh again." >&2
+    exit 1
+fi
+
+# ⚠️ In sola lettura: il confronto non tocca lo staging verificato.
+if ! python3 "$HERE/tools/stage-manifest.py" "$STAGE" --confronta "$MANIFEST"; then
+    echo "The staging changed after it was verified: run build-stack.sh again." >&2
+    exit 1
+fi
+echo "Staging verified on $(sed -n 's/^date=//p' "$STAMP"), $(sed -n 's/^files=//p' "$STAMP") entries unchanged"
 
 mkdir -p "$DIST"
 
