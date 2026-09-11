@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# fix_rights, VXOST: puts the ownership and permissions of the installation
+# back where the daemons expect them. Runs as root, once, at the first start
+# (the vxost script calls it until etc/vxost/rights_fixed exists) and on
+# request with "vxost fix_rights".
+#
+# ⚠️ The original (from XAMPP) ran twenty chown/chmod without looking at any
+# of them, touched htdocs/, webalizer and guestbook files that do not exist
+# in this layout, and ended with a touch: the caller read the exit status of
+# that touch, so a repair that had failed on every line still said "ok." and
+# was never tried again. That is exactly the repair a fresh install needs
+# after the drag in the Finder, which hands everything to whoever dragged.
+#
+# Here every step is checked, a step whose target is missing is skipped, and
+# rights_fixed is written only when nothing failed.
+#
+# Part of VXOST, GPL-licensed like the file it replaces.
+
+# The root is taken from where this script is, not written down: the folder
+# is dragged in the Finder and may not be where the builder thought.
+BASEX="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd -P)" || exit 1
+BASE="$(dirname "$BASEX")"
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "fix_rights: must run as root" >&2
+    exit 1
+fi
+
+errors=0
+run() {
+    if ! "$@" 2>/dev/null; then
+        errors=$((errors + 1))
+        echo "fix_rights: failed: $*" >&2
+    fi
+}
+
+# The MariaDB user is the one my.cnf names; macOS knows it as _mysql too.
+mysql_user="$(sed -nE 's/^[[:space:]]*user[[:space:]]*=[[:space:]]*([^[:space:]#]+).*/\1/p' "$BASEX/etc/my.cnf" 2>/dev/null | head -1)"
+[ -n "$mysql_user" ] || mysql_user="mysql"
+id "$mysql_user" >/dev/null 2>&1 || mysql_user="_mysql"
+
+run chown -R root:admin "$BASE"
+run chmod -R ug+rwX,a+X "$BASE"
+for d in bin lib share sbin; do
+    [ -d "$BASEX/$d" ] && run chmod -R og-w "$BASEX/$d"
+done
+
+# What Apache (daemon) has to write.
+[ -f "$BASEX/phpmyadmin/config.inc.php" ] && run chown daemon:daemon "$BASEX/phpmyadmin/config.inc.php"
+for d in temp logs; do
+    [ -d "$BASEX/$d" ] && run chown -R daemon:daemon "$BASEX/$d"
+done
+
+# What MariaDB has to own: the data directory, and the folders it recreates.
+if [ -d "$BASEX/var/mysql" ]; then
+    run chown -R "$mysql_user:$mysql_user" "$BASEX/var/mysql"
+    run chmod -R u+rwX,g+rwX,o-rwx "$BASEX/var/mysql"
+    run chmod 775 "$BASEX/var/mysql"
+fi
+[ -d "$BASEX/temp/mysql" ] && run chown -R "$mysql_user:$mysql_user" "$BASEX/temp/mysql"
+
+if [ "$errors" -gt 0 ]; then
+    echo "fix_rights: $errors step(s) failed, permissions are NOT fixed" >&2
+    exit 1
+fi
+
+mkdir -p "$BASEX/etc/vxost" && touch "$BASEX/etc/vxost/rights_fixed"

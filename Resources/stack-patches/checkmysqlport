@@ -60,16 +60,42 @@ then
 fi
 
 # 2. The real hardening: listen on loopback only.
-has_bind=$(grep -c '^[[:space:]]*bind-address' "$f")
+#
+# ⚠️ The value and the section count, not the presence of a line. The first
+# version of this script called any bind-address "safe", so bind-address=0.0.0.0
+# under [mysqld] printed "not reachable from the network. Good." while the
+# database answered to the whole wifi; and a correct line under [client] is
+# a client setting, not a server one.
+bind_value=$(awk '
+	/^[[:space:]]*\[/ { section=$0; gsub(/[[:space:]]/, "", section) }
+	section == "[mysqld]" && /^[[:space:]]*bind-address[[:space:]]*=/ {
+		v=$0; sub(/^[^=]*=[[:space:]]*/, "", v); sub(/[[:space:]#].*$/, "", v); value=v
+	}
+	END { print value }' "$f")
 
-if test "$has_bind" -eq 0
+if test "$bind_value" = "127.0.0.1"
 then
-	$check && exit 1
+	$check && exit 0
+	echo "VXOST: " $($GETTEXT 'MySQL is not reachable from the network. Good.')
+	exit 0
+fi
 
+$check && exit 1
+
+if test -z "$bind_value"
+then
 	echo "VXOST: ${bon}" $($GETTEXT 'MySQL listens on every network interface.') "${boff}"
+else
+	echo "VXOST: ${bon}" $($GETTEXT "MySQL has bind-address=$bind_value: reachable from the network.") "${boff}"
+fi
 
-	if asky $($GETTEXT "Restrict it to this computer only? Your projects keep working.")
+if asky $($GETTEXT "Restrict it to this computer only? Your projects keep working.")
+then
+	if test -n "$bind_value"
 	then
+		# A wrong value is rewritten in place, whatever it was.
+		perl -pi -e 'BEGIN{$s=""} if (/^\s*\[/) { ($s=$_) =~ s/\s//g } if ($s eq "[mysqld]" && /^(\s*)bind-address\s*=/) { $_ = "$1bind-address=127.0.0.1\n" }' "$f"
+	else
 		# Written right after [mysqld], where the section it belongs to starts.
 		perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
 			$_ .= "\n# Added by vxost security: reachable from this computer only.\n";
@@ -78,18 +104,39 @@ then
 			$_ .= "bind-address=127.0.0.1\n";
 			$done = 1;
 		}' "$f"
-
-		echo "VXOST: " $($GETTEXT 'Restricted to 127.0.0.1.')
-		if testrun "$VXOST_ROOT/var/mysql/$(hostname).pid" mysqld
-		then
-			$VXOST_ROOT/vxost stopmysql
-			sleep 2
-			$VXOST_ROOT/vxost startmysql
-			sleep 3
-		fi
 	fi
-else
-	$check && exit 0
 
-	echo "VXOST: " $($GETTEXT 'MySQL is not reachable from the network. Good.')
+	# The file, checked the same way it was read: a perl that found no
+	# [mysqld] section writes nothing and says nothing.
+	written=$(awk '
+		/^[[:space:]]*\[/ { section=$0; gsub(/[[:space:]]/, "", section) }
+		section == "[mysqld]" && /^[[:space:]]*bind-address[[:space:]]*=[[:space:]]*127\.0\.0\.1([[:space:]]|$)/ { found=1 }
+		END { print found+0 }' "$f")
+	if test "$written" -ne 1
+	then
+		echo "VXOST: " $($GETTEXT 'Could not write bind-address under [mysqld]: is there a [mysqld] section in my.cnf?')
+		exit 1
+	fi
+	echo "VXOST: " $($GETTEXT 'my.cnf now says bind-address=127.0.0.1.')
+
+	# ⚠️ The file is not the daemon. A running MariaDB keeps the old
+	# listener until it restarts, and the restart is verified on the port,
+	# not assumed from the commands.
+	if testrun "$VXOST_ROOT/var/mysql/$(hostname).pid" mysqld || testport 3306
+	then
+		$VXOST_ROOT/vxost stopmysql
+		sleep 2
+		$VXOST_ROOT/vxost startmysql
+		sleep 3
+		if netstat -an | egrep '^tcp[46]? .*127\.0\.0\.1[.:]3306 .*LISTEN' > /dev/null \
+		   && ! netstat -an | egrep '^tcp[46]? .*\*[.:]3306 .*LISTEN' > /dev/null
+		then
+			echo "VXOST: " $($GETTEXT 'MySQL now listens on 127.0.0.1 only.')
+		else
+			echo "VXOST: " $($GETTEXT 'The file is right but the running MySQL still listens elsewhere: restart it and check with netstat -an | grep 3306.')
+			exit 1
+		fi
+	else
+		echo "VXOST: " $($GETTEXT 'MySQL is not running: the setting applies at the next start.')
+	fi
 fi

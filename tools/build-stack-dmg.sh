@@ -16,11 +16,35 @@ NAME="VXOST-Stack-$VERSION"
 
 [ -d "$STAGE/vxostfiles" ] || { echo "Nothing staged. Run tools/build-stack.sh first." >&2; exit 1; }
 
+# ⚠️ Esistere non basta (rilievo G). Uno staging c'e' anche quando
+# build-stack.sh e' morto a meta', quando e' di ieri, o quando qualcuno ci ha
+# messo le mani dopo i controlli: in tutti e tre i casi il disco esce
+# uguale, e nessuno se ne accorge finche' non lo installa. build-stack.sh
+# scrive un timbro solo se arriva in fondo a tutte le verifiche; qui si
+# esige il timbro, e che nessun file sia piu' recente di lui.
+STAMP="$STAGE/.verified"
+if [ ! -f "$STAMP" ]; then
+    echo "The staging was never verified (no $STAMP): build-stack.sh did not finish. Run it again." >&2
+    exit 1
+fi
+_touched="$(find "$STAGE/vxostfiles" "$STAGE/VXOST.app" -newer "$STAMP" -print -quit 2>/dev/null || true)"
+if [ -n "$_touched" ]; then
+    echo "The staging changed after it was verified (${_touched#$STAGE/}): run build-stack.sh again." >&2
+    exit 1
+fi
+echo "Staging verified on $(cat "$STAMP"), untouched since"
+
 mkdir -p "$DIST"
+
+# The layout folder is built first so that the installer note goes there and
+# not into the staging, which must stay exactly as it was verified.
+LAYOUT="$HERE/build/dmg-layout"
+rm -rf "$LAYOUT"
+mkdir -p "$LAYOUT/VXOST"
 
 # The image carries an installer note next to the payload, because dragging a
 # folder called vxostfiles into Applications is not obvious on its own.
-cat > "$STAGE/READ ME FIRST.txt" <<EOF
+cat > "$LAYOUT/READ ME FIRST.txt" <<EOF
 VXOST Stack $VERSION for macOS
 ==============================
 
@@ -123,15 +147,10 @@ EOF
 # sull'alias, come in qualsiasi altro programma per macOS. Nessun percorso da
 # scrivere, nessuna cartella da creare.
 echo "Laying out the disk image"
-LAYOUT="$HERE/build/dmg-layout"
-rm -rf "$LAYOUT"
-mkdir -p "$LAYOUT/VXOST"
-
 # ditto e non cp: conserva i permessi, i link e i metadati dei bundle, che una
 # copia normale perderebbe insieme alla firma dell'app.
 ditto "$STAGE/vxostfiles" "$LAYOUT/VXOST/vxostfiles"
 ditto "$STAGE/VXOST.app" "$LAYOUT/VXOST.app"
-cp "$STAGE/READ ME FIRST.txt" "$LAYOUT/"
 ln -s /Applications "$LAYOUT/Applications"
 
 echo "Building the disk image (this takes a while)…"

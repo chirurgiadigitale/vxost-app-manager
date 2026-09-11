@@ -233,7 +233,11 @@ step "Creating empty runtime folders"
 # exist reads as "MariaDB never even tried", which sends people rewriting
 # datadir in my.cnf. On a machine with migrated databases that is how you
 # lose them. mysql.server recreates it too, at every start (see below).
-mkdir -p "$PAYLOAD/logs" "$PAYLOAD/var" "$PAYLOAD/temp" "$PAYLOAD/temp/mysql" "$PAYLOAD/backup"
+# ⚠️ var/proftpd: startProFTPD() nello script vxost redirige l'avvio su
+# var/proftpd/start.err PRIMA di qualunque altra cosa. Senza la cartella la
+# shell fallisce la redirezione, proftpd non viene nemmeno lanciato, e il
+# messaggio parla di un file che non si puo' creare invece che di FTP.
+mkdir -p "$PAYLOAD/logs" "$PAYLOAD/var" "$PAYLOAD/var/proftpd" "$PAYLOAD/temp" "$PAYLOAD/temp/mysql" "$PAYLOAD/backup"
 touch "$PAYLOAD/logs/.gitkeep"
 
 # --------------------------------------------------------------- web root ---
@@ -270,22 +274,26 @@ fi
 # The upstream dashboard ships backups of the framework it used to use.
 find "$PAYLOAD/$WEBROOT" \( -name "*.bak.*" -o -name "*.bak" -o -name "*-old.*" \) -delete 2>/dev/null || true
 
+# ⚠️ L'indice dei progetti e' quello DINAMICO della dashboard, non una pagina
+# scritta qui. Prima questo blocco generava un projects/index.html statico con
+# "No projects yet": un utente aggiungeva un sito, e l'indice continuava a
+# dire che non ce n'erano. projects/index.php legge le cartelle a ogni
+# richiesta e mostra lo stato di partenza da solo quando sono zero; la sua
+# .htaccess porta il DirectoryIndex verso browse.php e i filtri sui dump.
+# Le cartelle dei progetti di questa macchina NON si copiano: solo i due file.
 mkdir -p "$PAYLOAD/$WEBROOT/projects"
-cat > "$PAYLOAD/$WEBROOT/projects/index.html" <<'HTML'
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<title>Projects</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>body{font-family:-apple-system,sans-serif;background:#070B16;color:#E9EFFA;
-display:grid;place-items:center;height:100vh;margin:0;text-align:center}
-p{color:#8493AB;max-width:44ch;line-height:1.6}code{color:#FD47FD}</style>
-</head><body><div>
-<h1>No projects yet</h1>
-<p>Put your sites in this folder and they will show up here, and in the
-VXOST app, as soon as you give them a virtual host in
-<code>etc/extra/httpd-vhosts.conf</code>.</p>
-</div></body></html>
-HTML
+for _item in index.php .htaccess; do
+    if [ ! -f "$DASHBOARD_REPO/projects/$_item" ]; then
+        echo "!! $DASHBOARD_REPO/projects/$_item missing: the projects page would be a listing or a 404" >&2
+        exit 1
+    fi
+    cp "$DASHBOARD_REPO/projects/$_item" "$PAYLOAD/$WEBROOT/projects/"
+done
+if [ -f "$PAYLOAD/$WEBROOT/projects/index.html" ]; then
+    echo "!! a static projects/index.html got in: it would hide the dynamic index" >&2
+    exit 1
+fi
+echo "  projects/: dynamic index and .htaccess from the dashboard"
 
 # ------------------------------------------------------------ config reset ---
 
@@ -345,6 +353,13 @@ for line in open(path, encoding="utf-8", errors="replace"):
         port = parts[1].rsplit(":", 1)[-1] if len(parts) > 1 else ""
         if port not in ("80", "443"):
             continue
+        # The package ships closed: loopback, written down, whatever the
+        # build machine had. A bare "Listen 80" listens on every interface,
+        # and a builder who had opened his own install to the wifi would
+        # have shipped that choice to everyone. The app's exposure selector
+        # is what opens it, on the user's say-so.
+        rest = " ".join(parts[2:])
+        line = "Listen 127.0.0.1:" + port + (" " + rest if rest else "") + "\n"
 
     # Includes reaching outside the distribution
     if not commented and stripped.lower().startswith("include") and "/apache2/" in stripped:
@@ -362,6 +377,9 @@ if [ -f "$PAYLOAD/etc/extra/httpd-ssl.conf" ]; then
 import re, sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8", errors="replace").read()
+
+# Same rule as httpd.conf: the 443 listener ships on loopback, explicitly.
+text = re.sub(r"(?m)^([ \t]*)Listen[ \t]+(?:\S+:)?443\b(.*)$", r"\1Listen 127.0.0.1:443\2", text)
 
 # Both folder names are matched. The folder was renamed from progetti to
 # projects while this script already existed, and matching only the old name
@@ -841,6 +859,146 @@ text = text.replace(
     '$VXOST_ROOT/sbin/proftpd -c "$VXOST_ROOT/etc/proftpd.conf" > $VXOST_ROOT/var/proftpd/start.err 2>&1',
     1)
 
+# 5. stopApache() e stopProFTPD() (rilievo M): "not running" dedotto dalla
+#    sola assenza del file pid, e "ok." appena il comando usciva, senza
+#    guardare se il processo c'era ancora. Un file pid manca anche con Apache
+#    su, e c'e' anche con Apache giu' da giorni; e kill che torna 0 vuol dire
+#    "segnale consegnato", non "fermo". Le funzioni nuove distinguono quattro
+#    esiti: file pid assente, processo assente (pid vecchio o riciclato, che
+#    NON si segnala: potrebbe essere l'Apache di sistema o un altro
+#    programma), segnale mandato, arresto verificato aspettando che il
+#    processo sparisca. Il pid vale solo se il suo eseguibile sta sotto
+#    $VXOST_ROOT: un pid riciclato da /usr/sbin/httpd non e' nostro.
+def sostituisci_funzione(text, nome, corpo, marcatore):
+    m = re.search(r"function " + nome + r"\(\) \{\n.*?\n\}\n", text, re.S)
+    if not m:
+        sys.stderr.write("!! vxost: " + nome + " non trovata, non la tocco\n")
+        sys.exit(1)
+    if marcatore in m.group(0):
+        print("  vxost: " + nome + " gia' patchata, lasciata com'e'")
+        return text
+    return text[:m.start()] + corpo + text[m.end():]
+
+stop_apache = '''function stopApache() {
+	
+	printf "VXOST: $($GETTEXT 'Stopping %s...')" "Apache"
+
+	# Quattro esiti, non due: file pid assente, processo assente, segnale
+	# mandato, arresto verificato. Il file pid da solo non dice niente.
+	pidfile="$VXOST_ROOT/logs/httpd.pid"
+	pid=""
+	test -f "$pidfile" && pid=$(tr -d ' \\n' < "$pidfile" 2>/dev/null)
+
+	# Il pid deve essere il NOSTRO httpd: un pid riciclato da un altro
+	# programma, o l'Apache di sistema, non si toccano.
+	ours=0
+	if test -n "$pid"
+	then
+		case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
+			"$VXOST_ROOT"/*httpd) ours=1 ;;
+		esac
+	fi
+
+	if test $ours -eq 0
+	then
+		if test -n "$pid"
+		then
+			rm -f "$pidfile"
+			$GETTEXT -s "not running (stale pid file removed)."
+		else
+			$GETTEXT -s "not running."
+		fi
+		return 0
+	fi
+
+	if test -f $lc/startssl
+	then
+		apachedefines="$apachedefines -DSSL"
+	fi
+	apachedefines="$apachedefines -DPHP"
+
+	# apachectl puo' uscire in errore prima di segnalare: il suo esito si
+	# tiene per il messaggio, l'arresto si verifica sul padre.
+	$VXOST_ROOT/bin/apachectl -k stop $apachedefines > /dev/null 2>&1
+	ctl=$?
+	kill -0 "$pid" 2>/dev/null && kill -TERM "$pid" 2>/dev/null
+
+	atteso=0
+	while test $atteso -lt 20 && kill -0 "$pid" 2>/dev/null
+	do
+		sleep 1
+		atteso=$((atteso + 1))
+	done
+
+	if kill -0 "$pid" 2>/dev/null
+	then
+		$GETTEXT -s "fail."
+		echo "httpd (pid $pid) is still running after 20 seconds (apachectl returned $ctl)."
+		return 1
+	fi
+
+	$GETTEXT -s "ok."
+	return 0
+}
+'''
+
+stop_proftpd = '''function stopProFTPD() {
+	
+	printf "VXOST: $($GETTEXT 'Stopping %s...')" "ProFTPD"
+
+	pidfile="$VXOST_ROOT/var/proftpd.pid"
+	pid=""
+	test -f "$pidfile" && pid=$(tr -d ' \\n' < "$pidfile" 2>/dev/null)
+
+	ours=0
+	if test -n "$pid"
+	then
+		case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
+			"$VXOST_ROOT"/*proftpd) ours=1 ;;
+		esac
+	fi
+
+	if test $ours -eq 0
+	then
+		if test -n "$pid"
+		then
+			rm -f "$pidfile"
+			$GETTEXT -s "not running (stale pid file removed)."
+		else
+			$GETTEXT -s "not running."
+		fi
+		return 0
+	fi
+
+	# kill che torna 0 vuol dire "segnale consegnato", non "fermo".
+	if ! kill -TERM "$pid" 2>/dev/null
+	then
+		$GETTEXT -s "fail."
+		echo "could not signal proftpd (pid $pid)."
+		return 1
+	fi
+
+	atteso=0
+	while test $atteso -lt 15 && kill -0 "$pid" 2>/dev/null
+	do
+		sleep 1
+		atteso=$((atteso + 1))
+	done
+
+	if kill -0 "$pid" 2>/dev/null
+	then
+		$GETTEXT -s "fail."
+		echo "proftpd (pid $pid) is still running after 15 seconds."
+		return 1
+	fi
+
+	$GETTEXT -s "ok."
+	return 0
+}
+'''
+text = sostituisci_funzione(text, "stopApache", stop_apache, "stale pid file removed")
+text = sostituisci_funzione(text, "stopProFTPD", stop_proftpd, "stale pid file removed")
+
 if text == prima:
     # Niente da cambiare perche' era gia' tutto a posto: si esce bene. Era un
     # errore, e bastava ricostruire il pacchetto due volte di fila per vederlo.
@@ -852,7 +1010,7 @@ PYEOF
     # ⚠️ Nessun '$' nelle stringhe cercate: fra le virgolette la shell lo
     # espanderebbe, il grep cercherebbe una riga che non esiste e il controllo
     # direbbe di no su una patch entrata benissimo. Verificato: e' successo.
-    for _atteso in "testport 3306" "atteso -lt 60" "MySQL is still listening" "proftpd -c" "vxost-ssl-init"; do
+    for _atteso in "testport 3306" "atteso -lt 60" "MySQL is still listening" "proftpd -c" "vxost-ssl-init" "stale pid file removed" "still running after 20 seconds"; do
         has_active "$_atteso" "$PAYLOAD/vxost" || {
             echo "!! vxost was not patched: '$_atteso' is missing" >&2
             exit 1
@@ -1435,8 +1593,45 @@ fi
 echo "  all $FIRMATI verified"
 
 step "Adding the VXOST app"
-cp -R "$HERE/build/VXOST.app" "$STAGE/" 2>/dev/null || {
-    echo "  build/VXOST.app missing, run make first" >&2; exit 1; }
+APP_BUNDLE="$HERE/build/VXOST.app"
+[ -d "$APP_BUNDLE" ] || { echo "  build/VXOST.app missing, run make first" >&2; exit 1; }
+
+# ⚠️ Esserci non basta. Il bundle esaminato il 07/09 era universale ma con
+# minos 16.0 su entrambe le slice, per un prodotto che promette macOS 13: su
+# Ventura e Sonoma non si sarebbe aperto. E un bundle di ieri porta la
+# versione di ieri. Prima di copiarlo si controllano versione, architetture,
+# deployment target di ogni slice, firma e data rispetto ai sorgenti.
+_bin="$APP_BUNDLE/Contents/MacOS/VXOST"
+_plist="$APP_BUNDLE/Contents/Info.plist"
+_app_version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$_plist" 2>/dev/null || echo none)"
+_min="$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$HERE/Resources/Info.plist")"
+if [ "$_app_version" != "$VERSION" ]; then
+    echo "!! build/VXOST.app is version $_app_version, the release is $VERSION: run make" >&2
+    exit 1
+fi
+_archs="$(lipo -archs "$_bin" 2>/dev/null || echo none)"
+for _arch in arm64 x86_64; do
+    case " $_archs " in *" $_arch "*) ;; *)
+        echo "!! the app has no $_arch slice ($_archs): every Mac of the other kind is left out" >&2
+        exit 1 ;;
+    esac
+    _minos="$(otool -arch "$_arch" -l "$_bin" 2>/dev/null | awk '/LC_BUILD_VERSION/{f=1} f && /minos/{print $2; exit}')"
+    if [ "${_minos%.0}" != "${_min%.0}" ]; then
+        echo "!! the $_arch slice has minos ${_minos:-none}, Info.plist promises $_min: run make" >&2
+        exit 1
+    fi
+done
+if ! codesign --verify --deep --strict "$APP_BUNDLE" 2>/dev/null; then
+    echo "!! the app signature does not verify: run make" >&2
+    exit 1
+fi
+_newer="$(find "$HERE/src" "$HERE/Resources" -type f -newer "$_bin" -print -quit 2>/dev/null || true)"
+if [ -n "$_newer" ]; then
+    echo "!! ${_newer#$HERE/} is newer than the app binary: this bundle is an older build, run make" >&2
+    exit 1
+fi
+cp -R "$APP_BUNDLE" "$STAGE/"
+echo "  VXOST.app $_app_version, $_archs, minos $_min, signed, newer than every source"
 
 # ----------------------------------------------------------------- verify ---
 
@@ -1478,11 +1673,23 @@ fi
 # Nessuno dei due dimostra l'assenza di una chiave: dimostrano l'assenza
 # delle chiavi che sappiamo riconoscere. E' un controllo, non una garanzia.
 step "Checking no private key got in"
-LEAKED="$(find "$STAGE" -type f -size -100k 2>/dev/null | while IFS= read -r f; do
-    head -c 4096 "$f" 2>/dev/null | grep -qE '^-----BEGIN [A-Z ]*PRIVATE KEY-----' && echo "$f"
-done || true)"
-LEAKED="$LEAKED$(find "$STAGE" -type f \( -name "*.key" -o -name "*.pem" \
-    -o -name "*.p12" -o -name "*.pfx" -o -name "*.der" \) 2>/dev/null || true)"
+# ⚠️ Per nome si rifiutano solo i formati che sono SEMPRE chiavi: .key, .p12,
+# .pfx, .der. Un .pem puo' essere una chiave o un bundle pubblico di CA:
+# phpmyadmin/vendor/composer/ca-bundle/res/cacert.pem e' il secondo, sta nella
+# sorgente (216 KB, quindi fuori dal controllo sul contenuto dei file piccoli),
+# e la vecchia regola lo rifiutava per l'estensione. Un .pem si giudica dal
+# contenuto, tutto il file: "PRIVATE KEY" dentro e' una chiave, altrimenti
+# sono certificati e possono viaggiare. Togliere il bundle o la verifica non
+# era una scelta: composer e la parte HTTP di phpMyAdmin lo usano.
+LEAKED="$( {
+    find "$STAGE" -type f -size -100k -not -name "*.pem" 2>/dev/null | while IFS= read -r f; do
+        head -c 4096 "$f" 2>/dev/null | grep -qE '^-----BEGIN [A-Z ]*PRIVATE KEY-----' && echo "$f"
+    done
+    find "$STAGE" -type f \( -name "*.key" -o -name "*.p12" -o -name "*.pfx" -o -name "*.der" \) 2>/dev/null
+    find "$STAGE" -type f -name "*.pem" 2>/dev/null | while IFS= read -r f; do
+        grep -qE '^-----BEGIN [A-Z ]*PRIVATE KEY-----' "$f" 2>/dev/null && echo "$f"
+    done
+} || true)"
 if [ -n "$LEAKED" ]; then
     echo "$LEAKED" | sed 's|^|  |'
     echo
@@ -1502,67 +1709,105 @@ step "Checking the configuration still works"
 # sicurezza e la fa l'utente nel wizard, non noi al posto suo. Il controllo qui
 # serve a un'altra cosa — che una direttiva Listen sulla 80 ci sia, perche'
 # senza Apache non parte affatto.
-if ! grep -qE '^\s*Listen\s+([0-9.]+:)?80\b' "$PAYLOAD/etc/httpd.conf"; then
-    echo "  no Listen on port 80: Apache would not start" >&2
+# Dall'11/09 la forma e' una sola, e si verifica quella: il reset qui sopra
+# riscrive le due Listen su 127.0.0.1, e se una e' rimasta senza indirizzo il
+# pacchetto uscirebbe aperto alla rete di chiunque lo installa.
+if ! grep -qE '^[[:space:]]*Listen[[:space:]]+127\.0\.0\.1:80([[:space:]]|$)' "$PAYLOAD/etc/httpd.conf"; then
+    echo "!! httpd.conf: no 'Listen 127.0.0.1:80'. Found: $(grep -E '^[[:space:]]*Listen' "$PAYLOAD/etc/httpd.conf" | xargs || echo none)" >&2
     exit 1
 fi
-echo "  listening on port 80: $(grep -oE '^\s*Listen\s+([0-9.]+:)?80\b' "$PAYLOAD/etc/httpd.conf" | head -1 | xargs)"
-
-if "$PAYLOAD/bin/httpd" -t -d "$PAYLOAD" -f "$PAYLOAD/etc/httpd.conf" > /tmp/configtest.log 2>&1; then
-    echo "  Apache configuration valid"
-else
-    echo "  Apache configuration is broken:" >&2
-    tail -5 /tmp/configtest.log >&2
+if [ -f "$PAYLOAD/etc/extra/httpd-ssl.conf" ] \
+   && ! grep -qE '^[[:space:]]*Listen[[:space:]]+127\.0\.0\.1:443([[:space:]]|$)' "$PAYLOAD/etc/extra/httpd-ssl.conf"; then
+    echo "!! httpd-ssl.conf: no 'Listen 127.0.0.1:443'. Found: $(grep -E '^[[:space:]]*Listen' "$PAYLOAD/etc/extra/httpd-ssl.conf" | xargs || echo none)" >&2
     exit 1
 fi
+if grep -qE '^[[:space:]]*Listen[[:space:]]+[0-9]+([[:space:]]|$)' "$PAYLOAD/etc/httpd.conf" "$PAYLOAD/etc/extra/httpd-ssl.conf" 2>/dev/null; then
+    echo "!! a Listen without an address survived: the package would ship open to the network" >&2
+    exit 1
+fi
+echo "  listening on 127.0.0.1:80 and 127.0.0.1:443, closed by default"
 
-# Lo stesso controllo, con le opzioni con cui Apache parte davvero.
+# ⚠️ -d non basta, e il controllo validava un'altra installazione.
 #
-# ⚠️ Quello qui sopra valida una configurazione che nessuno usera' mai:
-# startApache() aggiunge -DSSL (etc/vxost/startssl c'e' sempre, viene da
-# upstream) e -DPHP, e i blocchi <IfDefine SSL> restano fuori dal controllo
-# senza quelle opzioni. Un errore li' dentro passava la build e si presentava
-# al primo avvio sul Mac di chi installa.
+# httpd.conf porta ServerRoot "/Applications/VXOST/vxostfiles" in assoluto, e
+# ServerRoot nel file vince su -d: Include relativi, moduli e i percorsi SSL
+# venivano risolti nell'installazione reale della macchina che costruisce. Il
+# test diceva "valid" della configurazione di casa, non del pacchetto.
+# (httpd.apache.org/docs/2.4/programs/httpd.html)
 #
-# Il certificato non puo' stare nel pacchetto — sarebbe lo stesso per tutti,
-# con la chiave privata leggibile — quindi se ne genera uno qui, si controlla
-# la configurazione, e lo si cancella subito. Il trap serve al caso in cui il
-# controllo si interrompa: senza, un'uscita a meta' lascerebbe la chiave
-# dentro il payload e finirebbe nel DMG.
+# Si costruisce uno SPECCHIO temporaneo: un link a ogni cartella del payload
+# tranne etc/, e una copia di etc/ con la radice riscritta sullo specchio. Il
+# certificato di prova nasce dentro lo specchio, non nel payload: vxost-ssl-init
+# deduce la radice dal proprio percorso, e chiamato dal link la trova li'. Poi
+# httpd -t -D DUMP_INCLUDES elenca i file che ha letto, e devono stare TUTTI
+# nello specchio: e' la dimostrazione, non una speranza.
 if [ -e "$PAYLOAD/etc/ssl.key" ] || [ -e "$PAYLOAD/etc/ssl.crt" ]; then
     echo "!! the payload already carries a certificate: it would be the same for" >&2
     echo "   every install, with the private key in the clear. Stopping here." >&2
     exit 1
 fi
 
-_ssl_test_cleanup() {
-    rm -rf "$PAYLOAD/etc/ssl.crt" "$PAYLOAD/etc/ssl.key"
-}
-trap _ssl_test_cleanup EXIT INT TERM
+MIRROR="$(mktemp -d /tmp/vxost-configtest.XXXXXX)"
+_mirror_cleanup() { rm -rf "$MIRROR"; }
+trap _mirror_cleanup EXIT INT TERM
+for _entry in "$PAYLOAD"/* "$PAYLOAD"/.[!.]*; do
+    [ -e "$_entry" ] || continue
+    _name="$(basename "$_entry")"
+    [ "$_name" = "etc" ] && continue
+    ln -s "$_entry" "$MIRROR/$_name"
+done
+cp -R "$PAYLOAD/etc" "$MIRROR/etc"
+find "$MIRROR/etc" -type f \( -name "*.conf" -o -name "*.ini" -o -name "*.cnf" \) -exec \
+    sed -i '' "s|$NUOVA_RADICE|$MIRROR|g" {} +
 
-if ! "$PAYLOAD/bin/vxost-ssl-init"; then
+# Il certificato di prova: nello specchio, mai nel payload.
+if ! "$MIRROR/bin/vxost-ssl-init"; then
     echo "!! could not generate a test certificate: cannot validate the SSL config" >&2
     exit 1
 fi
-
-if "$PAYLOAD/bin/httpd" -t -d "$PAYLOAD" -f "$PAYLOAD/etc/httpd.conf" \
-        -DSSL -DPHP > /tmp/configtest-ssl.log 2>&1; then
-    echo "  Apache configuration valid with -DSSL -DPHP"
-else
-    echo "  Apache configuration is broken with -DSSL -DPHP:" >&2
-    tail -5 /tmp/configtest-ssl.log >&2
+if [ ! -f "$MIRROR/etc/ssl.crt/server.crt" ]; then
+    echo "!! vxost-ssl-init wrote the certificate somewhere else than the mirror" >&2
     exit 1
 fi
-
-_ssl_test_cleanup
-trap - EXIT INT TERM
-
-# La verifica che conta: il certificato di prova non deve sopravvivere.
 if [ -e "$PAYLOAD/etc/ssl.key" ] || [ -e "$PAYLOAD/etc/ssl.crt" ]; then
-    echo "!! the test certificate is still in the payload: it must not ship" >&2
+    echo "!! the test certificate landed in the payload: it must not ship" >&2
     exit 1
 fi
-echo "  test certificate removed"
+
+for _defines in "" "-DSSL -DPHP"; do
+    # shellcheck disable=SC2086
+    if "$MIRROR/bin/httpd" -t -d "$MIRROR" -f "$MIRROR/etc/httpd.conf" $_defines > /tmp/configtest.log 2>&1; then
+        echo "  Apache configuration valid${_defines:+ with $_defines}"
+    else
+        echo "  Apache configuration is broken${_defines:+ with $_defines}:" >&2
+        tail -5 /tmp/configtest.log >&2
+        exit 1
+    fi
+done
+
+# La prova di isolamento: ogni file letto sta nello specchio.
+"$MIRROR/bin/httpd" -t -d "$MIRROR" -f "$MIRROR/etc/httpd.conf" -DSSL -DPHP -D DUMP_INCLUDES \
+    > /tmp/configtest-includes.log 2>&1 || true
+_read="$(awk '$1 ~ /^\([^)]*\)$/ && $2 ~ /^\// {print $2}' /tmp/configtest-includes.log)"
+if [ -z "$_read" ]; then
+    echo "!! httpd -D DUMP_INCLUDES listed nothing: cannot prove what was checked" >&2
+    exit 1
+fi
+_outside="$(printf '%s\n' "$_read" | grep -v "^$MIRROR/" || true)"
+if [ -n "$_outside" ]; then
+    echo "!! the configuration test read files outside the package:" >&2
+    printf '%s\n' "$_outside" | sed 's/^/     /' >&2
+    exit 1
+fi
+echo "  $(printf '%s\n' "$_read" | wc -l | xargs) configuration files read, all inside the package"
+
+_mirror_cleanup
+trap - EXIT INT TERM
+if [ -e "$PAYLOAD/etc/ssl.key" ] || [ -e "$PAYLOAD/etc/ssl.crt" ]; then
+    echo "!! a certificate is in the payload: it must not ship" >&2
+    exit 1
+fi
+echo "  no certificate in the payload"
 
 # What follows are the three things that only break on a machine that has never
 # had XAMPP on it. None of them can be caught by reading the config: they are
@@ -1600,6 +1845,25 @@ if [ ! -f "$PAYLOAD/error/HTTP_NOT_FOUND.html.var" ]; then
     exit 1
 fi
 echo "  error pages: $(ls "$PAYLOAD/error"/*.html.var 2>/dev/null | wc -l | xargs) files"
+
+# The folder startProFTPD() redirects into before doing anything else.
+if grep -q 'var/proftpd/start.err' "$PAYLOAD/vxost" 2>/dev/null && [ ! -d "$PAYLOAD/var/proftpd" ]; then
+    echo "  vxost writes var/proftpd/start.err but var/proftpd is not in the package: FTP could never start" >&2
+    exit 1
+fi
+echo "  var/proftpd: present"
+
+# The projects page is dynamic, and it is the one that ships.
+if [ ! -f "$PAYLOAD/$WEBROOT/projects/index.php" ]; then
+    echo "  no projects/index.php: the projects page would be a listing" >&2
+    exit 1
+fi
+echo "  projects index: index.php"
+
+# Il timbro: build-stack-dmg.sh confeziona solo uno staging che e' arrivato
+# fin qui, e che nessuno ha toccato dopo. Sta nella radice dello staging,
+# fuori da vxostfiles/ e dall'app, quindi non finisce nel disco.
+date -u +%Y-%m-%dT%H:%M:%SZ > "$STAGE/.verified"
 
 step "Done"
 du -sh "$STAGE" | awk '{print "  staged:", $1}'

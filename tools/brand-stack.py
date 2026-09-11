@@ -220,6 +220,16 @@ def main():
         os.chmod(os.path.join(share_new, "checkmysqlport"), 0o755)
         print("    checkmysqlport replaced, skip-networking cannot be set any more")
 
+    # fix_rights too (rilievo L): the original never looked at its own chown
+    # and chmod, touched folders this layout does not have, and reported the
+    # exit status of the final touch. See the header of the replacement.
+    patch = os.path.join(PATCHES, "fix_rights")
+    bin_dir = os.path.join(payload, "bin")
+    if os.path.isfile(patch) and os.path.isdir(bin_dir):
+        shutil.copyfile(patch, os.path.join(bin_dir, "fix_rights"))
+        os.chmod(os.path.join(bin_dir, "fix_rights"), 0o755)
+        print("    fix_rights replaced, a failed repair is reported instead of marked done")
+
     # Nothing ships that the shell cannot parse.
     broken = []
     checked = 0
