@@ -19,8 +19,18 @@ Due domande distinte, e nessuna delle due ha risposta in `httpd -t`.
    ogni dipendenza che non sia di sistema sta dentro il pacchetto: dopo
    l'installazione quei percorsi esisteranno, perche' li spediamo noi.
 
+⚠️ E si distingue quello che rompiamo noi da quello che ereditiamo. Lo stack
+   upstream e' pieno di dipendenze verso macchine che non esistono piu':
+   /ade/b/2649109290/... e' la macchina di build di Oracle, /bitnami/... quella
+   di chi ha compilato XAMPP, e postgresql/lib/libpq.5.dylib non c'e' nemmeno
+   nell'installazione da cui copiamo. Sono cosi' da prima di noi e non si
+   correggono senza ricompilare: farci fallire la build vuol dire non
+   costruire mai piu'. Si elencano, e si ferma la build solo per le
+   dipendenze che la SORGENTE aveva e il pacchetto no, cioe' quelle che il
+   confezionamento ha perso per strada.
+
 Uso:
-    python3 tools/verify-isolation.py <specchio> <payload> <radice-installazione>
+    python3 tools/verify-isolation.py <specchio> <payload> <radice-installazione> [<sorgente>]
 
 Esce 0 se non ci sono problemi, 1 se ce ne sono, 2 se non ha potuto guardare.
 """
@@ -58,12 +68,28 @@ MAGIE = (0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe, 0xcafebabe, 0xbebafeca)
 
 
 def e_mach_o(percorso):
+    """⚠️ CA FE BA BE non basta: e' la firma dei binari universali Mach-O E
+    quella dei .class di Java. share/gettext/javaversion.class ha fatto
+    fallire la build dicendo che otool non rispondeva, il 11/09/2026.
+
+    Dopo la firma, un .class porta la versione del formato (>= 45 per Java 1.0)
+    dove un binario universale porta il numero di architetture, che e' un
+    numero piccolo: nessuno spedisce un binario per 45 architetture."""
     try:
         with open(percorso, "rb") as f:
-            testa = f.read(4)
-        return len(testa) == 4 and struct.unpack(">I", testa)[0] in MAGIE
+            testa = f.read(8)
     except OSError:
         return False
+    if len(testa) < 4:
+        return False
+    magia = struct.unpack(">I", testa[:4])[0]
+    if magia not in MAGIE:
+        return False
+    if magia in (0xcafebabe, 0xbebafeca) and len(testa) == 8:
+        quante = struct.unpack(">I", testa[4:8])[0]
+        if quante > 30:
+            return False          # e' un .class di Java, non un fat binary
+    return True
 
 
 def percorsi_nella_configurazione(specchio):
@@ -128,11 +154,12 @@ def dipendenze(percorso):
 
 
 def main():
-    if len(sys.argv) != 4:
-        print("uso: verify-isolation.py <specchio> <payload> <radice-installazione>",
+    if len(sys.argv) not in (4, 5):
+        print("uso: verify-isolation.py <specchio> <payload> <radice-installazione> [<sorgente>]",
               file=sys.stderr)
         return 2
     specchio, payload, radice = (os.path.abspath(p).rstrip("/") for p in sys.argv[1:4])
+    sorgente = os.path.abspath(sys.argv[4]).rstrip("/") if len(sys.argv) > 4 else None
     for cartella in (specchio, payload):
         if not os.path.isdir(cartella):
             print("  %s non e' una cartella" % cartella, file=sys.stderr)
@@ -158,8 +185,8 @@ def main():
 
     # ---- 2. le librerie ------------------------------------------------
     binari = 0
-    mancanti = 0
-    estranee = 0
+    perse = 0                 # c'erano nella sorgente e nel pacchetto no: colpa nostra
+    ereditate = []            # rotte da prima di noi
     senza_percorso = []
     for cartella, _, nomi in os.walk(payload):
         for nome in nomi:
@@ -172,35 +199,61 @@ def main():
                 problemi.append("%s: otool non ha risposto (%s)"
                                 % (os.path.relpath(intero, payload), errore))
                 continue
+            dove = os.path.relpath(intero, payload)
             for lib in libs:
                 if not lib.startswith("/"):
                     # Nome senza percorso, come "libgd.dylib": lo risolve dyld
                     # a runtime con i suoi percorsi di ripiego. Viene dal build
-                    # upstream, non da noi, e cambiarlo vorrebbe dire
-                    # ricompilare: si segnala e si va avanti, invece di far
-                    # fallire ogni build su una cosa che non dipende da noi.
-                    senza_percorso.append((os.path.relpath(intero, payload), lib))
+                    # upstream e cambiarlo vorrebbe dire ricompilare.
+                    senza_percorso.append((dove, lib))
                     continue
                 if lib.startswith(SISTEMA_LIB):
                     continue
                 if lib.startswith(radice + "/"):
-                    # Sta nel pacchetto? Dopo l'installazione quel percorso
-                    # sara' questo file, e deve esserci.
-                    atteso = os.path.join(payload, os.path.relpath(lib, radice))
-                    if not os.path.exists(atteso):
-                        mancanti += 1
-                        problemi.append("%s dipende da %s, che il pacchetto non contiene"
-                                        % (os.path.relpath(intero, payload), lib))
+                    # Dopo l'installazione quel percorso sara' questo file, e
+                    # deve esserci. Se non c'e', la domanda e' di chi e' la
+                    # colpa: la sorgente ce l'aveva?
+                    relativo = os.path.relpath(lib, radice)
+                    if os.path.exists(os.path.join(payload, relativo)):
+                        continue
+                    if sorgente and os.path.exists(os.path.join(sorgente, relativo)):
+                        perse += 1
+                        problemi.append("%s dipende da %s: c'era nella sorgente e il "
+                                        "pacchetto non la contiene" % (dove, lib))
+                    else:
+                        ereditate.append((dove, lib))
                     continue
-                estranee += 1
-                problemi.append("%s dipende da %s, fuori dal pacchetto e non di sistema"
-                                % (os.path.relpath(intero, payload), lib))
-    print("  %d Mach-O esaminati, %d dipendenze mancanti, %d estranee, %d nomi senza percorso"
-          % (binari, mancanti, estranee, len(senza_percorso)))
-    for dove, lib in senza_percorso[:5]:
-        print("      %s -> %s (lo risolve dyld)" % (dove, lib))
-    if len(senza_percorso) > 5:
-        print("      e altri %d" % (len(senza_percorso) - 5))
+                # Un percorso assoluto che non e' ne' di sistema ne' nostro: la
+                # macchina di build di qualcun altro. Se esiste qui e' un
+                # riferimento all'installazione locale, ed e' un problema
+                # nostro; se non esiste da nessuna parte e' cosi' da sempre.
+                if os.path.exists(lib):
+                    perse += 1
+                    problemi.append("%s dipende da %s, che esiste solo su questa "
+                                    "macchina" % (dove, lib))
+                else:
+                    ereditate.append((dove, lib))
+    print("  %d Mach-O esaminati, %d dipendenze perse dal confezionamento"
+          % (binari, perse))
+    if senza_percorso:
+        print("  %d dipendenze per nome, senza percorso: le risolve dyld"
+              % len(senza_percorso))
+        for dove, lib in senza_percorso[:3]:
+            print("      %s -> %s" % (dove, lib))
+        if len(senza_percorso) > 3:
+            print("      e altre %d" % (len(senza_percorso) - 3))
+    if ereditate:
+        # Non un problema, ma nemmeno una cosa da nascondere: e' un elenco di
+        # pezzi dello stack che non funzionerebbero se qualcuno li usasse.
+        print("  %d dipendenze rotte gia' nella sorgente, ereditate da upstream:"
+              % len(ereditate))
+        visti = {}
+        for dove, lib in ereditate:
+            visti.setdefault(lib, []).append(dove)
+        for lib in sorted(visti)[:6]:
+            print("      %s (%d file)" % (lib, len(visti[lib])))
+        if len(visti) > 6:
+            print("      e altre %d librerie" % (len(visti) - 6))
     if binari == 0:
         problemi.append("nessun Mach-O trovato nel payload: non e' un pacchetto verificato")
 

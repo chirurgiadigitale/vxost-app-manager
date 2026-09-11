@@ -1359,6 +1359,15 @@ if kill -0 "$_mysqld_pid" 2>/dev/null; then
 fi
 echo "  database stopped cleanly"
 
+# ⚠️ I file di lavoro di questo passo si tolgono adesso. Restano nella radice
+# dello staging, quindi non entrano nel disco (il DMG copia vxostfiles e
+# VXOST.app e basta), ma contengono il percorso della home di chi costruisce
+# e la password di root in chiaro, e una cartella di lavoro con dentro quelle
+# due cose e' il posto sbagliato dove lasciarle. Il 11/09/2026 il controllo
+# finale si e' fermato proprio su mysqld-init.log.
+rm -f "$STAGE/mysqld-init.log" "$STAGE/priv-rebuild.log" \
+      "$STAGE/db-init.sql" "$STAGE/init-my.cnf"
+
 # Transaction logs are regenerated on first start and carry the old hostname.
 rm -f "$PAYLOAD/var/mysql/aria_log."* "$PAYLOAD/var/mysql/aria_log_control" \
       "$PAYLOAD/var/mysql/"*.err "$PAYLOAD/var/mysql/"*.pid \
@@ -1710,11 +1719,26 @@ step "Checking for anything personal"
 # One walk for every word, instead of one walk per word: the old form scanned
 # 900 MB seventy times over and took minutes. See tools/verify-package.py for
 # why an occurrence right after "github.com/" does not count as a leak.
-if ! printf '%s\n' "${FORBIDDEN[@]}" | python3 "$HERE/tools/verify-package.py" "$STAGE"; then
-    echo
-    echo "Refusing to package: personal data found." >&2
-    exit 1
-fi
+#
+# ⚠️ Si guarda quello che PARTE, non la cartella di lavoro. Il disco contiene
+# vxostfiles e VXOST.app: il resto dello staging sono appunti di questo
+# script, e accusarli vuol dire fermare la build per un file che nessuno
+# ricevera'. E' successo il 11/09/2026, alla prima esecuzione vera, con il
+# log di mysqld: due minuti di build buttati e un difetto che non c'era.
+#
+# Guardare meno non e' guardare peggio: quello che non parte non e' un
+# problema di chi installa, e quello che parte viene guardato tutto.
+for _spedito in vxostfiles VXOST.app; do
+    if [ ! -e "$STAGE/$_spedito" ]; then
+        echo "!! $_spedito is not in the staging: nothing to check" >&2
+        exit 1
+    fi
+    if ! printf '%s\n' "${FORBIDDEN[@]}" | python3 "$HERE/tools/verify-package.py" "$STAGE/$_spedito"; then
+        echo
+        echo "Refusing to package: personal data found in $_spedito." >&2
+        exit 1
+    fi
+done
 
 # Una chiave privata non contiene il nome di nessuno, quindi il controllo qui
 # sopra la lascerebbe passare: cerca parole, e una chiave e' base64. Si guarda
@@ -1884,7 +1908,7 @@ echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files read, all inside
 #     cartella di sistema;
 #   - ogni dipendenza non di sistema di ogni Mach-O sta dentro il pacchetto,
 #     quindi dopo l'installazione quel percorso esistera'.
-if ! python3 "$HERE/tools/verify-isolation.py" "$MIRROR" "$PAYLOAD" "$NUOVA_RADICE"; then
+if ! python3 "$HERE/tools/verify-isolation.py" "$MIRROR" "$PAYLOAD" "$NUOVA_RADICE" "$SOURCE"; then
     echo "!! the package leans on something outside itself" >&2
     exit 1
 fi
