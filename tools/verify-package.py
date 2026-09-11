@@ -121,6 +121,11 @@ def main():
         print("usage: verify-package.py <staged folder>", file=sys.stderr)
         return 2
     stage = sys.argv[1]
+    # ⚠️ Una cartella che non c'e' dava "nothing found in 0 files" ed exit 0:
+    # un pacchetto mai guardato passava per pulito (rilievo P).
+    if not os.path.isdir(stage):
+        print(f"  {stage} is not a folder: nothing was checked", file=sys.stderr)
+        return 2
 
     words = []
     for line in sys.stdin:
@@ -135,7 +140,15 @@ def main():
 
     hits = {}
     files = 0
-    for root, dirs, names in os.walk(stage):
+
+    # Gli errori di attraversamento (una cartella non leggibile, un link
+    # spezzato che os.walk prova a entrare) non sono "niente trovato": sono
+    # una parte del pacchetto di cui non si sa niente, e finiscono nello
+    # stesso elenco dei file non leggibili.
+    def walk_error(error):
+        UNREADABLE.append((getattr(error, "filename", None) or stage, str(error)))
+
+    for root, dirs, names in os.walk(stage, onerror=walk_error):
         for name in names:
             path = os.path.join(root, name)
             if os.path.islink(path):
@@ -153,6 +166,11 @@ def main():
         if len(UNREADABLE) > 5:
             print(f"      and {len(UNREADABLE) - 5} more")
         print("  A package is not verified while part of it is unread.")
+        return 1
+
+    if files == 0:
+        print(f"  no file under {stage}: an empty package is not a verified one",
+              file=sys.stderr)
         return 1
 
     if not hits:

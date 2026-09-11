@@ -2,14 +2,18 @@
 //  XPExposure.h
 //  Chi può raggiungere i progetti serviti da questo Mac.
 //
-//  ⚠️ Il punto di partenza non è quello che sembra. Lo stack esce con
-//  `Listen 80`, `Listen 4000`… **senza indirizzo**, e una Listen senza
-//  indirizzo si mette in ascolto su tutte le interfacce. Quindi i progetti
-//  sono già raggiungibili da chiunque sia sulla stessa rete, da sempre.
+//  ⚠️ Il punto di partenza dipende da quando è stato costruito il pacchetto.
+//  Fino al 10/09/2026 lo stack usciva con `Listen 80`, `Listen 4000`…
+//  **senza indirizzo**, cioè in ascolto su tutte le interfacce: i progetti
+//  erano raggiungibili da chiunque fosse sulla stessa rete, da sempre.
+//  Dall'11/09 build-stack.sh scrive `Listen 127.0.0.1:80` e `:443` e si
+//  rifiuta di confezionare una Listen senza indirizzo (rilievo I): il
+//  pacchetto nasce chiuso, e currentScope lo legge come ThisMac.
 //
-//  "Chiuso in modo predefinito" quindi non vuol dire non accendere qualcosa:
-//  vuol dire spegnere qualcosa che è acceso, riscrivendo `Listen 4000` in
-//  `Listen 127.0.0.1:4000`.
+//  Le installazioni precedenti restano com'erano: per quelle "chiuso in
+//  modo predefinito" vuol dire spegnere qualcosa che è acceso, riscrivendo
+//  `Listen 4000` in `Listen 127.0.0.1:4000`. Il codice qui sotto copre
+//  entrambi i casi, perché legge le righe invece di supporre come sono.
 //
 //  MariaDB invece è chiuso (bind-address=127.0.0.1). Oggi la situazione è
 //  Apache aperto e database chiuso, il che vuol dire che un progetto aperto

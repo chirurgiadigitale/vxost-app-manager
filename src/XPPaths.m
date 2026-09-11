@@ -135,10 +135,24 @@ static NSString *XPDetectControlScript(NSString *root) {
 }
 
 + (NSString *)localHostname {
+    // ⚠️ Niente dispatch_once (rilievo J). Il wizard aggiunge virtualhost a
+    // /etc/hosts e un istante dopo chiede questo nome per aprire la
+    // dashboard: con la cache "per sempre" leggeva ancora localhost, e su un
+    // Mac con XAMPP apriva la dashboard di XAMPP. La cache vale finche'
+    // /etc/hosts ha la stessa data di modifica: una stat per chiamata, non
+    // una risoluzione DNS, e il file cambia solo quando qualcuno lo scrive.
     static NSString *name = nil;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        name = @"localhost";
+    static NSDate *seen = nil;
+
+    @synchronized ([XPPaths class]) {
+        NSDictionary *attributes = [[NSFileManager defaultManager]
+                                    attributesOfItemAtPath:@"/etc/hosts" error:NULL];
+        NSDate *modified = attributes[NSFileModificationDate];
+        if (name && seen && modified && [modified isEqualToDate:seen]) {
+            return name;
+        }
+
+        NSString *found = @"localhost";
 
         // /etc/hosts e' leggibile da chiunque e dice la verita' senza costare
         // il timeout di una risoluzione DNS su un nome che non esiste.
@@ -149,21 +163,34 @@ static NSString *XPDetectControlScript(NSString *root) {
         NSString *hosts = [NSString stringWithContentsOfFile:@"/etc/hosts"
                                                     encoding:NSUTF8StringEncoding
                                                        error:NULL];
+        NSCharacterSet *blank = [NSCharacterSet whitespaceCharacterSet];
         for (NSString *line in [hosts componentsSeparatedByString:@"\n"]) {
-            NSString *clean = [line stringByTrimmingCharactersInSet:
-                               [NSCharacterSet whitespaceCharacterSet]];
-            if (clean.length == 0 || [clean hasPrefix:@"#"]) continue;
+            // ⚠️ Un commento non e' una mappatura: "127.0.0.1 foo # virtualhost"
+            // dice foo. Si taglia dal cancelletto in poi, ovunque stia.
+            NSRange hash = [line rangeOfString:@"#"];
+            NSString *clean = hash.location == NSNotFound
+                            ? line : [line substringToIndex:hash.location];
+            clean = [clean stringByTrimmingCharactersInSet:blank];
+            if (clean.length == 0) continue;
 
-            for (NSString *field in [clean componentsSeparatedByCharactersInSet:
-                                     [NSCharacterSet whitespaceCharacterSet]]) {
-                if ([field isEqualToString:@"virtualhost"]) {
-                    name = @"virtualhost";
-                    return;
+            NSMutableArray<NSString *> *fields = [NSMutableArray array];
+            for (NSString *field in [clean componentsSeparatedByCharactersInSet:blank]) {
+                if (field.length > 0) [fields addObject:field];
+            }
+            // Il primo campo e' l'indirizzo: il nome conta solo se sta dopo.
+            for (NSUInteger i = 1; i < fields.count; i++) {
+                if ([fields[i] isEqualToString:@"virtualhost"]) {
+                    found = @"virtualhost";
+                    break;
                 }
             }
+            if ([found isEqualToString:@"virtualhost"]) break;
         }
-    });
-    return name;
+
+        name = found;
+        seen = modified;
+        return name;
+    }
 }
 
 + (NSString *)vxostVersion {

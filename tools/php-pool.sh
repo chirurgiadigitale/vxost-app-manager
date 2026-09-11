@@ -163,7 +163,9 @@ listen.acl_users = daemon"
     i=0
     while [ $i -lt 10 ] && [ ! -S "$SOCK" ]; do sleep 1; i=$((i + 1)); done
 
-    if [ -S "$SOCK" ]; then
+    # Il socket sul disco non basta: dietro ci deve essere il master vivo,
+    # altrimenti Apache trova il file e nessuno che risponda (503).
+    if [ -S "$SOCK" ] && [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF" 2>/dev/null)" 2>/dev/null; then
         ok "php $VERSION on $SOCK"
         echo
         echo "  To use it in a project, inside its <VirtualHost> block:"
@@ -182,13 +184,28 @@ listen.acl_users = daemon"
 stop)
     [ -n "$VERSION" ] || { fail "which version? or 'all'"; exit 1; }
     say "Stopping"
+    # ⚠️ Tre contatori distinti (rilievo O): fermati, falliti, e "non c'era
+    # niente". Prima l'ultima riga era `[ $stopped -eq 0 ] && echo ...`, che
+    # dopo uno stop riuscito usciva 1 (il test falliva ed era l'ultimo
+    # comando) e dopo un timeout diceva che niente girava e usciva 0.
     stopped=0
+    failed=0
     for PIDF in "$RUNTIME"/vxost-php*.pid; do
         [ -f "$PIDF" ] || continue
         v="$(basename "$PIDF" .pid)"; v="${v#vxost-php}"
         if [ "$VERSION" != "all" ] && [ "$v" != "${VERSION//./}" ]; then continue; fi
         pid="$(cat "$PIDF" 2>/dev/null || true)"
         if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            # Il pid deve essere un php-fpm: un file pid vecchio puo' puntare
+            # a qualunque processo abbia ereditato quel numero, e a quello
+            # non si manda niente.
+            case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
+                *php-fpm*) ;;
+                *)
+                    fail "pid $pid in $(basename "$PIDF") is not php-fpm: stale file, removed"
+                    rm -f "$PIDF" "$RUNTIME/vxost-php$v.sock" "$RUNTIME/vxost-php$v.conf"
+                    continue ;;
+            esac
             kill -QUIT "$pid" 2>/dev/null
             # ⚠️ QUIT e' un arresto garbato: php-fpm finisce le richieste in
             # corso e poi esce. Annunciarlo fermo subito, e togliergli il
@@ -201,6 +218,7 @@ stop)
             done
             if kill -0 "$pid" 2>/dev/null; then
                 fail "php $v did not stop within 15s (pid $pid), left as it is"
+                failed=$((failed + 1))
                 continue
             fi
             ok "php $v stopped"
@@ -208,7 +226,12 @@ stop)
         fi
         rm -f "$PIDF" "$RUNTIME/vxost-php$v.sock" "$RUNTIME/vxost-php$v.conf"
     done
+    if [ "$failed" -gt 0 ]; then
+        fail "$failed pool(s) still running"
+        exit 1
+    fi
     [ "$stopped" -eq 0 ] && echo "  nothing was running"
+    exit 0
     ;;
 
 *)

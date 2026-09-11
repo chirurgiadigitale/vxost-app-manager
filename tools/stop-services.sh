@@ -127,8 +127,12 @@ if [ "${1:-}" = "resume" ]; then
         sleep 1
         i=$((i + 1))
     done
+    # ⚠️ L'esito e' quello dei processi, non del comando (rilievo N): prima
+    # questo ramo stampava "non e' partito" e usciva 0 lo stesso, e chi lo
+    # chiamava da uno script leggeva un successo.
+    esito=0
     for p in httpd mysqld; do
-        running_ours "$p" && ok "$p gira" || fail "$p non e' partito"
+        if running_ours "$p"; then ok "$p gira"; else fail "$p non e' partito"; esito=1; fi
     done
     # ⚠️ ProFTPD non parte con gli altri, ed e' voluto: lo stack lo avvia solo
     # se esiste etc/vxost/startftp, che si crea premendo Avvia sull'app o con
@@ -137,10 +141,11 @@ if [ "${1:-}" = "resume" ]; then
         ok "proftpd gira"
     elif [ -f "$ROOT/etc/vxost/startftp" ]; then
         fail "proftpd doveva partire e non e' partito"
+        esito=1
     else
         echo "      proftpd e' spento per scelta: si accende dall'app, una volta sola"
     fi
-    exit 0
+    exit $esito
 fi
 
 # Aspetta che un processo sparisca davvero, invece di fidarsi di un messaggio.
@@ -159,7 +164,18 @@ wait_gone() {
 # successo il 14/08 durante la rinomina.
 if [ -f "$PLIST" ] && launchctl list 2>/dev/null | grep -q "com.equipedigitale.vxost"; then
     say "Autostart"
-    launchctl unload -w "$PLIST" 2>/dev/null
+    # L'esito si guarda, e poi si ricontrolla la tabella di launchd: un unload
+    # rifiutato lasciava scritto "suspended" con l'avvio automatico ancora
+    # vivo, pronto a far ripartire tutto un istante dopo lo stop.
+    output="$(launchctl unload -w "$PLIST" 2>&1)" || {
+        fail "launchctl unload refused:"
+        printf '%s\n' "$output" | head -5 | sed 's/^/      /'
+        exit 1
+    }
+    if launchctl list 2>/dev/null | grep -q "com.equipedigitale.vxost"; then
+        fail "the autostart job is still loaded after unload: stopping now would be undone"
+        exit 1
+    fi
     ok "suspended, nothing will bring the services back on its own"
     echo "      per riaccendere: sudo bash $0 resume"
 fi

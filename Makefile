@@ -52,7 +52,11 @@ all: $(ICON) strings
 	@printf 'APPL????' > "$(CONTENTS)/PkgInfo"
 	@# Firma ad-hoc: non serve un account sviluppatore, ma evita che macOS
 	@# consideri il bundle danneggiato dopo una modifica.
-	@codesign --force --deep --sign - "$(BUNDLE)" 2>/dev/null || true
+	@# ⚠️ Niente "|| true": una firma fallita usciva zitta e la riga dopo
+	@# stampava "Creato" su un bundle che Gatekeeper avrebbe rifiutato. Ora
+	@# il fallimento ferma make, e il bundle viene verificato subito dopo.
+	@codesign --force --deep --sign - "$(BUNDLE)"
+	@codesign --verify --deep --strict "$(BUNDLE)"
 	@# Il Finder tiene in cache le icone per percorso: senza questo tocco
 	@# continuerebbe a mostrare quella vecchia dopo una rigenerazione.
 	@touch "$(BUNDLE)"
