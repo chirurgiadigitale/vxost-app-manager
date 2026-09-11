@@ -13,8 +13,10 @@ It cannot be restyled either: the interface is compiled into the executable and
 the only replaceable resource is the icon. Hence the rewrite, which also drops
 the Rosetta dependency.
 
-No external dependency, no third-party framework, no network request. Native
-arm64 binary of about 200 KB.
+No external dependency, no third-party framework. One network request, the
+daily update check against `vxost.com/version.json`, on by default and
+switched off from the menu bar icon; with it off, none. Universal binary
+(arm64 and x86_64) of about 800 KB.
 
 ## What it does
 

@@ -1311,6 +1311,50 @@ if [ "$RESTI" != "0" ]; then
 fi
 echo "  no file carries the old name any more"
 
+# ------------------------------------------------------------- pear.conf ---
+#
+# Rilievo C della revisione del 10/09. etc/pear.conf e' PHP serializzato, e
+# ogni stringa porta la propria lunghezza: s:45:"/Applications/XAMPP/...".
+# La rinomina XAMPP -> VXOST ha accorciato i percorsi di tre byte senza
+# toccare i numeri, e unserialize() si ferma al primo che non torna:
+# "Error at offset 684". pear e pecl non partono piu', e la guida su Xdebug
+# insegna un comando che fallisce alla prima riga.
+#
+# Le lunghezze si ricalcolano dal contenuto, e poi si verifica che il file si
+# legga davvero: una riparazione che non si prova e' una riparazione creduta.
+step "Repairing the serialized lengths in pear.conf"
+if [ -f "$PAYLOAD/etc/pear.conf" ]; then
+    python3 - "$PAYLOAD/etc/pear.conf" <<'PYEOF'
+import re, sys
+path = sys.argv[1]
+lines = open(path, encoding="utf-8").read().split("\n")
+fixed = 0
+def fix(m):
+    global fixed
+    declared, value = int(m.group(1)), m.group(2)
+    real = len(value.encode("utf-8"))
+    if real != declared:
+        fixed += 1
+    return f's:{real}:"{value}";'
+# The serialized array is the second line; the first is the "#PEAR_Config" tag.
+if len(lines) > 1:
+    lines[1] = re.sub(r's:(\d+):"((?:[^"\\]|\\.)*?)";', fix, lines[1])
+    open(path, "w", encoding="utf-8").write("\n".join(lines))
+print(f"  pear.conf: {fixed} length(s) corrected")
+PYEOF
+    # La prova: il php del pacchetto deve leggere il file e trovarci un array.
+    if [ -x "$PAYLOAD/bin/php" ]; then
+        if ! "$PAYLOAD/bin/php" -n -r '$l = file($argv[1]); exit(is_array(@unserialize($l[1])) ? 0 : 1);' \
+                "$PAYLOAD/etc/pear.conf" 2>/dev/null; then
+            echo "!! pear.conf does not unserialize: pear and pecl would not start" >&2
+            exit 1
+        fi
+        echo "  pear.conf: unserialize() reads it"
+    else
+        echo "  pear.conf: NOT VERIFIED, no runnable php in the payload"
+    fi
+fi
+
 step "Signing the binaries"
 # ⚠️ Si cerca in tutto il payload e non in un elenco di cartelle: un plugin
 # di MariaDB stava sotto share/, fuori da ogni cartella che uno si aspetta, e
