@@ -118,7 +118,7 @@
 "exposure.mixed" = "Setat manual";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "Acest Mac și rețeaua locală";
+"exposure.network" = "Acest Mac și rețeaua locală (doar serverul web)";
 
 /* Esito: era già così */
 "exposure.nochange" = "Era deja așa.";

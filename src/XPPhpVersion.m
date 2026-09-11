@@ -312,6 +312,17 @@ static NSDate *sCachedAt = nil;
         return nil;
     }
 
+    // ⚠️ Si ripiega SOLO se e' la ACL a non essere supportata: php-fpm
+    // compilato senza --with-fpm-acl rifiuta la direttiva con
+    // "unknown entry 'listen.acl_users'" (verificato con quello di Homebrew,
+    // 11/09/2026). Qualunque altro errore, porta in uso, log non scrivibile,
+    // php.ini rotto, si ripresenterebbe identico con il socket aperto:
+    // riprovare con i permessi allargati toglierebbe una protezione senza
+    // risolvere niente, e lo direbbe pure con il messaggio sbagliato.
+    if ([why rangeOfString:@"unknown entry 'listen.acl_"].location == NSNotFound) {
+        return why;
+    }
+
     // php-fpm senza supporto ACL non parte affatto. Fra un pool esposto e
     // nessun pool, il primo almeno funziona: si ripiega, ma resta scritto
     // nel log di sistema, perché una rinuncia silenziosa alla sicurezza

@@ -919,6 +919,98 @@ fi
 
 # ---------------------------------------------------------------- database ---
 
+# ------------------------------------------------------------- esposizione ---
+#
+# Tre cose che il pacchetto apriva o diceva senza che nessuno l'avesse chiesto
+# (rilievi S, V e W della revisione del 10/09):
+#
+#   - ProFTPD ascoltava su tutte le interfacce (*.21) mentre Apache e MariaDB
+#     stavano su 127.0.0.1. Il selettore dell'app riscrive le Listen di
+#     Apache e basta: "solo questo Mac" non chiudeva FTP. Ora FTP nasce su
+#     loopback, e per aprirlo si modifica proftpd.conf a mano.
+#   - ServerTokens Full e expose_php=On stampavano "Apache/2.4.56 (Unix)
+#     OpenSSL/1.1.1t PHP/8.2.4" in ogni pagina di errore e in ogni risposta:
+#     meta' del lavoro di chi cerca falle note, regalata.
+#   - error/include/bottom.html stampa SERVER_SOFTWARE via SSI in tutte le
+#     pagine di errore multilingua. Con ServerTokens Prod dice solo "Apache",
+#     ma la riga non serve a nessuno e resta una spia pronta se qualcuno
+#     riapre i token.
+#
+# Stesso schema del bind-address di MariaDB qui sopra: quello che c'e' si
+# riscrive, quello che manca si aggiunge, e si verifica sulle righe attive.
+step "Keeping FTP, versions and error pages quiet"
+if [ -f "$PAYLOAD/etc/proftpd.conf" ]; then
+    if grep -qE '^[[:space:]]*DefaultAddress[[:space:]]' "$PAYLOAD/etc/proftpd.conf"; then
+        sed -i '' -E 's/^([[:space:]]*)DefaultAddress[[:space:]].*/\1DefaultAddress 127.0.0.1/' \
+            "$PAYLOAD/etc/proftpd.conf"
+        echo "  proftpd: DefaultAddress rewritten to 127.0.0.1"
+    else
+        perl -pi -e 'if (/^Port\s+\d+/ && !$done) {
+            $_ .= "\n# Reachable from this computer only. The exposure selector in the VXOST\n";
+            $_ .= "# app rewrites the Apache Listen lines, not this file: FTP stays on\n";
+            $_ .= "# loopback whatever is chosen there. To reach it from the local network,\n";
+            $_ .= "# change DefaultAddress by hand and restart ProFTPD.\n";
+            $_ .= "DefaultAddress 127.0.0.1\n";
+            $done = 1;
+        }' "$PAYLOAD/etc/proftpd.conf"
+        echo "  proftpd: restricted to 127.0.0.1"
+    fi
+    # Senza SocketBindTight proftpd ascolta comunque su tutte le interfacce e
+    # usa DefaultAddress solo per scegliere il server virtuale.
+    if grep -qE '^[[:space:]]*SocketBindTight[[:space:]]' "$PAYLOAD/etc/proftpd.conf"; then
+        sed -i '' -E 's/^([[:space:]]*)SocketBindTight[[:space:]].*/\1SocketBindTight on/' \
+            "$PAYLOAD/etc/proftpd.conf"
+    else
+        printf '# Bind to DefaultAddress only, not to every interface.\nSocketBindTight on\n' \
+            >> "$PAYLOAD/etc/proftpd.conf"
+    fi
+    if ! grep -qE '^[[:space:]]*DefaultAddress[[:space:]]+127\.0\.0\.1[[:space:]]*$' "$PAYLOAD/etc/proftpd.conf" \
+       || ! grep -qE '^[[:space:]]*SocketBindTight[[:space:]]+on[[:space:]]*$' "$PAYLOAD/etc/proftpd.conf"; then
+        echo "!! proftpd.conf: FTP would answer on every interface of the machine" >&2
+        exit 1
+    fi
+fi
+
+DEFAULTS="$PAYLOAD/etc/extra/httpd-default.conf"
+if [ -f "$DEFAULTS" ]; then
+    for _wanted in "ServerTokens Prod" "ServerSignature Off"; do
+        _name=${_wanted%% *}; _value=${_wanted#* }
+        if grep -qE "^[[:space:]]*$_name[[:space:]]" "$DEFAULTS"; then
+            sed -i '' -E "s/^([[:space:]]*)$_name[[:space:]].*/\1$_name $_value/" "$DEFAULTS"
+        else
+            printf '\n%s %s\n' "$_name" "$_value" >> "$DEFAULTS"
+        fi
+        if ! grep -qE "^[[:space:]]*$_name[[:space:]]+$_value[[:space:]]*$" "$DEFAULTS"; then
+            echo "!! httpd-default.conf: '$_wanted' is not active" >&2
+            exit 1
+        fi
+    done
+    echo "  httpd-default.conf: ServerTokens Prod, ServerSignature Off"
+fi
+
+if [ -f "$PAYLOAD/etc/php.ini" ]; then
+    if grep -qE '^[[:space:]]*expose_php[[:space:]]*=' "$PAYLOAD/etc/php.ini"; then
+        sed -i '' -E 's/^([[:space:]]*)expose_php[[:space:]]*=.*/\1expose_php=Off/' "$PAYLOAD/etc/php.ini"
+    else
+        printf '\n; The PHP version is not announced in the response headers.\nexpose_php=Off\n' \
+            >> "$PAYLOAD/etc/php.ini"
+    fi
+    if ! grep -qE '^[[:space:]]*expose_php[[:space:]]*=[[:space:]]*Off[[:space:]]*$' "$PAYLOAD/etc/php.ini"; then
+        echo "!! php.ini: expose_php is not Off" >&2
+        exit 1
+    fi
+    echo "  php.ini: expose_php=Off"
+fi
+
+if [ -f "$PAYLOAD/error/include/bottom.html" ] && grep -q 'SERVER_SOFTWARE' "$PAYLOAD/error/include/bottom.html"; then
+    sed -i '' '/SERVER_SOFTWARE/d' "$PAYLOAD/error/include/bottom.html"
+    echo "  error pages: the SERVER_SOFTWARE line is gone"
+fi
+if [ -d "$PAYLOAD/error" ] && grep -rq 'SERVER_SOFTWARE' "$PAYLOAD/error"; then
+    echo "!! error/: a page still prints SERVER_SOFTWARE" >&2
+    exit 1
+fi
+
 step "Creating an empty database"
 # Not copied: InnoDB stores every table in ibdata1, so copying the folder while
 # excluding database directories would still carry the data.

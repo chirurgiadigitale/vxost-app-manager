@@ -118,7 +118,7 @@
 "exposure.mixed" = "手動設定";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "本機和區域網路";
+"exposure.network" = "本機和區域網路（僅 Web 伺服器）";
 
 /* Esito: era già così */
 "exposure.nochange" = "本來就是這樣設定的。";

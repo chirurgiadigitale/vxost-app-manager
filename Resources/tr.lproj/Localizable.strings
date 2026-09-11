@@ -118,7 +118,7 @@
 "exposure.mixed" = "Elle ayarlanmış";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "Bu Mac ve yerel ağ";
+"exposure.network" = "Bu Mac ve yerel ağ (yalnızca web sunucusu)";
 
 /* Esito: era già così */
 "exposure.nochange" = "Zaten öyleydi.";

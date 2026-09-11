@@ -118,7 +118,7 @@
 "exposure.mixed" = "Set by hand";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "This Mac and the local network";
+"exposure.network" = "This Mac and the local network (web server only)";
 
 /* Esito: era già così */
 "exposure.nochange" = "It was already set that way.";

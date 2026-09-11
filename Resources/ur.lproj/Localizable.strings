@@ -118,7 +118,7 @@
 "exposure.mixed" = "ہاتھ سے مقرر";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "یہ Mac اور مقامی نیٹ ورک";
+"exposure.network" = "یہ Mac اور مقامی نیٹ ورک (صرف ویب سرور)";
 
 /* Esito: era già così */
 "exposure.nochange" = "یہ پہلے ہی ایسے ہی تھا۔";

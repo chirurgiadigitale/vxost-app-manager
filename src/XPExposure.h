@@ -15,6 +15,15 @@
 //  Apache aperto e database chiuso, il che vuol dire che un progetto aperto
 //  dal telefono funziona solo se non gli serve il database.
 //
+//  ⚠️ Il selettore governa SOLO le Listen di Apache, cioè HTTP e HTTPS.
+//  MariaDB (bind-address=127.0.0.1 in my.cnf) e ProFTPD (DefaultAddress
+//  127.0.0.1 in proftpd.conf, dall'11/09/2026) restano su loopback qualunque
+//  cosa si scelga qui: la scelta "rete locale" serve a mostrare un progetto
+//  dal telefono, non ad aprire il database o l'FTP alla wifi. Per quelli si
+//  modifica il file a mano. L'etichetta del radio lo dice ("solo il server
+//  web"), perché prima diceva "questo Mac e la rete locale" e lasciava
+//  credere che valesse per tutto lo stack.
+//
 //  ⚠️ Non è un booleano. Domani Gateway aggiunge un terzo valore, e un
 //  interruttore aperto/chiuso andrebbe riscritto da capo per farcelo stare.
 //

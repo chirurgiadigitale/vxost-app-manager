@@ -118,7 +118,7 @@
 "exposure.mixed" = "Definido à mão";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "Este Mac e a rede local";
+"exposure.network" = "Este Mac e a rede local (apenas o servidor web)";
 
 /* Esito: era già così */
 "exposure.nochange" = "Já estava assim.";

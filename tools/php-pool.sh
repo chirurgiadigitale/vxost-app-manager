@@ -133,9 +133,21 @@ listen.acl_users = daemon"
     say "Starting"
     # L'output non si butta via: se fallisce, il motivo serve.
     if ! output="$("$FPM" --fpm-config "$CONF" 2>&1)"; then
-        # php-fpm compilato senza --with-fpm-acl rifiuta la direttiva e non
-        # parte. Fra un pool esposto e nessun pool il primo almeno funziona,
-        # ma la rinuncia si dice, non si nasconde.
+        # ⚠️ Si ripiega sul socket aperto SOLO se e' la ACL a non essere
+        # supportata. php-fpm compilato senza --with-fpm-acl rifiuta la
+        # direttiva con "unknown entry 'listen.acl_users'" (verificato con
+        # quello di Homebrew, 11/09/2026), ed e' l'unico errore per cui
+        # aprire il socket e' un rimedio. Qualunque altro (porta in uso, log
+        # non scrivibile, php.ini rotto) si ripresenterebbe identico con 0666:
+        # riprovare con i permessi allargati toglierebbe una protezione senza
+        # risolvere niente.
+        if ! printf '%s\n' "$output" | grep -q "unknown entry 'listen\.acl_"; then
+            fail "php-fpm refused to start:"
+            printf '%s\n' "$output" | head -6 | sed 's/^/      /'
+            exit 1
+        fi
+        # Fra un pool esposto e nessun pool il primo almeno funziona, ma la
+        # rinuncia si dice, non si nasconde.
         fail "this php-fpm does not support ACLs on the socket:"
         printf '%s\n' "$output" | head -3 | sed 's/^/      /'
         fail "falling back to a socket every user of this Mac can open"

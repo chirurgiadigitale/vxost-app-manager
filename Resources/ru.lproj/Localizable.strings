@@ -118,7 +118,7 @@
 "exposure.mixed" = "Задано вручную";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "Этот Mac и локальная сеть";
+"exposure.network" = "Этот Mac и локальная сеть (только веб-сервер)";
 
 /* Esito: era già così */
 "exposure.nochange" = "Уже было настроено так.";

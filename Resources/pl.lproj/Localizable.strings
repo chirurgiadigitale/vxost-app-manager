@@ -118,7 +118,7 @@
 "exposure.mixed" = "Ustawione ręcznie";
 
 /* Ambito: anche gli altri dispositivi in rete */
-"exposure.network" = "Ten Mac i sieć lokalna";
+"exposure.network" = "Ten Mac i sieć lokalna (tylko serwer WWW)";
 
 /* Esito: era già così */
 "exposure.nochange" = "Już tak było ustawione.";
