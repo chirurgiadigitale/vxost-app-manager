@@ -1547,6 +1547,41 @@ fi
 VECCHIA_RADICE="/Applications/XAMPP/xamppfiles"
 echo "  $VECCHIA_RADICE -> $NUOVA_RADICE"
 
+# I quattro diagnostici della dashboard anche nella configurazione
+# principale, non solo nel loro .htaccess (rilievo R11).
+#
+# ⚠️ Un .htaccess vale finche' AllowOverride lo permette. Il pacchetto esce
+# con AllowOverride All e quindi la regola e' attiva, ma chi stringe quella
+# direttiva -- cosa che si fa per irrigidire, non per allentare -- spegne la
+# protezione SENZA nessun errore di sintassi e senza accorgersene. Qui la
+# regola non dipende da nessuna opzione.
+#
+# (?i) per la stessa ragione dell'.htaccess: il filesystem di macOS non
+# distingue le maiuscole e PHPINFO.php e' lo stesso file di phpinfo.php.
+VXOSTCONF="$PAYLOAD/etc/extra/httpd-vxost.conf"
+if [ -f "$VXOSTCONF" ]; then
+    if grep -q 'VXOST: i diagnostici rispondono solo a questo Mac' "$VXOSTCONF"; then
+        echo "  httpd-vxost.conf: diagnostics already restricted"
+    else
+        cat >> "$VXOSTCONF" <<VXEOF
+
+# VXOST: i diagnostici rispondono solo a questo Mac, qualunque cosa dica il
+# selettore di esposizione dell'app. La stessa regola sta in
+# www/dashboard/.htaccess: questa vale anche se AllowOverride viene stretto.
+<Directory "$NUOVA_RADICE/www/dashboard">
+    <FilesMatch "(?i)^(phpinfo|ports|browse|database)\.php\$">
+        Require local
+    </FilesMatch>
+</Directory>
+VXEOF
+        echo "  httpd-vxost.conf: diagnostics restricted to this Mac"
+    fi
+    if ! grep -q 'phpinfo|ports|browse|database' "$VXOSTCONF"; then
+        echo "!! httpd-vxost.conf: the diagnostics rule is not there" >&2
+        exit 1
+    fi
+fi
+
 # ⚠️ I due prefissi sono lunghi uguali, 30 caratteri, e non e' un caso: e' la
 # ragione per cui questa operazione e' sicura. install_name_tool riscrive in
 # loco senza riallocare i load command, che e' il modo classico in cui questo
@@ -1775,21 +1810,37 @@ fi
 # Prima la prova era su bin/mysql soltanto: bastava a dire che codesign
 # funzionava su questa macchina, non che il pacchetto fosse a posto. Un
 # qualsiasi altro binario rimasto indietro sarebbe uscito lo stesso.
+# ⚠️ E "verificare" vuol dire --verify, non -dv (rilievo R9).
+#
+# codesign -dv MOSTRA i metadati della firma e non convalida niente: alterando
+# un byte dentro un binario firmato continua a uscire 0 e a dire "adhoc". La
+# convalida ricalcola le impronte delle pagine, e la fa --verify --strict.
+# Il messaggio diceva "all N verified" promettendo piu' di quello che il
+# comando faceva.
+#
+# Servono tutte e due: --verify dice che la firma vale per QUESTO contenuto,
+# -dv dice che la firma e' ad hoc, che e' un'altra cosa.
 NONVERIFICATI=0
+NONADHOC=0
 while IFS= read -r binario; do
+    if ! codesign --verify --strict "$binario" 2>/dev/null; then
+        NONVERIFICATI=$((NONVERIFICATI + 1))
+        echo "  ⚠ signature does not verify: ${binario#$PAYLOAD/}" >&2
+        continue
+    fi
     FIRMA="$(codesign -dv "$binario" 2>&1 || true)"
     case "$FIRMA" in
         *adhoc*) ;;
-        *) NONVERIFICATI=$((NONVERIFICATI + 1))
-           echo "  ⚠ unsigned: ${binario#$PAYLOAD/}" >&2 ;;
+        *) NONADHOC=$((NONADHOC + 1))
+           echo "  ⚠ not ad-hoc signed: ${binario#$PAYLOAD/}" >&2 ;;
     esac
 done < <(mach_o_files)
 
-if [ "$NONVERIFICATI" -ne 0 ]; then
-    echo "!! $NONVERIFICATI binaries are still unsigned" >&2
+if [ "$NONVERIFICATI" -ne 0 ] || [ "$NONADHOC" -ne 0 ]; then
+    echo "!! $NONVERIFICATI signatures do not verify, $NONADHOC are not ad-hoc" >&2
     exit 1
 fi
-echo "  all $FIRMATI verified"
+echo "  all $FIRMATI signatures verified with codesign --verify --strict"
 
 step "Adding the VXOST app"
 APP_BUNDLE="$HERE/build/VXOST.app"
