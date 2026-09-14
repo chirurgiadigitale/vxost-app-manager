@@ -34,8 +34,10 @@ Uso:
 
 Esce 0 se non ci sono problemi, 1 se ce ne sono, 2 se non ha potuto guardare.
 """
+import glob
 import os
 import re
+import shlex
 import struct
 import subprocess
 import sys
@@ -56,13 +58,39 @@ DIRETTIVE = {
     "mutex": 0,  # "Mutex default:/percorso": l'argomento va spacchettato
 }
 
-# Percorsi che un server si aspetta dal sistema operativo e che il pacchetto
-# non spedisce ne' deve spedire. Stretti di proposito: /tmp non c'e', perche'
-# un DocumentRoot sotto /tmp sarebbe roba della macchina che costruisce, non
-# una dipendenza di sistema.
-SISTEMA_CONF = ("/usr/lib/", "/usr/share/", "/System/", "/Library/Frameworks/",
-                "/dev/", "/var/run/", "/private/var/run/", "/etc/")
-SISTEMA_LIB = ("/usr/lib/", "/System/", "/Library/Frameworks/")
+# Cosa puo' stare FUORI dal pacchetto, DIRETTIVA PER DIRETTIVA.
+#
+# ⚠️ Un elenco unico di prefissi ignora il ruolo della direttiva, e sbagliava
+# in tutti e due i sensi: /etc va bene per mime.types e non per un
+# DocumentRoot, e /Library/Frameworks non e' roba di Apple, e' roba installata
+# da qualcuno. Un modulo caricato da li' passava il controllo.
+#
+# Le direttive che non compaiono qui non possono nominare niente fuori dal
+# pacchetto: DocumentRoot, Alias, Include, i certificati, i file di password.
+FUORI_AMMESSO = {
+    "typesconfig": ("/etc/", "/usr/share/"),
+    "mimemagicfile": ("/etc/", "/usr/share/"),
+    "sslrandomseed": ("/dev/",),
+    "mutex": ("/var/run/", "/private/var/run/", "/tmp/", "/private/tmp/"),
+    "defaultruntimedir": ("/var/run/", "/private/var/run/"),
+    "pidfile": ("/var/run/", "/private/var/run/"),
+    "loadmodule": ("/usr/lib/", "/System/"),
+    "loadfile": ("/usr/lib/", "/System/"),
+    "errorlog": ("/var/log/", "/private/var/log/", "/dev/"),
+    "customlog": ("/var/log/", "/private/var/log/", "/dev/"),
+    "transferlog": ("/var/log/", "/private/var/log/", "/dev/"),
+}
+
+# Le direttive il cui bersaglio deve ESISTERE. Un modulo che non c'e' non e'
+# un modulo isolato, e' un avvio che fallisce. Gli Include con un glob restano
+# fuori: un glob che non trova niente e' lecito.
+DEVE_ESISTERE = ("loadmodule", "loadfile", "include", "typesconfig",
+                 "sslcertificatefile", "sslcertificatekeyfile")
+
+# Solo le librerie di sistema vere. ⚠️ /Library/Frameworks NON e' qui: le
+# librerie di Apple stanno in /System/Library/Frameworks, e /Library/Frameworks
+# e' dove installa il software di terze parti.
+SISTEMA_LIB = ("/usr/lib/", "/System/")
 
 MAGIE = (0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe, 0xcafebabe, 0xbebafeca)
 
@@ -92,46 +120,210 @@ def e_mach_o(percorso):
     return True
 
 
+def dentro(percorso, *basi):
+    """Vero se percorso sta dentro una delle basi, guardando dove i link
+    portano DAVVERO.
+
+    ⚠️ Il confronto testuale bastava per dire di si': <specchio>/../fuori
+    comincia per <specchio>/ e passava, e cosi' un DocumentRoot dentro una
+    cartella dello specchio che e' un link a un'altra parte del disco.
+
+    ⚠️ Le basi sono piu' d'una perche' lo specchio E' fatto di link verso il
+    payload: build-stack.sh ci mette un link per ogni voce tranne etc/, che
+    copia. Sciogliendo i link, ogni modulo risulta "fuori dallo specchio" pur
+    essendo esattamente dentro il pacchetto. I link VOLUTI si ammettono
+    nominando l'altra base, non allentando il confronto.
+    """
+    try:
+        vero = os.path.realpath(percorso)
+    except OSError:
+        return False
+    for base in basi:
+        if not base:
+            continue
+        try:
+            b = os.path.realpath(base)
+        except OSError:
+            continue
+        if vero == b or vero.startswith(b + os.sep):
+            return True
+    return False
+
+
+def argomenti(riga):
+    """I pezzi di una riga di configurazione, virgolette comprese.
+
+    ⚠️ split() spezzava "modulo con spazio.so" al primo spazio e ne guardava
+    la prima meta': un percorso mai esistito passava per buono.
+    """
+    try:
+        return shlex.split(riga, comments=False)
+    except ValueError:
+        return None
+
+
 def percorsi_nella_configurazione(specchio):
-    """Ogni percorso assoluto nominato da una direttiva attiva, con la riga."""
+    """Ogni percorso nominato da una direttiva attiva, con la riga.
+
+    Legge i file per estensione E SEGUE gli Include, glob compresi: un file
+    incluso con un'estensione qualsiasi veniva saltato, e con lui tutto quello
+    che caricava. Restituisce
+    (file, numero, direttiva, percorso_assoluto, grezzo, errore).
+    """
     trovati = []
-    for cartella, _, nomi in os.walk(os.path.join(specchio, "etc")):
+    etc = os.path.join(specchio, "etc")
+
+    # La radice per i percorsi relativi. Apache li risolve rispetto a
+    # ServerRoot, e non guardarla voleva dire scartare in silenzio ogni
+    # ../../fuori.conf, che e' il modo piu' semplice di uscire dal pacchetto.
+    serverroot = specchio
+
+    # ⚠️ Due insiemi diversi. ATTIVO e' quello che Apache legge davvero,
+    # partendo da httpd.conf e seguendo gli Include: solo li' ha senso
+    # pretendere che un modulo o un certificato ESISTA. Tutto il resto viene
+    # letto lo stesso, perche' un percorso che porta fuori dal pacchetto e'
+    # un problema anche in un file mai incluso, ma non se ne pretende
+    # l'esistenza: etc/original/ e' la copia di sicurezza delle
+    # configurazioni di partenza, e i suoi certificati non esistono e non
+    # devono esistere.
+    principale = os.path.join(etc, "httpd.conf")
+    da_leggere = [principale] if os.path.exists(principale) else []
+    attivi = set(os.path.realpath(f) for f in da_leggere)
+    altri = []
+    for cartella, _, nomi in os.walk(etc):
         for nome in sorted(nomi):
-            if not nome.endswith((".conf", ".ini")):
+            if nome.endswith((".conf", ".ini")):
+                intero = os.path.join(cartella, nome)
+                if os.path.realpath(intero) not in attivi:
+                    altri.append(intero)
+
+    visti = set()
+    while da_leggere or altri:
+        if da_leggere:
+            intero = da_leggere.pop(0)
+            attivo = True
+        else:
+            intero = altri.pop(0)
+            attivo = False
+        vero = os.path.realpath(intero)
+        if vero in visti:
+            continue
+        visti.add(vero)
+        try:
+            testo = open(intero, encoding="utf-8", errors="replace").read()
+        except OSError as errore:
+            trovati.append((intero, 0, None, None, None, str(errore), False, True))
+            continue
+
+        # ⚠️ Apache continua una direttiva sulla riga dopo con una barra
+        # rovescia finale. Lasciandole spezzate, shlex si ferma sulla barra e
+        # una CustomLog perfettamente valida diventava "riga non
+        # interpretabile".
+        grezze = testo.split("\n")
+        righe = []
+        accumulata = ""
+        inizio = 1
+        for indice, riga in enumerate(grezze, 1):
+            if not accumulata:
+                inizio = indice
+            if riga.rstrip().endswith(chr(92)):
+                accumulata += riga.rstrip()[:-1] + " "
                 continue
-            intero = os.path.join(cartella, nome)
-            try:
-                testo = open(intero, encoding="utf-8", errors="replace").read()
-            except OSError as errore:
-                trovati.append((intero, 0, None, str(errore)))
+            righe.append((inizio, accumulata + riga))
+            accumulata = ""
+        if accumulata:
+            righe.append((inizio, accumulata))
+
+        condizionale = 0
+        for numero, riga in righe:
+            pulita = riga.strip()
+            # ⚠️ Il punto e virgola: php.ini commenta cosi', e leggendo quelle
+            # righe come direttive uscivano sessanta "riga non interpretabile"
+            # su frasi in inglese piene di apostrofi.
+            if not pulita or pulita.startswith(("#", ";")):
                 continue
-            for numero, riga in enumerate(testo.split("\n"), 1):
-                pulita = riga.strip()
-                if not pulita or pulita.startswith("#"):
+
+            # ⚠️ <IfDefine JUSTTOMAKEAPXSHAPPY> e' il modo in cui XAMPP tiene
+            # buono apxs: dentro ci sono LoadModule di libphp4 e libphp5, che
+            # non esistono e non si caricano mai. Pretendere che il file ci
+            # sia li' dentro e' un falso allarme; che il percorso resti dentro
+            # il pacchetto va preteso comunque.
+            minuscola = pulita.lower()
+            if minuscola.startswith(("<ifdefine", "<ifmodule", "<ifversion")):
+                condizionale += 1
+                continue
+            if minuscola.startswith(("</ifdefine", "</ifmodule", "</ifversion")):
+                condizionale = max(0, condizionale - 1)
+                continue
+
+            # Prima si guarda la prima parola: shlex si scomoda solo per una
+            # direttiva che ci interessa, e le righe di prosa non lo fanno
+            # nemmeno inciampare.
+            primo = pulita.split(None, 1)[0].strip('"').lower()
+            if primo not in DIRETTIVE:
+                continue
+            pezzi = argomenti(pulita)
+            if pezzi is None:
+                trovati.append((intero, numero, primo, None, pulita,
+                                "riga non interpretabile", False, attivo))
+                continue
+            if not pezzi:
+                continue
+            direttiva = pezzi[0].lower()
+            if direttiva == "serverroot" and len(pezzi) > 1:
+                serverroot = pezzi[1] if pezzi[1].startswith("/") \
+                    else os.path.join(specchio, pezzi[1])
+            quale = DIRETTIVE.get(direttiva)
+            if quale is None:
+                continue
+
+            grezzi = []
+            if quale == 0:                      # Mutex: "nome meccanismo:/percorso"
+                for pezzo in pezzi[1:]:
+                    if ":" in pezzo:
+                        grezzi.append(pezzo.split(":", 1)[1])
+            elif len(pezzi) > quale:
+                grezzi.append(pezzi[quale])
+
+            for grezzo in grezzi:
+                if not grezzo or grezzo.startswith("|"):
+                    continue                    # un programma, non un file
+                if "${" in grezzo or "%" in grezzo:
+                    # Una variabile che qui non si sa espandere: si dice, non
+                    # si scarta.
+                    trovati.append((intero, numero, direttiva, None, grezzo,
+                                    "contiene una variabile non espandibile",
+                                    condizionale > 0, attivo))
                     continue
-                pezzi = [p.strip('"') for p in pulita.split()]
-                quale = DIRETTIVE.get(pezzi[0].lower())
-                if quale is None:
-                    continue
-                if quale == 0:
-                    # Mutex: "nome meccanismo:/percorso"
-                    for pezzo in pezzi[1:]:
-                        if ":" in pezzo and pezzo.split(":", 1)[1].startswith("/"):
-                            trovati.append((intero, numero, pezzo.split(":", 1)[1], None))
-                    continue
-                if len(pezzi) <= quale:
-                    continue
-                valore = pezzi[quale]
-                # Un CustomLog che comincia con | e' un programma, non un file.
-                if valore.startswith("|"):
-                    continue
-                if valore.startswith("/"):
-                    trovati.append((intero, numero, valore, None))
+                assoluto = grezzo if grezzo.startswith("/") \
+                    else os.path.normpath(os.path.join(serverroot, grezzo))
+                trovati.append((intero, numero, direttiva, assoluto, grezzo, None,
+                                condizionale > 0, attivo))
+
+                if attivo and direttiva in ("include", "includeoptional"):
+                    # ⚠️ Il contenuto degli inclusi va letto: un .inc che
+                    # carica un modulo da /opt/homebrew non veniva mai aperto.
+                    for incluso in sorted(glob.glob(assoluto)):
+                        if os.path.isdir(incluso):
+                            for c, _, n in os.walk(incluso):
+                                for x in sorted(n):
+                                    da_leggere.append(os.path.join(c, x))
+                                    attivi.add(os.path.realpath(os.path.join(c, x)))
+                        elif os.path.isfile(incluso):
+                            da_leggere.append(incluso)
+                            attivi.add(os.path.realpath(incluso))
     return trovati
 
 
 def dipendenze(percorso):
-    """Le librerie che un Mach-O si porta scritte dentro."""
+    """Le librerie che un Mach-O si porta scritte dentro, @ compresi.
+
+    ⚠️ I prefissi @rpath, @loader_path e @executable_path venivano saltati
+    dicendo che "per costruzione non escono dal pacchetto". Non e' vero:
+    @loader_path/../../fuori.dylib ne esce, e un @rpath puo' risolvere in una
+    cartella esterna o non risolvere affatto. Qui si restituiscono tutti, e
+    chi chiama li risolve.
+    """
     try:
         uscita = subprocess.run(["otool", "-L", percorso], capture_output=True,
                                 text=True, timeout=30)
@@ -139,18 +331,103 @@ def dipendenze(percorso):
         return None, str(errore)
     if uscita.returncode != 0:
         return None, (uscita.stderr or "otool ha risposto %d" % uscita.returncode).strip()
-    fuori = []
+    nomi = []
     for riga in uscita.stdout.split("\n")[1:]:
         riga = riga.strip()
         if not riga:
             continue
-        nome = riga.split(" (compatibility")[0].strip()
-        if nome.startswith(("@rpath", "@loader_path", "@executable_path")):
-            # Relativo al binario: non punta fuori dal pacchetto per
-            # costruzione, e lo risolve dyld a partire da dove sta il file.
+        nomi.append(riga.split(" (compatibility")[0].strip())
+    return nomi, None
+
+
+def elenco_rpath(percorso):
+    """Le LC_RPATH di un Mach-O, che sono quelle che @rpath usa."""
+    try:
+        uscita = subprocess.run(["otool", "-l", percorso], capture_output=True,
+                                text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if uscita.returncode != 0:
+        return None
+    righe = uscita.stdout.split("\n")
+    trovati = []
+    for i, riga in enumerate(righe):
+        if riga.strip() != "cmd LC_RPATH":
             continue
-        fuori.append(nome)
-    return fuori, None
+        for successiva in righe[i + 1:i + 5]:
+            trovata = re.search(r"\bpath (.+?) \(offset \d+\)", successiva)
+            if trovata:
+                trovati.append(trovata.group(1))
+                break
+    return trovati
+
+
+def candidati(lib, binario, eseguibile):
+    """Dove puo' finire una dipendenza con un prefisso @.
+
+    Ritorna (elenco, None) oppure (None, motivo) quando non si sa risolverla.
+    """
+    cartella = os.path.dirname(binario)
+    if lib.startswith("@loader_path"):
+        return [os.path.normpath(lib.replace("@loader_path", cartella, 1))], None
+    if lib.startswith("@executable_path"):
+        if not eseguibile:
+            # In una libreria dipende da CHI la carica, e da qui non si sa.
+            return None, "@executable_path in una libreria: dipende dal programma che la carica"
+        return [os.path.normpath(lib.replace("@executable_path", cartella, 1))], None
+    if lib.startswith("@rpath"):
+        percorsi = elenco_rpath(binario)
+        if percorsi is None:
+            return None, "otool -l non ha risposto"
+        if not percorsi:
+            return None, "@rpath senza nessuna LC_RPATH: non risolve"
+        risolti = []
+        for base in percorsi:
+            if base.startswith("@loader_path"):
+                base = base.replace("@loader_path", cartella, 1)
+            elif base.startswith("@executable_path"):
+                if not eseguibile:
+                    return None, "@rpath basato su @executable_path in una libreria"
+                base = base.replace("@executable_path", cartella, 1)
+            risolti.append(os.path.normpath(os.path.join(base, lib[len("@rpath/"):])))
+        return risolti, None
+    return [lib], None
+
+
+def coda(percorso, quanti=3):
+    """Gli ultimi pezzi di un percorso: quello che la riscrittura della
+    radice non cambia. Tre bastano a distinguere postgresql/lib/libpq.5.dylib
+    da lib/libpq.5.dylib, e non tanti da dipendere da dove sta installato."""
+    pezzi = [p for p in percorso.split("/") if p]
+    return "/".join(pezzi[-quanti:])
+
+
+def dipendenza_gia_nella_sorgente(sorgente, relativo, lib):
+    """Vero se lo STESSO binario, nella sorgente, aveva gia' questa dipendenza.
+
+    ⚠️ Senza questo confronto, ogni percorso che non esiste da nessuna parte
+    veniva etichettato "rotto gia' nella sorgente, ereditato da upstream",
+    compreso uno appena introdotto da un errore delle nostre patch. Nella
+    riproduzione esterna una dipendenza inventata ha ottenuto quell'etichetta
+    e il controllo e' uscito 0.
+    """
+    if not sorgente:
+        return None                       # senza sorgente non si sa
+    originale = os.path.join(sorgente, relativo)
+    if not os.path.exists(originale):
+        return None
+    nomi, errore = dipendenze(originale)
+    if nomi is None:
+        return None
+    if lib in nomi:
+        return True
+    # ⚠️ Il confezionamento RISCRIVE i percorsi: il binario di origine dice
+    # /Applications/XAMPP/xamppfiles/postgresql/lib/libpq.5.dylib e quello
+    # confezionato /Applications/VXOST/vxostfiles/postgresql/lib/libpq.5.dylib.
+    # Un confronto alla lettera li chiamava diversi e concludeva che la
+    # dipendenza l'avevamo introdotta noi, che e' il contrario del vero. Si
+    # confronta la CODA del percorso, che la riscrittura non tocca.
+    return coda(lib) in set(coda(n) for n in nomi)
 
 
 def main():
@@ -169,25 +446,47 @@ def main():
 
     # ---- 1. la configurazione ------------------------------------------
     esaminate = 0
-    for file_conf, numero, valore, errore in percorsi_nella_configurazione(specchio):
+    fuori = 0
+    non_valutabili = 0
+    for (file_conf, numero, direttiva, valore, grezzo, errore, condizionale,
+         attivo) in percorsi_nella_configurazione(specchio):
+        dove = os.path.relpath(file_conf, specchio)
         if errore:
-            problemi.append("%s non si e' potuto leggere: %s" % (file_conf, errore))
+            # ⚠️ Quello che non si sa leggere si DICHIARA. Prima le righe non
+            # interpretabili e i percorsi relativi sparivano in silenzio, e il
+            # conteggio finale diceva "0 fuori" su una configurazione che non
+            # era stata guardata tutta.
+            non_valutabili += 1
+            problemi.append("%s:%d %s: %s" % (dove, numero, errore, grezzo or ""))
             continue
         esaminate += 1
-        if valore.startswith(specchio + "/") or valore == specchio:
+
+        if dentro(valore, specchio, payload):
+            if direttiva in DEVE_ESISTERE and attivo and not condizionale \
+                    and not any(c in grezzo for c in "*?[") \
+                    and not os.path.exists(valore):
+                problemi.append("%s:%d %s nomina %s, che non esiste"
+                                % (dove, numero, direttiva, grezzo))
+                fuori += 1
             continue
-        if valore.startswith(SISTEMA_CONF):
+
+        ammessi = FUORI_AMMESSO.get(direttiva, ())
+        if ammessi and valore.startswith(ammessi):
             continue
-        problemi.append("%s:%d porta fuori dal pacchetto: %s"
-                        % (os.path.relpath(file_conf, specchio), numero, valore))
-    print("  %d percorsi nominati dalla configurazione, %d fuori"
-          % (esaminate, len([p for p in problemi if "porta fuori" in p])))
+
+        fuori += 1
+        problemi.append("%s:%d %s porta fuori dal pacchetto: %s"
+                        % (dove, numero, direttiva, valore))
+
+    print("  %d percorsi nominati dalla configurazione, %d fuori, %d non valutabili"
+          % (esaminate, fuori, non_valutabili))
 
     # ---- 2. le librerie ------------------------------------------------
     binari = 0
     perse = 0                 # c'erano nella sorgente e nel pacchetto no: colpa nostra
-    ereditate = []            # rotte da prima di noi
+    ereditate = []            # rotte da prima di noi, e VERIFICATO che lo fossero
     senza_percorso = []
+    irrisolte = []            # con un @ che da qui non si sa sciogliere
     for cartella, _, nomi in os.walk(payload):
         for nome in nomi:
             intero = os.path.join(cartella, nome)
@@ -200,7 +499,54 @@ def main():
                                 % (os.path.relpath(intero, payload), errore))
                 continue
             dove = os.path.relpath(intero, payload)
+            eseguibile = os.access(intero, os.X_OK) and not nome.endswith(
+                (".dylib", ".so", ".bundle"))
+
             for lib in libs:
+                if lib.startswith("@"):
+                    dove_puo, motivo = candidati(lib, intero, eseguibile)
+                    if dove_puo is None:
+                        irrisolte.append((dove, lib, motivo))
+                        continue
+                    # Basta che UNO dei candidati esista e stia nel payload.
+                    if any(os.path.exists(c) and dentro(c, payload) for c in dove_puo):
+                        continue
+                    if any(os.path.exists(c) and c.startswith(SISTEMA_LIB)
+                           for c in dove_puo):
+                        continue
+                    # ⚠️ Una LC_RPATH che punta alla radice di INSTALLAZIONE
+                    # non e' un riferimento esterno: e' lo stesso caso del
+                    # percorso assoluto sotto la radice, e dopo
+                    # l'installazione quel file sara' nel pacchetto. Quello
+                    # che va chiesto e' che il pacchetto lo contenga.
+                    sotto_radice = [c for c in dove_puo if c.startswith(radice + "/")]
+                    if any(os.path.exists(os.path.join(payload,
+                                                       os.path.relpath(c, radice)))
+                           for c in sotto_radice):
+                        continue
+                    fuori_payload = [c for c in dove_puo
+                                     if os.path.exists(c) and not dentro(c, payload)
+                                     and not c.startswith(radice + "/")]
+                    if fuori_payload:
+                        perse += 1
+                        problemi.append("%s: %s risolve fuori dal pacchetto (%s)"
+                                        % (dove, lib, fuori_payload[0]))
+                        continue
+                    # Nessun candidato esiste: stessa domanda di sotto, e
+                    # stessa risposta. Se la sorgente non aveva questo
+                    # riferimento, l'abbiamo introdotto noi.
+                    gia = dipendenza_gia_nella_sorgente(sorgente, dove, lib)
+                    if gia is True:
+                        ereditate.append((dove, lib))
+                    elif gia is False:
+                        perse += 1
+                        problemi.append("%s dipende da %s, che nella sorgente non "
+                                        "c'era: l'ha introdotta il confezionamento"
+                                        % (dove, lib))
+                    else:
+                        irrisolte.append((dove, lib, "nessun candidato esiste"))
+                    continue
+
                 if not lib.startswith("/"):
                     # Nome senza percorso, come "libgd.dylib": lo risolve dyld
                     # a runtime con i suoi percorsi di ripiego. Viene dal build
@@ -211,8 +557,7 @@ def main():
                     continue
                 if lib.startswith(radice + "/"):
                     # Dopo l'installazione quel percorso sara' questo file, e
-                    # deve esserci. Se non c'e', la domanda e' di chi e' la
-                    # colpa: la sorgente ce l'aveva?
+                    # deve esserci.
                     relativo = os.path.relpath(lib, radice)
                     if os.path.exists(os.path.join(payload, relativo)):
                         continue
@@ -220,19 +565,33 @@ def main():
                         perse += 1
                         problemi.append("%s dipende da %s: c'era nella sorgente e il "
                                         "pacchetto non la contiene" % (dove, lib))
-                    else:
-                        ereditate.append((dove, lib))
-                    continue
-                # Un percorso assoluto che non e' ne' di sistema ne' nostro: la
-                # macchina di build di qualcun altro. Se esiste qui e' un
-                # riferimento all'installazione locale, ed e' un problema
-                # nostro; se non esiste da nessuna parte e' cosi' da sempre.
-                if os.path.exists(lib):
-                    perse += 1
-                    problemi.append("%s dipende da %s, che esiste solo su questa "
-                                    "macchina" % (dove, lib))
+                        continue
                 else:
+                    # Un percorso assoluto che non e' ne' di sistema ne' nostro:
+                    # la macchina di build di qualcun altro. Se esiste qui e'
+                    # un riferimento all'installazione locale.
+                    if os.path.exists(lib):
+                        perse += 1
+                        problemi.append("%s dipende da %s, che esiste solo su questa "
+                                        "macchina" % (dove, lib))
+                        continue
+
+                # Non esiste da nessuna parte. ⚠️ "Ereditata" si DIMOSTRA
+                # guardando lo stesso binario nella sorgente, non si deduce
+                # dall'assenza: un riferimento appena introdotto da una nostra
+                # patch non esiste da nessuna parte esattamente come uno rotto
+                # da sempre.
+                gia = dipendenza_gia_nella_sorgente(sorgente, dove, lib)
+                if gia is True:
                     ereditate.append((dove, lib))
+                elif gia is False:
+                    perse += 1
+                    problemi.append("%s dipende da %s, che nella sorgente non c'era: "
+                                    "l'ha introdotta il confezionamento" % (dove, lib))
+                else:
+                    irrisolte.append((dove, lib,
+                                      "non esiste, e la sorgente non e' consultabile"))
+
     print("  %d Mach-O esaminati, %d dipendenze perse dal confezionamento"
           % (binari, perse))
     if senza_percorso:
@@ -242,11 +601,20 @@ def main():
             print("      %s -> %s" % (dove, lib))
         if len(senza_percorso) > 3:
             print("      e altre %d" % (len(senza_percorso) - 3))
+    if irrisolte:
+        # ⚠️ Non un via libera. Sono dipendenze di cui NON si e' potuto dire
+        # niente, e finche' sono elencate il controllo non sta affermando che
+        # il pacchetto e' autosufficiente.
+        print("  %d dipendenze non valutabili da qui:" % len(irrisolte))
+        for dove, lib, motivo in irrisolte[:6]:
+            print("      %s -> %s (%s)" % (dove, lib, motivo))
+        if len(irrisolte) > 6:
+            print("      e altre %d" % (len(irrisolte) - 6))
     if ereditate:
         # Non un problema, ma nemmeno una cosa da nascondere: e' un elenco di
         # pezzi dello stack che non funzionerebbero se qualcuno li usasse.
-        print("  %d dipendenze rotte gia' nella sorgente, ereditate da upstream:"
-              % len(ereditate))
+        print("  %d dipendenze rotte GIA' NELLA SORGENTE, verificato binario per "
+              "binario:" % len(ereditate))
         visti = {}
         for dove, lib in ereditate:
             visti.setdefault(lib, []).append(dove)
@@ -254,6 +622,7 @@ def main():
             print("      %s (%d file)" % (lib, len(visti[lib])))
         if len(visti) > 6:
             print("      e altre %d librerie" % (len(visti) - 6))
+
     if binari == 0:
         problemi.append("nessun Mach-O trovato nel payload: non e' un pacchetto verificato")
 
