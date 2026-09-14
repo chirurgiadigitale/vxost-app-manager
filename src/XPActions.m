@@ -546,6 +546,16 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
             message = NSLocalizedString(@"wizard.failed.configtest", nil);
         } else if ([result.output containsString:@"VXOST_RESTART_FAILED"]) {
             message = NSLocalizedString(@"wizard.failed.restart", nil);
+        // ⚠️ Prima di VXOST_OK, perche' containsString: lo trova anche dentro
+        // VXOST_OK_UNVERIFIED: invertendo i due rami, un riavvio non
+        // verificato passerebbe per verificato senza che niente lo dica.
+        //
+        // Il messaggio qui non e' tradotto, ed e' voluto: dice cosa non si e'
+        // potuto verificare, e una frase tradotta che dichiari il successo
+        // sarebbe una bugia in quindici lingue invece che in una.
+        } else if ([result.output containsString:@"VXOST_OK_UNVERIFIED"]) {
+            ok = YES;
+            message = [self firstMeaningfulLine:result.output];
         } else if ([result.output containsString:@"VXOST_OK"]) {
             ok = YES;
             message = [NSString stringWithFormat:
@@ -632,10 +642,19 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // e' un file ordinario (syslog, o un programma dietro una pipe) la riga
     // non si puo' leggere: in quel caso valgono il pid e la porta, e non si
     // pretende di aver letto un log che non esiste.
-    [block appendString:@"LOG=$(\"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" -D DUMP_RUN_CFG 2>/dev/null \\\n"];
+    // ⚠️ Gli stessi -D dell'avvio (rilievo R8). Senza, i blocchi IfDefine
+    // vengono letti diversamente da come li legge l'Apache vero, e
+    // "Main ErrorLog" puo' uscire diverso da quello in uso.
+    [block appendString:@"DEFS=\"-D PHP\"\n"];
+    [block appendString:@"[ -f \"$R/etc/vxost/startssl\" ] && DEFS=\"$DEFS -D SSL\"\n"];
+    [block appendString:@"LOG=$(\"$R/bin/httpd\" -t -d \"$R\" -f \"$HTTPD\" $DEFS -D DUMP_RUN_CFG 2>/dev/null \\\n"];
     [block appendString:@"      | sed -n 's/^Main ErrorLog: \"\\(.*\\)\"$/\\1/p' | head -1)\n"];
+    // ⚠️ Un percorso che non si e' ottenuto NON si indovina. Prima il caso
+    // vuoto ripiegava su $R/logs/error_log: se il log vero era altrove, il
+    // riavvio riuscito veniva dichiarato fallito e si tornava indietro per
+    // niente. Non sapere dove scrive si dice, e vale come "non verificabile".
     [block appendString:@"case \"$LOG\" in\n"];
-    [block appendString:@"    \"\")      LOG=\"$R/logs/error_log\" ;;\n"];
+    [block appendString:@"    \"\")      LOG='' ;;\n"];
     [block appendString:@"    syslog*) LOG='' ;;\n"];
     [block appendString:@"    \"|\"*)    LOG='' ;;\n"];
     [block appendString:@"    /*)      ;;\n"];
@@ -644,26 +663,49 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"\n"];
     // ⚠️ Il segno si prende in byte, non in righe. Con la rotazione il file
     // riparte da zero e la riga nuova finisce alla riga 1: un "dalla riga 101
-    // in poi" non la vedrebbe mai, e il riavvio riuscito verrebbe annullato.
-    // Se il file si e' accorciato, si rilegge da capo.
+    // in poi" non la vedrebbe mai.
+    //
+    // ⚠️ E non basta guardare se si e' accorciato: un file ruotato e
+    // sostituito puo' essere gia' piu' lungo della vecchia soglia quando lo
+    // si guarda, e allora la riga nuova resta prima del segno. Il file si
+    // riconosce dall'inode, che cambia quando il file e' un altro.
     [block appendString:@"prima=0\n"];
+    [block appendString:@"prima_ino=''\n"];
     [block appendString:@"if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
     [block appendString:@"    prima=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
     [block appendString:@"    [ -n \"$prima\" ] || prima=0\n"];
+    [block appendString:@"    prima_ino=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
     [block appendString:@"fi\n"];
     [block appendString:@"\n"];
     // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
     // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
     // copie divergono alla prima correzione.
+    //
+    // Tre esiti, non due: 0 verificato, 2 vivo ma non verificabile, 1 no.
+    // ⚠️ Il 2 esisteva gia' nei fatti e veniva riportato come 0: senza un log
+    // leggibile bastava un pid vivo, e nella riproduzione esterna passava il
+    // pid della shell di prova, senza Apache e senza nessun riavvio.
     [block appendString:@"vxost_ripartito() {\n"];
     [block appendString:@"    _da=\"$1\"\n"];
     [block appendString:@"    _pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    [ -n \"$_pid\" ] && kill -0 \"$_pid\" 2>/dev/null || return 1\n"];
-    [block appendString:@"    [ -n \"$LOG\" ] || return 0\n"];
+    // Vivo non basta: dev'essere il NOSTRO httpd. Un pid riciclato da un
+    // altro programma, o l'httpd di sistema, non dicono niente di questo
+    // riavvio.
+    [block appendString:@"    _cmd=$(ps -p \"$_pid\" -o comm= 2>/dev/null)\n"];
+    [block appendString:@"    [ \"${_cmd##*/}\" = 'httpd' ] || return 1\n"];
+    [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
+    [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
+    [block appendString:@"    _ino=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    _dopo=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
     [block appendString:@"    [ -n \"$_dopo\" ] || _dopo=0\n"];
-    [block appendString:@"    [ \"$_dopo\" -lt \"$_da\" ] && _da=0\n"];
-    [block appendString:@"    tail -c +$((_da + 1)) \"$LOG\" 2>/dev/null | grep -q 'resuming normal operations'\n"];
+    [block appendString:@"    if [ -z \"$prima_ino\" ] || [ \"$_ino\" != \"$prima_ino\" ]; then\n"];
+    [block appendString:@"        _da=0\n"];
+    [block appendString:@"    elif [ \"$_dopo\" -lt \"$_da\" ]; then\n"];
+    [block appendString:@"        _da=0\n"];
+    [block appendString:@"    fi\n"];
+    [block appendString:@"    tail -c +$((_da + 1)) \"$LOG\" 2>/dev/null | grep -q 'resuming normal operations' || return 1\n"];
+    [block appendString:@"    return 0\n"];
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
     [block appendString:@"if pgrep -x httpd >/dev/null 2>&1; then\n"];
@@ -672,12 +714,18 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    \"$CTL\" startapache > \"$OUT\" 2>&1; ctl=$?\n"];
     [block appendString:@"fi\n"];
     [block appendString:@"\n"];
+    // 1 verificato, 2 vivo ma non verificabile, 0 no.
     [block appendString:@"avviato=0\n"];
     [block appendString:@"attesa=0\n"];
     [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"    if vxost_ripartito \"$prima\"; then\n"];
-    [block appendString:@"        avviato=1\n"];
-    [block appendString:@"        break\n"];
+    [block appendString:@"    vxost_ripartito \"$prima\"; esito=$?\n"];
+    [block appendString:@"    if [ $esito -eq 0 ]; then avviato=1; break; fi\n"];
+    // Senza un log leggibile l'attesa non puo' portare nessuna prova nuova:
+    // si concede il tempo di partire e si smette, invece di fermare l'utente
+    // quindici secondi a ogni progetto su una macchina che logga su syslog.
+    [block appendString:@"    if [ $esito -eq 2 ]; then\n"];
+    [block appendString:@"        avviato=2\n"];
+    [block appendString:@"        [ $attesa -ge 3 ] && break\n"];
     [block appendString:@"    fi\n"];
     [block appendString:@"    sleep 1\n"];
     [block appendString:@"    attesa=$((attesa + 1))\n"];
@@ -686,7 +734,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     if (port > 0) {
         [block appendString:@"\n"];
         [block appendString:@"# Vivo non basta: deve ascoltare la porta del progetto nuovo.\n"];
-        [block appendFormat:@"if [ $avviato -eq 1 ]; then\n"];
+        [block appendString:@"if [ $avviato -ne 0 ]; then\n"];
         [block appendString:@"    inascolto=0\n"];
         [block appendString:@"    attesa=0\n"];
         [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
@@ -698,7 +746,10 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
         [block appendString:@"        sleep 1\n"];
         [block appendString:@"        attesa=$((attesa + 1))\n"];
         [block appendString:@"    done\n"];
-        [block appendString:@"    [ $inascolto -eq 1 ] || avviato=0\n"];
+        // ⚠️ La porta nuova viene dalla configurazione nuova: se e' in
+        // ascolto, quella configurazione e' stata caricata. E' una prova
+        // vera, e vale anche quando il log non si puo' leggere.
+        [block appendString:@"    if [ $inascolto -eq 1 ]; then avviato=1; else avviato=0; fi\n"];
         [block appendString:@"fi\n"];
     }
 
@@ -706,6 +757,16 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"if [ $avviato -eq 1 ]; then\n"];
     [block appendString:@"    rm -f \"$OUT\"\n"];
     [block appendString:@"    echo VXOST_OK\n"];
+    // ⚠️ Non si dichiara riuscito quello che non si e' guardato, e non si
+    // torna indietro per un dubbio: Apache e' su, la configurazione ha
+    // passato il configtest, e riportarlo giu' sarebbe il danno peggiore.
+    // Si dice com'e'.
+    [block appendString:@"elif [ $avviato -eq 2 ]; then\n"];
+    [block appendString:@"    rm -f \"$OUT\"\n"];
+    [block appendString:@"    echo \"NOTE: Apache is running, but the reload could not be verified:\"\n"];
+    [block appendString:@"    echo \"the error log is not a readable file (syslog, or a program behind a pipe).\"\n"];
+    [block appendString:@"    echo \"Open the site before relying on it.\"\n"];
+    [block appendString:@"    echo VXOST_OK_UNVERIFIED\n"];
     [block appendString:@"else\n"];
     [block appendString:@"    # Si torna indietro e si rimette su quello che c'era: il danno\n"];
     [block appendString:@"    # peggiore non e' il progetto mancato, e' Apache giu' per tutti.\n"];
@@ -715,17 +776,21 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // risale, la configurazione su disco e quella caricata non coincidono
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
     [block appendString:@"    prima_rb=0\n"];
+    [block appendString:@"    prima_ino=''\n"];
     [block appendString:@"    if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
     [block appendString:@"        prima_rb=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
     [block appendString:@"        [ -n \"$prima_rb\" ] || prima_rb=0\n"];
+    [block appendString:@"        prima_ino=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    fi\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
     [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"        if vxost_ripartito \"$prima_rb\"; then\n"];
-    [block appendString:@"            tornato=1\n"];
-    [block appendString:@"            break\n"];
+    [block appendString:@"        vxost_ripartito \"$prima_rb\"; esito=$?\n"];
+    [block appendString:@"        if [ $esito -eq 0 ]; then tornato=1; break; fi\n"];
+    [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
+    [block appendString:@"            tornato=2\n"];
+    [block appendString:@"            [ $attesa -ge 3 ] && break\n"];
     [block appendString:@"        fi\n"];
     [block appendString:@"        sleep 1\n"];
     [block appendString:@"        attesa=$((attesa + 1))\n"];
@@ -733,6 +798,9 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    echo \"control script exit status: $ctl\"\n"];
     [block appendString:@"    if [ $tornato -eq 1 ]; then\n"];
     [block appendString:@"        echo \"the previous configuration is back and Apache is serving it\"\n"];
+    [block appendString:@"    elif [ $tornato -eq 2 ]; then\n"];
+    [block appendString:@"        echo \"the files were restored and Apache is running, but the reload could not be\"\n"];
+    [block appendString:@"        echo \"verified: the error log is not a readable file. Open a project page to check.\"\n"];
     [block appendString:@"    else\n"];
     [block appendString:@"        echo \"WARNING: the files were restored but Apache did not come back up.\"\n"];
     [block appendString:@"        echo \"What is on disk and what is running no longer match. Start it by hand:\"\n"];
@@ -1044,6 +1112,16 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
             message = NSLocalizedString(@"wizard.failed.configtest", nil);
         } else if ([result.output containsString:@"VXOST_RESTART_FAILED"]) {
             message = NSLocalizedString(@"wizard.failed.restart", nil);
+        // ⚠️ Prima di VXOST_OK, perche' containsString: lo trova anche dentro
+        // VXOST_OK_UNVERIFIED: invertendo i due rami, un riavvio non
+        // verificato passerebbe per verificato senza che niente lo dica.
+        //
+        // Il messaggio qui non e' tradotto, ed e' voluto: dice cosa non si e'
+        // potuto verificare, e una frase tradotta che dichiari il successo
+        // sarebbe una bugia in quindici lingue invece che in una.
+        } else if ([result.output containsString:@"VXOST_OK_UNVERIFIED"]) {
+            ok = YES;
+            message = [self firstMeaningfulLine:result.output];
         } else if ([result.output containsString:@"VXOST_OK"]) {
             ok = YES;
             message = success;
