@@ -17,6 +17,19 @@ Qui si legge quello che c'e' dentro. Il manifesto elenca, in ordine:
     l <bersaglio> <percorso>
     d <permessi> <percorso>
 
+Percorsi e bersagli sono CITATI: spazi, a capo, tabulazioni e barre rovesce
+diventano \\s \\n \\t \\\\. Senza, due cose andavano storte insieme: le righe non
+si sapevano piu' dividere in campi (nel pacchetto ci sono sette file con uno
+spazio nel nome), e il confronto usava l'ultima parola della riga come chiave,
+quindi due percorsi che finiscono uguale si sovrascrivevano e uno dei due
+spariva dal confronto senza che niente lo dicesse.
+
+Non sono rappresentati, e vanno detti invece di lasciarli intendere: la
+topologia degli hard link, il proprietario, le ACL e gli attributi estesi. Due
+file identici al posto di un hard link danno lo stesso pacchetto a chi
+installa; il proprietario viene rifatto dall'installazione. Il manifesto lega
+CONTENUTO, PERMESSI e BERSAGLI DEI LINK, e non promette altro.
+
 I permessi ci sono perche' un file eseguibile che smette di esserlo rompe il
 pacchetto senza cambiare un byte di contenuto. I bersagli dei link ci sono
 perche' cambiare dove punta un link non cambia nessun file.
@@ -30,6 +43,7 @@ che fa build-stack-dmg.sh prima di confezionare.
 """
 import hashlib
 import os
+import stat
 import sys
 
 # Le due cose che finiscono nel disco. Il resto della cartella di staging (il
@@ -38,6 +52,21 @@ import sys
 CONTENUTO = ("vxostfiles", "VXOST.app")
 
 BLOCCO = 1024 * 1024
+
+# Il numero di formato sta nella prima riga. Cambiandolo, un manifesto vecchio
+# viene riconosciuto come tale e lo si dice: senza, il confronto sputerebbe
+# ventisettemila differenze e nessuno capirebbe che e' solo un altro formato.
+INTESTAZIONE = "#manifesto 2"
+
+CITAZIONI = ((chr(92), chr(92) + chr(92)), (" ", chr(92) + "s"),
+             ("\n", chr(92) + "n"), ("\r", chr(92) + "r"), ("\t", chr(92) + "t"))
+
+
+def cita(testo):
+    """Un percorso o un bersaglio come UN campo, senza spazi ne' a capo."""
+    for carattere, sostituto in CITAZIONI:
+        testo = testo.replace(carattere, sostituto)
+    return testo
 
 
 def impronta(percorso):
@@ -62,26 +91,52 @@ def manifesto(staging):
     """
     righe = []
     problemi = []
+
+    def guasto(errore):
+        # ⚠️ os.walk senza questo INGOIA gli errori di discesa: una cartella
+        # illeggibile spariva insieme a tutto quello che conteneva, e il
+        # manifesto usciva completo di quello che era riuscito a leggere.
+        problemi.append("%s: %s" % (getattr(errore, "filename", "?"), errore))
+
+    def registra(intero, relativo):
+        st = os.lstat(intero)
+        modo = oct(st.st_mode & 0o7777)[2:].rjust(4, "0")
+        if stat.S_ISLNK(st.st_mode):
+            righe.append("l %s %s" % (cita(os.readlink(intero)), cita(relativo)))
+        elif stat.S_ISDIR(st.st_mode):
+            righe.append("d %s %s" % (modo, cita(relativo)))
+        elif stat.S_ISREG(st.st_mode):
+            righe.append("f %s %d %s %s"
+                         % (impronta(intero), st.st_size, modo, cita(relativo)))
+        else:
+            # ⚠️ Fifo, socket e device non si impronta: aprire una fifo in
+            # lettura resta in attesa di uno scrittore che non arrivera' mai,
+            # e la build si ferma li' senza dire perche'. E comunque in un
+            # pacchetto non ci vanno.
+            problemi.append("%s: non e' un file, un link o una cartella" % relativo)
+
     for radice in CONTENUTO:
         base = os.path.join(staging, radice)
-        if not os.path.exists(base):
-            problemi.append("manca " + radice)
+        # ⚠️ La radice stessa va registrata. Prima bastava che esistesse:
+        # cambiandone i permessi il confronto passava, e sostituendo VXOST.app
+        # con un file ordinario os.walk non produceva niente e la generazione
+        # usciva 0 su uno staging senza l'applicazione.
+        if not os.path.isdir(base):
+            problemi.append("manca %s, o non e' una cartella" % radice)
             continue
-        for cartella, sottocartelle, nomi in os.walk(base, followlinks=False):
+        try:
+            registra(base, radice)
+        except OSError as errore:
+            problemi.append("%s: %s" % (radice, errore))
+            continue
+        for cartella, sottocartelle, nomi in os.walk(base, followlinks=False,
+                                                     onerror=guasto):
             sottocartelle.sort()
             for nome in sorted(sottocartelle + nomi):
                 intero = os.path.join(cartella, nome)
                 relativo = os.path.relpath(intero, staging)
                 try:
-                    st = os.lstat(intero)
-                    modo = oct(st.st_mode & 0o7777)[2:].rjust(4, "0")
-                    if os.path.islink(intero):
-                        righe.append("l %s %s" % (os.readlink(intero), relativo))
-                    elif os.path.isdir(intero):
-                        righe.append("d %s %s" % (modo, relativo))
-                    else:
-                        righe.append("f %s %d %s %s"
-                                     % (impronta(intero), st.st_size, modo, relativo))
+                    registra(intero, relativo)
                 except OSError as errore:
                     # Un file che non si riesce a leggere non e' un file
                     # verificato: non si salta in silenzio.
@@ -107,7 +162,7 @@ def main():
         return 2
 
     if len(sys.argv) == 2:
-        sys.stdout.write("\n".join(righe) + "\n")
+        sys.stdout.write("\n".join([INTESTAZIONE] + righe) + "\n")
         return 0
 
     if sys.argv[2] != "--confronta" or len(sys.argv) < 4:
@@ -119,13 +174,34 @@ def main():
         attese = f.read().split("\n")
     attese = [r for r in attese if r]
 
+    # ⚠️ Un manifesto di un altro formato non e' uno staging cambiato, e dirlo
+    # in questo modo evita di leggere ventisettemila differenze per capirlo.
+    # Il timbro va rifatto RICOSTRUENDO lo staging, non ricalcolando l'hash
+    # sopra quello che c'e'.
+    if not attese or attese[0] != INTESTAZIONE:
+        print("  il manifesto e' di un altro formato (atteso %r)" % INTESTAZIONE,
+              file=sys.stderr)
+        print("  ricostruire lo staging, non rigenerare il timbro",
+              file=sys.stderr)
+        return 2
+    attese = attese[1:]
+
     # Il confronto dice COSA e' cambiato, non solo che qualcosa lo e': con
     # novantamila righe, "il manifesto non combacia" non aiuta nessuno.
     def per_percorso(elenco):
         mappa = {}
         for riga in elenco:
-            pezzi = riga.split(" ")
-            mappa[pezzi[-1]] = riga
+            # Il percorso e' l'ultimo campo ed e' citato, quindi non contiene
+            # spazi: la chiave e' il percorso intero, non la sua ultima parola.
+            # ⚠️ Prima era pezzi[-1] su un percorso NON citato, cioe' l'ultima
+            # parola: due percorsi che finivano uguale si sovrascrivevano, e
+            # quello nascosto poteva cambiare senza che il confronto lo dicesse.
+            chiave = riga.rsplit(" ", 1)[-1]
+            if chiave in mappa:
+                # Non puo' succedere con i percorsi citati, e se succede il
+                # confronto non e' affidabile: meglio fermarsi.
+                raise SystemExit("  due righe per lo stesso percorso: " + chiave)
+            mappa[chiave] = riga
         return mappa
 
     prima, adesso = per_percorso(attese), per_percorso(righe)
