@@ -78,70 +78,131 @@ fi
 # "not reachable from the network. Good." without ever looking at a socket.
 # File and daemon are two answers, and both get reported.
 
-# The value of bind-address in the last server group that sets it. Empty if
-# no server group sets it at all.
-bind_value=$(awk '
-	/^[[:space:]]*\[/ {
-		g = $0
-		sub(/^[[:space:]]*\[/, "", g)
-		sub(/\].*$/, "", g)
-		gsub(/[[:space:]]/, "", g)
-		g = tolower(g)
-		next
-	}
-	/^[[:space:]]*bind-address[[:space:]]*=/ {
-		if (g == "mysqld" || g == "server" || g == "mariadb" || g == "mariadbd" \
-		    || g == "client-server" || g ~ /^mysqld-[0-9]/ || g ~ /^mariadb-[0-9]/) {
-			v = $0
-			sub(/^[^=]*=[[:space:]]*/, "", v)
-			sub(/[[:space:]#].*$/, "", v)
-			value = v
+# I gruppi si CHIEDONO al binario, non si trascrivono: quali gruppi legga e'
+# un fatto del programma, e una lista scritta a mano invecchia alla prima
+# versione. --no-defaults --verbose --help li stampa e non avvia niente.
+#
+# ⚠️ La lista scritta a mano ne ometteva due, mariadbd-10.4 e galera, e in
+# cambio accettava qualunque [mysqld-<numero>]: un [mysqld-99.9] che il
+# server ignora veniva letto come se contasse, e bastava a far passare il
+# controllo su un file che apre il database alla rete.
+mysqld_bin="$VXOST_ROOT/sbin/mysqld"
+test -x "$mysqld_bin" || mysqld_bin="$VXOST_ROOT/bin/mysqld"
+gruppi=$("$mysqld_bin" --no-defaults --verbose --help 2>/dev/null \
+	| sed -n 's/^The following groups are read: *//p' | head -1)
+gruppi_letti="true"
+if test -z "$gruppi"
+then
+	# Ripiego esplicito, non un modello: sono i nove gruppi di MariaDB
+	# 10.4, letti da questo binario il 14/09/2026. Un elenco si aggiorna
+	# quando si guarda; un'espressione regolare accetta anche quello che
+	# non esiste.
+	gruppi="mysqld server mysqld-10.4 mariadb mariadb-10.4 mariadbd mariadbd-10.4 client-server galera"
+	gruppi_letti="false"
+fi
+
+# L'ultimo valore dell'opzione $1 fra i gruppi di server. Vuoto se nessuno la
+# imposta.
+#
+# ⚠️ Le due grafie sono la stessa opzione: MariaDB tratta trattino e trattino
+# basso come equivalenti nei nomi. Guardando solo "bind-address", una riga
+# "bind_address=0.0.0.0" scritta dopo non veniva vista e il file passava.
+#
+# Una funzione sola, usata anche dopo la riscrittura: due copie dello stesso
+# awk divergono alla prima correzione.
+leggi_opzione() {
+	awk -v gruppi="$gruppi" -v opt="$1" '
+		BEGIN {
+			n = split(gruppi, a, " ")
+			for (i = 1; i <= n; i++) ok[tolower(a[i])] = 1
+			gsub(/-/, "[-_]", opt)
+			modello = "^[[:space:]]*" opt "[[:space:]]*="
 		}
-	}
-	END { print value }' "$f")
+		/^[[:space:]]*\[/ {
+			g = $0
+			sub(/^[[:space:]]*\[/, "", g)
+			sub(/\].*$/, "", g)
+			gsub(/[[:space:]]/, "", g)
+			g = tolower(g)
+			next
+		}
+		$0 ~ modello {
+			if (g in ok) {
+				v = $0
+				sub(/^[^=]*=[[:space:]]*/, "", v)
+				sub(/[[:space:]#].*$/, "", v)
+				value = v
+			}
+		}
+		END { print value }' "$f"
+}
+
+bind_value=$(leggi_opzione bind-address)
+
+# La porta si legge dal file come tutto il resto. Interrogare sempre la 3306
+# vuol dire non aver guardato niente su un'installazione che ne usa un'altra.
+port_value=$(leggi_opzione port)
+case "$port_value" in
+	''|*[!0-9]*) port_value=3306 ;;
+esac
 
 # !include porta altre opzioni da un altro file: da qui non si vede cosa
 # dicono, e dire "a posto" guardando solo questo sarebbe una risposta data
-# senza aver guardato.
+# senza aver guardato. Copre anche !includedir, che comincia allo stesso modo.
 altrove=$(grep -c '^[[:space:]]*!include' "$f")
 
-# Le due forme di netstat, che non sono la stessa su tutti i sistemi:
-# 127.0.0.1.3306 su macOS, 127.0.0.1:3306 altrove.
-mysql_listen_lines() {
-	netstat -an 2>/dev/null | egrep "[.:]3306[[:space:]].*LISTEN"
-}
-
-# Vero se il demone ascolta su qualcosa che non e' il loopback.
-mysql_listens_wide() {
-	mysql_listen_lines | egrep -v "127\.0\.0\.1[.:]3306|\[?::1\]?[.:]3306" | grep -q .
-}
-
-# Vero se il demone ascolta, da qualche parte.
-mysql_listens() {
-	mysql_listen_lines | grep -q .
+# Lo stato della porta, in quattro esiti.
+#
+# ⚠️ "unreadable" e' il quarto, e mancava. netstat che fallisce non vuol dire
+# "niente in ascolto": l'esito veniva buttato via dalla pipe, l'assenza di
+# righe diventava "il server e' fermo", e in modalita' check si usciva 0 su
+# una macchina dove non si era visto proprio niente.
+porta_stato=""
+leggi_porta() {
+	_uscita=$(netstat -an 2>/dev/null)
+	if test $? -ne 0
+	then
+		porta_stato="unreadable"
+		return
+	fi
+	_righe=$(printf '%s\n' "$_uscita" | egrep "[.:]${port_value}[[:space:]].*LISTEN")
+	if test -z "$_righe"
+	then
+		porta_stato="stopped"
+		return
+	fi
+	# Le due forme non sono la stessa su tutti i sistemi:
+	# 127.0.0.1.3306 su macOS, 127.0.0.1:3306 altrove.
+	if printf '%s\n' "$_righe" \
+		| egrep -v "127\.0\.0\.1[.:]${port_value}|\[?::1\]?[.:]${port_value}" \
+		| grep -q .
+	then
+		porta_stato="listening-wide"
+	else
+		porta_stato="listening-loopback"
+	fi
 }
 
 file_ok="false"
 test "$bind_value" = "127.0.0.1" && test "$altrove" -eq 0 && file_ok="true"
 
-daemon_ok="unknown"
-if mysql_listens
-then
-	if mysql_listens_wide
-	then
-		daemon_ok="false"
-	else
-		daemon_ok="true"
-	fi
-else
-	daemon_ok="stopped"
-fi
+leggi_porta
+case "$porta_stato" in
+	listening-wide)     daemon_ok="false" ;;
+	listening-loopback) daemon_ok="true" ;;
+	stopped)            daemon_ok="stopped" ;;
+	*)                  daemon_ok="unreadable" ;;
+esac
 
 if test "$check" = "true"
 then
-	# In modalita' check si esce 0 solo se non c'e' niente da fare: il file
-	# giusto E il demone che non ascolta oltre il loopback.
-	if test "$file_ok" = "true" && test "$daemon_ok" != "false"
+	# Si esce 0 solo se non c'e' niente da fare E si e' potuto guardare.
+	#
+	# ⚠️ "unreadable" non e' un via libera: non aver visto non e' aver visto
+	# che va bene. Prima bastava "diverso da false", e lo stato sconosciuto
+	# passava insieme a quello buono.
+	if test "$file_ok" = "true" \
+		&& { test "$daemon_ok" = "true" || test "$daemon_ok" = "stopped"; }
 	then
 		exit 0
 	fi
@@ -170,11 +231,12 @@ else
 			# Un valore sbagliato si riscrive dov'e', qualunque fosse, e
 			# in tutti i gruppi di server che lo impostano: lasciarne uno
 			# indietro vuol dire che vince quello.
-			perl -pi -e 'BEGIN { $g = "" }
+			# Gli stessi gruppi letti dal binario, e le stesse due
+			# grafie: un elenco qui e uno nell'awk divergerebbero.
+			VXOST_GRUPPI="$gruppi" perl -pi -e '
+				BEGIN { %ok = map { lc($_) => 1 } split /\s+/, $ENV{VXOST_GRUPPI}; $g = "" }
 				if (/^\s*\[/) { ($g = $_) =~ s/^\s*\[//; $g =~ s/\].*$//s; $g =~ s/\s//g; $g = lc $g }
-				if (($g eq "mysqld" || $g eq "server" || $g eq "mariadb" || $g eq "mariadbd"
-				     || $g eq "client-server" || $g =~ /^mysqld-[0-9]/ || $g =~ /^mariadb-[0-9]/)
-				    && /^(\s*)bind-address\s*=/) { $_ = "$1bind-address=127.0.0.1\n" }' "$f"
+				if ($ok{$g} && /^(\s*)bind[-_]address\s*=/) { $_ = "$1bind-address=127.0.0.1\n" }' "$f"
 		else
 			# Written right after [mysqld], where the section it belongs to starts.
 			perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
@@ -186,23 +248,29 @@ else
 			}' "$f"
 		fi
 
-		# Il file si rilegge con lo stesso criterio con cui e' stato letto
-		# prima: un perl che non ha trovato nessun [mysqld] non scrive
-		# niente e non lo dice.
-		bind_value=$(awk '
-			/^[[:space:]]*\[/ { g = $0; sub(/^[[:space:]]*\[/, "", g); sub(/\].*$/, "", g); gsub(/[[:space:]]/, "", g); g = tolower(g); next }
-			/^[[:space:]]*bind-address[[:space:]]*=/ {
-				if (g == "mysqld" || g == "server" || g == "mariadb" || g == "mariadbd" \
-				    || g == "client-server" || g ~ /^mysqld-[0-9]/ || g ~ /^mariadb-[0-9]/) {
-					v = $0; sub(/^[^=]*=[[:space:]]*/, "", v); sub(/[[:space:]#].*$/, "", v); value = v
-				}
-			}
-			END { print value }' "$f")
+		# Il file si rilegge con la stessa funzione con cui e' stato
+		# letto prima: un perl che non ha trovato nessun gruppo non
+		# scrive niente e non lo dice.
+		bind_value=$(leggi_opzione bind-address)
 		if test "$bind_value" != "127.0.0.1"
 		then
 			echo "VXOST: " $($GETTEXT 'Could not write bind-address under a server group: is there a [mysqld] section in my.cnf?')
 			exit 1
 		fi
+
+		# ⚠️ Il valore giusto IN QUESTO FILE non basta. Gli !include si
+		# rileggono, perche' uno di loro puo' rimettere bind-address dopo,
+		# e da qui non si vede: prima bastava la riscrittura per
+		# dichiarare il file a posto, includendo quello che non si era
+		# guardato.
+		altrove=$(grep -c '^[[:space:]]*!include' "$f")
+		if test "$altrove" -gt 0
+		then
+			echo "VXOST: ${bon}" $($GETTEXT 'my.cnf now says bind-address=127.0.0.1, but it still pulls in other files with !include: what the server ends up using cannot be read from here.') "${boff}"
+			file_ok="false"
+			exit 1
+		fi
+
 		echo "VXOST: " $($GETTEXT 'my.cnf now says bind-address=127.0.0.1.')
 		file_ok="true"
 	fi
@@ -219,23 +287,35 @@ then
 	$VXOST_ROOT/vxost startmysql
 	sleep 3
 
-	if mysql_listens_wide
-	then
-		echo "VXOST: ${bon}" $($GETTEXT 'MySQL still listens beyond this computer after the restart.') "${boff}"
-		echo "VXOST: " $($GETTEXT 'Check with: netstat -an | grep 3306')
-		exit 1
-	fi
-	if mysql_listens
-	then
-		echo "VXOST: " $($GETTEXT 'MySQL now listens on 127.0.0.1 only.')
-	else
-		echo "VXOST: " $($GETTEXT 'MySQL did not come back up after the restart: start it from the app.')
-		exit 1
-	fi
+	leggi_porta
+	case "$porta_stato" in
+		listening-wide)
+			echo "VXOST: ${bon}" $($GETTEXT 'MySQL still listens beyond this computer after the restart.') "${boff}"
+			echo "VXOST: " $($GETTEXT 'Check with:') "netstat -an | grep $port_value"
+			exit 1
+			;;
+		listening-loopback)
+			echo "VXOST: " $($GETTEXT 'MySQL now listens on 127.0.0.1 only.')
+			;;
+		unreadable)
+			# Non si dichiara riuscito un riavvio che non si e' visto.
+			echo "VXOST: ${bon}" $($GETTEXT 'Could not read the open ports, so the restart could not be checked.') "${boff}"
+			echo "VXOST: " $($GETTEXT 'Check with:') "netstat -an | grep $port_value"
+			exit 1
+			;;
+		*)
+			echo "VXOST: " $($GETTEXT 'MySQL did not come back up after the restart: start it from the app.')
+			exit 1
+			;;
+	esac
 elif test "$daemon_ok" = "true"
 then
 	echo "VXOST: " $($GETTEXT 'The running MySQL listens on 127.0.0.1 only.')
 elif test "$daemon_ok" = "stopped"
 then
 	echo "VXOST: " $($GETTEXT 'MySQL is not running: the setting applies at the next start.')
+elif test "$daemon_ok" = "unreadable"
+then
+	echo "VXOST: ${bon}" $($GETTEXT 'Could not read the open ports: whether MySQL is reachable from the network is unknown.') "${boff}"
+	echo "VXOST: " $($GETTEXT 'Check with:') "netstat -an | grep $port_value"
 fi
