@@ -455,16 +455,58 @@ ROOT=$(cd "$(dirname "$0")/.." 2>/dev/null && pwd) || exit 1
 CRT="$ROOT/etc/ssl.crt/server.crt"
 KEY="$ROOT/etc/ssl.key/server.key"
 
-# -s: un file vuoto non e' un certificato. Un tentativo interrotto lascia il
-# file creato e vuoto, e senza questo controllo non verrebbe mai rifatto.
-if [ -s "$CRT" ] && [ -s "$KEY" ]; then
-    exit 0
-fi
+OPENSSL="$ROOT/bin/openssl"
+[ -x "$OPENSSL" ] || OPENSSL=/usr/bin/openssl
+
+# Tre esiti, e solo il secondo rigenera. Finche' bastavano due file non vuoti
+# per uscire 0, il rimedio che la dashboard suggerisce -- "rigeneralo con
+# bin/vxost-ssl-init" -- non faceva niente: un certificato scaduto restava
+# li' identico e la pagina insegnava un comando inutile.
+#
+#   0  usabile          non tocca niente
+#   1  da rifare        manca, vuoto, illeggibile, scaduto o non ancora valido
+#   2  non valutabile   tiene quello che c'e'
+#
+# Il terzo esito non e' prudenza per modo di dire: questo script parte a ogni
+# avvio di Apache. Cancellare un certificato buono perche' openssl non ha
+# risposto spegnerebbe l'HTTPS di chi lo sta usando, e lo spegnerebbe ogni
+# volta. Nel dubbio non si distrugge niente.
+#
+# -s perche' un tentativo interrotto lascia il file creato e vuoto, e senza
+# quel controllo non verrebbe mai rifatto.
+cert_stato() {
+    [ -s "$CRT" ] && [ -s "$KEY" ] || return 1
+    [ -x "$OPENSSL" ] || return 2
+
+    # Illeggibile o non un certificato: va rifatto, non e' un dubbio.
+    "$OPENSSL" x509 -in "$CRT" -noout -subject >/dev/null 2>&1 || return 1
+
+    # -checkend 0 esce 1 quando e' gia' scaduto.
+    "$OPENSSL" x509 -in "$CRT" -noout -checkend 0 >/dev/null 2>&1 || return 1
+
+    # -checkend non guarda notBefore. Un orologio sbagliato al momento della
+    # generazione produce un certificato valido dal futuro, che il browser
+    # rifiuta esattamente come uno scaduto.
+    _da=$("$OPENSSL" x509 -in "$CRT" -noout -startdate 2>/dev/null) || return 2
+    _da=${_da#notBefore=}
+    [ -n "$_da" ] || return 2
+    _inizio=$(date -j -f '%b %e %T %Y %Z' "$_da" '+%s' 2>/dev/null) || return 2
+    _ora=$(date '+%s' 2>/dev/null) || return 2
+    case "$_inizio-$_ora" in
+        ''|*[!0-9-]*) return 2 ;;
+    esac
+    [ "$_inizio" -le "$_ora" ] || return 1
+
+    return 0
+}
+
+cert_stato
+case $? in
+    0|2) exit 0 ;;
+esac
 
 mkdir -p "$ROOT/etc/ssl.crt" "$ROOT/etc/ssl.key" || exit 1
 
-OPENSSL="$ROOT/bin/openssl"
-[ -x "$OPENSSL" ] || OPENSSL=/usr/bin/openssl
 [ -x "$OPENSSL" ] || {
     echo "vxost-ssl-init: no openssl available" >&2
     exit 1
