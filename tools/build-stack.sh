@@ -918,6 +918,35 @@ text = text.replace(
 # $VXOST_ROOT/bin/nothttpd: l'asterisco copre le barre e qualunque prefisso.
 # Il nome si confronta per basename esatto, e il percorso deve stare sotto la
 # nostra radice. Sono due condizioni, non un motivo solo.
+# 6. (R6) vxostOurPids perdeva l'esito dell'enumerazione: dentro un for,
+#    l'uscita di pgrep si scarta, e un errore diventava elenco vuoto, cioe'
+#    "nessun processo". E pgrep -f legge il suo argomento come espressione
+#    regolare: una radice con parentesi o parentesi quadre nel nome non e' un
+#    percorso, e' un modello, e con VXOST_ROOT=/tmp/bad[ l'aiutante usciva 0.
+#
+#    ⚠️ Sostituita anche quando gli aiutanti ci sono gia'. La sorgente della
+#    build e' quasi sempre un'installazione gia' patchata: senza questa riga
+#    la versione nuova non arriverebbe mai nel pacchetto, e il blocco qui
+#    sopra direbbe soltanto "aiutanti gia' presenti".
+OUR_PIDS = '''function vxostOurPids() {
+\tvxname="$1"
+\t# index() di awk confronta testo, non modelli, e l'errore di ps si vede
+\t# invece di sparire in un elenco vuoto.
+\tvxelenco=$(ps -axo pid=,comm= 2>/dev/null) || return 1
+\ttest -n "$vxelenco" || return 1
+\tvxtrovati=$(printf '%s\\n' "$vxelenco" | awk -v vxroot="$VXOST_ROOT/" -v vxnome="$vxname" '
+\t\t{
+\t\t\tvxp = $1
+\t\t\t$1 = ""
+\t\t\tsub(/^ +/, "")
+\t\t\tvxn = $0
+\t\t\tsub(/^.*\\//, "", vxn)
+\t\t\tif (vxn == vxnome && index($0, vxroot) == 1) print vxp
+\t\t}') || return 1
+\ttest -z "$vxtrovati" || printf '%s\\n' "$vxtrovati"
+\treturn 0
+}
+'''
 AIUTANTI = '''
 # --- aggiunti da VXOST: identificare i propri processi ---------------------
 
@@ -937,23 +966,7 @@ function vxostProcessIsOurs() {
 \treturn 1
 }
 
-# I pid dei nostri processi di nome $1, senza passare dal file pid. Esce 1 se
-# non si riesce nemmeno a elencare i processi: non sapere e' diverso da sapere
-# che non ce ne sono.
-function vxostOurPids() {
-\tvxname="$1"
-\tcommand -v pgrep > /dev/null 2>&1 || return 1
-\tfor vxp in $(pgrep -f "$VXOST_ROOT" 2>/dev/null)
-\tdo
-\t\tif vxostProcessIsOurs "$vxp" "$vxname"
-\t\tthen
-\t\t\techo "$vxp"
-\t\tfi
-\tdone
-\treturn 0
-}
-
-'''
+''' + OUR_PIDS + '\n'
 
 if "vxostProcessIsOurs" not in text:
     inizio = text.find("function startProFTPD() {")
@@ -1111,6 +1124,70 @@ stop_proftpd = '''function stopProFTPD() {
 
 text = sostituisci_funzione(text, "stopApache", stop_apache, "vxostProcessIsOurs")
 text = sostituisci_funzione(text, "stopProFTPD", stop_proftpd, "vxostProcessIsOurs")
+
+text = sostituisci_funzione(text, "vxostOurPids", OUR_PIDS, "index() di awk")
+
+
+# 7. (R6) Gli esiti degli arresti tornavano a essere successi nei chiamanti.
+#    "exit $?" dopo un if si riferisce all'ultimo blocco condizionale, non
+#    all'errore accumulato; e restart e restartapache scartavano del tutto il
+#    risultato dello stop. Con stopApache che dice "unverified" e torna 1,
+#    tutti e tre uscivano 0.
+#
+#    ⚠️ L'app legge l'esito del comando: un errore trasformato in zero qui
+#    non e' piu' recuperabile a valle. E nei riavvii il vecchio processo
+#    ancora vivo fa dire "already running" allo start, che e' il modo in cui
+#    un arresto non avvenuto si traveste da riavvio riuscito.
+def patch_blocco(text, nome, vecchio, nuovo, marcatore):
+    if marcatore in text:
+        print("  vxost: " + nome + " gia' applicata")
+        return text
+    if text.count(vecchio) != 1:
+        sys.stderr.write("!! vxost: " + nome + " non ha la forma attesa\n")
+        sys.exit(1)
+    print("  vxost: " + nome)
+    return text.replace(vecchio, nuovo)
+
+text = patch_blocco(
+    text, "stop propaga l'errore",
+    '\t\tif $iswebmin && test -f $lc/startwebmin\n\t\tthen\n\t\t\tstopWebmin || error=1\n\t\tfi\n\n\t\texit $?\n\t\t;;\n',
+    '\t\tif $iswebmin && test -f $lc/startwebmin\n\t\tthen\n\t\t\tstopWebmin || error=1\n\t\tfi\n\n'
+    '\t\t# exit $? si riferiva all\'ultimo if, non a error: gli arresti\n'
+    '\t\t# falliti venivano riportati come riusciti.\n'
+    '\t\texit $error\n\t\t;;\n',
+    "si riferiva all'ultimo if")
+
+text = patch_blocco(
+    text, "restartapache propaga l'errore",
+    '\t"restartapache")\n\t\tcheckRoot\n\t\t\n\t\tstopApache\n\t\tsleep 1\n\t\tstartApache\n\t\texit $?\n\t\t;;\n',
+    '\t"restartapache")\n\t\tcheckRoot\n\n'
+    '\t\t# L\'esito dello stop non si scarta: se Apache non si e\' fermato,\n'
+    '\t\t# lo start trova la porta occupata, dice "already running" e il\n'
+    '\t\t# comando esce 0 raccontando un riavvio che non e\' avvenuto.\n'
+    '\t\terror=0\n'
+    '\t\tstopApache || error=1\n\t\tsleep 1\n\t\tstartApache || error=1\n'
+    '\t\texit $error\n\t\t;;\n',
+    "lo start trova la porta occupata")
+
+text = patch_blocco(
+    text, "restart propaga gli errori",
+    '\t\tcheckRoot\n\t\t\n\t\tstopApache\n\t\tstopMySQL\n\t\tif test -f $lc/startftp\n\t\tthen\n\t\t\tstopProFTPD\n\t\tfi\n\t\tif $iswebmin && test -f $lc/startwebmin\n\t\tthen\n\t\t\tstopWebmin\n\t\tfi\n\t\t\n\t\tsleep 1\n\t\terror=0\n',
+    '\t\tcheckRoot\n\n'
+    '\t\t# Gli arresti non si scartano, per la stessa ragione di\n'
+    '\t\t# restartapache: un servizio che non si e\' fermato fa dire\n'
+    '\t\t# "already running" allo start, e il riavvio risulta riuscito.\n'
+    '\t\terror=0\n\n'
+    '\t\tstopApache || error=1\n\t\tstopMySQL || error=1\n'
+    '\t\tif test -f $lc/startftp\n\t\tthen\n\t\t\tstopProFTPD || error=1\n\t\tfi\n'
+    '\t\tif $iswebmin && test -f $lc/startwebmin\n\t\tthen\n\t\t\tstopWebmin || error=1\n\t\tfi\n\n'
+    '\t\tsleep 1\n',
+    "Gli arresti non si scartano")
+
+text = patch_blocco(
+    text, "restart esce con l'errore accumulato",
+    '\t\t\tstartWebmin || error=1\n\t\tfi\n\t\texit $?\n\t\t;;\n',
+    '\t\t\tstartWebmin || error=1\n\t\tfi\n\t\texit $error\n\t\t;;\n',
+    "startWebmin || error=1\n\t\tfi\n\t\texit $error")
 
 if text == prima:
     # Niente da cambiare perche' era gia' tutto a posto: si esce bene. Era un
