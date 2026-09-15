@@ -672,7 +672,23 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // Apache la data ce l'ha scritta accanto. Si prende l'ora di partenza e
     // si chiede che la riga sia PIU' RECENTE: non dipende da rotazioni,
     // troncamenti o dimensioni.
+    // ⚠️ La prova che il messaggio appartiene A QUESTO tentativo non e' la
+    // sua data: una riga gia' presente un secondo prima passava, e una con la
+    // data nel futuro pure. Quello che lega messaggio e tentativo e' che ne
+    // sia arrivato UNO IN PIU'. Si conta prima e si riconta dopo.
+    //
+    // La data resta per il solo caso in cui il log si e' accorciato, cioe' e'
+    // stato ruotato: li' il conteggio non e' confrontabile.
     [block appendString:@"prima=$(date +%s)\n"];
+    [block appendString:@"vxost_quante() {\n"];
+    [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo 0; return; }\n"];
+    // ⚠️ grep -c stampa 0 E esce 1 quando non trova niente: con "|| echo 0"
+    // il conteggio diventava "0\n0" e il confronto numerico falliva sempre.
+    [block appendString:@"    _q=$(grep -c 'resuming normal operations' \"$LOG\" 2>/dev/null) || _q=0\n"];
+    [block appendString:@"    case \"$_q\" in ''|*[!0-9]*) _q=0 ;; esac\n"];
+    [block appendString:@"    echo \"$_q\"\n"];
+    [block appendString:@"}\n"];
+    [block appendString:@"prima_n=$(vxost_quante)\n"];
     [block appendString:@"\n"];
     // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
     // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
@@ -681,6 +697,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // Tre esiti, non due: 0 verificato, 2 vivo ma non verificabile, 1 no.
     [block appendString:@"vxost_ripartito() {\n"];
     [block appendString:@"    _da=\"$1\"\n"];
+    [block appendString:@"    _da_n=\"$2\"\n"];
     [block appendString:@"    _pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    [ -n \"$_pid\" ] && kill -0 \"$_pid\" 2>/dev/null || return 1\n"];
     // Vivo non basta: dev'essere il NOSTRO httpd. Un pid riciclato da un
@@ -690,6 +707,10 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    [ \"${_cmd##*/}\" = 'httpd' ] || return 1\n"];
     [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
+    [block appendString:@"    _n=$(vxost_quante)\n"];
+    [block appendString:@"    if [ \"$_n\" -gt \"$_da_n\" ]; then return 0; fi\n"];
+    // Se il log non si e' accorciato, nessun messaggio nuovo e' arrivato.
+    [block appendString:@"    [ \"$_n\" -lt \"$_da_n\" ] || return 1\n"];
     [block appendString:@"    _riga=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
     [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
     // "[Mon Sep 15 15:14:51.574038 2026]" -> "Mon Sep 15 15:14:51 2026"
@@ -700,7 +721,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    case \"$_epoca\" in ''|*[!0-9]*) return 2 ;; esac\n"];
     // Due secondi di tolleranza per lo scarto fra l'ora del comando e quella
     // che Apache scrive.
-    [block appendString:@"    [ \"$_epoca\" -ge \"$((_da - 2))\" ] || return 1\n"];
+    [block appendString:@"    [ \"$_epoca\" -ge \"$_da\" ] || return 1\n"];
     [block appendString:@"    return 0\n"];
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
@@ -714,7 +735,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"avviato=0\n"];
     [block appendString:@"attesa=0\n"];
     [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"    vxost_ripartito \"$prima\"; esito=$?\n"];
+    [block appendString:@"    vxost_ripartito \"$prima\" \"$prima_n\"; esito=$?\n"];
     [block appendString:@"    if [ $esito -eq 0 ]; then avviato=1; break; fi\n"];
     // Senza un log leggibile l'attesa non puo' portare nessuna prova nuova:
     // si concede il tempo di partire e si smette, invece di fermare l'utente
@@ -785,11 +806,12 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // risale, la configurazione su disco e quella caricata non coincidono
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
     [block appendString:@"    prima_rb=$(date +%s)\n"];
+    [block appendString:@"    prima_rb_n=$(vxost_quante)\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
     [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"        vxost_ripartito \"$prima_rb\"; esito=$?\n"];
+    [block appendString:@"        vxost_ripartito \"$prima_rb\" \"$prima_rb_n\"; esito=$?\n"];
     [block appendString:@"        if [ $esito -eq 0 ]; then tornato=1; break; fi\n"];
     [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"            tornato=2\n"];

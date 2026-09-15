@@ -194,6 +194,12 @@ def percorsi_nell_argomento(pezzo):
     # una cosa da saltare.
     if pezzo.startswith("|"):
         pezzo = pezzo[1:].strip()
+        # ⚠️ "|$" non e' un programma che si chiama "$qualcosa": il dollaro
+        # dice ad Apache di passare per la shell, e quello che segue e' il
+        # programma. Conservandolo, /opt/homebrew/bin/x diventava un percorso
+        # relativo sotto ServerRoot e il controllo lo dichiarava interno.
+        if pezzo.startswith("$"):
+            pezzo = pezzo[1:].strip()
         if pezzo:
             trovati.append(pezzo.split()[0])
         return trovati
@@ -230,6 +236,7 @@ def percorsi_nella_configurazione(specchio):
     # ServerRoot, e non guardarla voleva dire scartare in silenzio ogni
     # ../../fuori.conf, che e' il modo piu' semplice di uscire dal pacchetto.
     serverroot = specchio
+    define_attivi = set(DEFINE_ATTIVI)
 
     # ⚠️ Due insiemi diversi. ATTIVO e' quello che Apache legge davvero,
     # partendo da httpd.conf e seguendo gli Include: solo li' ha senso
@@ -287,8 +294,7 @@ def percorsi_nella_configurazione(specchio):
         if accumulata:
             righe.append((inizio, accumulata))
 
-        condizionale = 0
-        profondita_ignota = []
+        pila = []
         for numero, riga in righe:
             pulita = riga.strip()
             # ⚠️ Il punto e virgola: php.ini commenta cosi', e leggendo quelle
@@ -303,22 +309,34 @@ def percorsi_nella_configurazione(specchio):
             # sia li' dentro e' un falso allarme; che il percorso resti dentro
             # il pacchetto va preteso comunque.
             minuscola = pulita.lower()
+
+            # ⚠️ Una pila vera, con un valore per ogni contenitore aperto.
+            # Prima si teneva un contatore e un elenco delle sole condizioni
+            # ignote: chiudendo una condizione NOTA annidata si toglieva
+            # dall'elenco quella esterna, e la profondita' andava fuori passo.
             if minuscola.startswith(("<ifdefine", "<ifmodule", "<ifversion")):
-                # ⚠️ <IfDefine SSL> non e' una condizione ignota: e' uno dei
-                # -D con cui Apache parte davvero, quindi li' dentro le
-                # direttive contano e l'esistenza si pretende. Prima
-                # qualunque blocco condizionale sopprimeva il controllo, e un
-                # certificato mancante sotto <IfDefine SSL> passava.
-                nome_def = re.sub(r"^<if\w+\s+!?", "", minuscola).rstrip(">").strip()
-                if not (minuscola.startswith("<ifdefine")
-                        and nome_def in DEFINE_ATTIVI):
-                    condizionale += 1
-                    profondita_ignota.append(numero)
+                if minuscola.startswith("<ifdefine"):
+                    nome_def = re.sub(r"^<ifdefine\s+", "", minuscola).rstrip(">").strip()
+                    negato = nome_def.startswith("!")
+                    nome_def = nome_def.lstrip("!").strip().strip('"')
+                    # ⚠️ <IfDefine !SSL> con SSL attivo e' un blocco che Apache
+                    # NON legge: pretendere che i suoi file esistano e' un
+                    # falso allarme. La negazione va letta, non tolta.
+                    pila.append((nome_def in define_attivi) != negato)
+                else:
+                    pila.append(False)          # non valutabile da qui
                 continue
             if minuscola.startswith(("</ifdefine", "</ifmodule", "</ifversion")):
-                if profondita_ignota:
-                    profondita_ignota.pop()
-                    condizionale = max(0, condizionale - 1)
+                if pila:
+                    pila.pop()
+                continue
+
+            # ⚠️ Define crea una condizione attiva: <IfDefine EXTRA> dopo
+            # "Define EXTRA" conta, e prima passava per ignoto.
+            if minuscola.startswith("define "):
+                _pezzi = pulita.split()
+                if len(_pezzi) > 1:
+                    define_attivi.add(_pezzi[1].lower())
                 continue
 
             # Prima si guarda la prima parola: shlex si scomoda solo per una
@@ -358,7 +376,7 @@ def percorsi_nella_configurazione(specchio):
                     # si scarta.
                     trovati.append((intero, numero, direttiva, None, grezzo,
                                     "contiene una variabile non espandibile",
-                                    condizionale > 0, attivo))
+                                    (not all(pila)), attivo))
                     continue
                 # ⚠️ normpath anche sugli assoluti: /usr/lib/../../opt/homebrew
                 # comincia per /usr/lib/, che e' un prefisso ammesso, e
@@ -366,7 +384,7 @@ def percorsi_nella_configurazione(specchio):
                 assoluto = os.path.normpath(grezzo) if grezzo.startswith("/") \
                     else os.path.normpath(os.path.join(serverroot, grezzo))
                 trovati.append((intero, numero, direttiva, assoluto, grezzo, None,
-                                condizionale > 0, attivo))
+                                (not all(pila)), attivo))
 
                 if direttiva == "include" and any(c in grezzo for c in "*?["):
                     # ⚠️ Include con un glob che non trova niente FERMA Apache
@@ -376,7 +394,7 @@ def percorsi_nella_configurazione(specchio):
                     if not glob.glob(assoluto):
                         trovati.append((intero, numero, direttiva, None, grezzo,
                                         "Include con un glob che non trova nessun file",
-                                        condizionale > 0, attivo))
+                                        (not all(pila)), attivo))
                 if attivo and direttiva in ("include", "includeoptional"):
                     # ⚠️ Il contenuto degli inclusi va letto: un .inc che
                     # carica un modulo da /opt/homebrew non veniva mai aperto.
@@ -548,6 +566,21 @@ def main():
             non_valutabili += 1
             problemi.append("%s:%d %s: %s" % (dove, numero, errore, grezzo or ""))
             continue
+        # ⚠️ Non tutto quello che sta al posto di un percorso E' un percorso.
+        # "SSLPassPhraseDialog builtin", "SSLSessionCache none", "Mutex
+        # default": parole chiave che finivano risolte come file sotto
+        # ServerRoot e contate fra i percorsi esaminati. Il conteggio saliva
+        # senza che nessun percorso in piu' fosse stato guardato, ed e' il
+        # numero su cui ci si accorge di quello che il controllo non vede.
+        #
+        # Si riconosce un percorso da una barra, o dal fatto che esista. Per
+        # le direttive che DEVONO nominare un file la regola non vale: li' un
+        # nome senza barra e' un percorso relativo, e se non esiste e' un
+        # problema, non una parola chiave.
+        if direttiva not in DEVE_ESISTERE and "/" not in grezzo \
+                and not os.path.exists(valore):
+            continue
+
         esaminate += 1
 
         if dentro(valore, specchio, payload):
