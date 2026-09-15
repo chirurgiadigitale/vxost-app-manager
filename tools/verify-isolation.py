@@ -626,9 +626,16 @@ def main():
                             continue
                         if primo.startswith(SISTEMA_LIB):
                             continue
-                        if primo.startswith(radice + "/") and os.path.exists(
-                                os.path.join(payload, os.path.relpath(primo, radice))):
-                            continue
+                        # ⚠️ Anche qui dentro(), non exists(): il ramo che
+                        # rimappa un candidato sotto la radice di
+                        # installazione era rimasto scoperto, e un link nel
+                        # payload che punta alla cartella sorgente esisteva
+                        # benissimo senza essere nel pacchetto.
+                        if primo.startswith(radice + "/"):
+                            _rimappato = os.path.join(payload,
+                                                      os.path.relpath(primo, radice))
+                            if os.path.exists(_rimappato) and dentro(_rimappato, payload):
+                                continue
                         perse += 1
                         problemi.append("%s: %s risolve fuori dal pacchetto (%s)"
                                         % (dove, lib, primo))

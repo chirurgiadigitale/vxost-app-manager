@@ -1220,6 +1220,18 @@ def patch_blocco(text, nome, vecchio, nuovo, marcatore=None):
     cambiare le chiamate, e non decide piu' niente.
     """
     if nuovo in text:
+        # ⚠️ Che il testo giusto ci sia non basta: deve esserci UNA volta e la
+        # forma vecchia non deve esistere piu'. Con il ramo difettoso prima e
+        # quello corretto dopo, la patch diceva "gia' applicata" e il dispatch
+        # eseguiva il primo, cioe' quello rotto.
+        if text.count(nuovo) != 1:
+            sys.stderr.write("!! vxost: " + nome + " compare %d volte: non so "
+                             "quale venga eseguita\n" % text.count(nuovo))
+            sys.exit(1)
+        if vecchio in text:
+            sys.stderr.write("!! vxost: " + nome + " c'e' nella forma nuova ma "
+                             "anche in quella vecchia\n")
+            sys.exit(1)
         print("  vxost: " + nome + " gia' applicata")
         return text
     if text.count(vecchio) == 1:

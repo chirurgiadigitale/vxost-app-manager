@@ -160,8 +160,20 @@ bind_value=$(leggi_opzione bind-address)
 # La porta si legge dal file come tutto il resto. Interrogare sempre la 3306
 # vuol dire non aver guardato niente su un'installazione che ne usa un'altra.
 port_value=$(leggi_opzione port)
+# Un segno + davanti e' sintassi accettata: il demone legge 3307 da "+3307".
 case "$port_value" in
-	''|*[!0-9]*) port_value=3306 ;;
+	+*) port_value=${port_value#+} ;;
+esac
+porta_letta="true"
+case "$port_value" in
+	'') port_value=3306 ;;
+	*[!0-9]*)
+		# ⚠️ Non si ripiega in silenzio sulla 3306. Guardare una porta
+		# diversa da quella che il demone usera' vuol dire non aver
+		# guardato niente, e il controllo usciva 0 lo stesso.
+		porta_letta="false"
+		port_value=3306
+		;;
 esac
 
 # !include porta altre opzioni da un altro file: da qui non si vede cosa
@@ -219,12 +231,18 @@ then
 	# ⚠️ "unreadable" non e' un via libera: non aver visto non e' aver visto
 	# che va bene. Prima bastava "diverso da false", e lo stato sconosciuto
 	# passava insieme a quello buono.
-	if test "$file_ok" = "true" \
+	if test "$file_ok" = "true" && test "$porta_letta" = "true" \
 		&& { test "$daemon_ok" = "true" || test "$daemon_ok" = "stopped"; }
 	then
 		exit 0
 	fi
 	exit 1
+fi
+
+if test "$porta_letta" = "false"
+then
+	echo "VXOST: ${bon}" $($GETTEXT 'The port in my.cnf is not a number this script can read: which port MySQL will use cannot be told from here.') "${boff}"
+	echo "VXOST: " "port=$(leggi_opzione port)"
 fi
 
 if test "$file_ok" = "true"
