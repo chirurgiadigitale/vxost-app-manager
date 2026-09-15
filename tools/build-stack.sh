@@ -2181,7 +2181,7 @@ echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files read, all inside
 #     cartella di sistema;
 #   - ogni dipendenza non di sistema di ogni Mach-O sta dentro il pacchetto,
 #     quindi dopo l'installazione quel percorso esistera'.
-if ! python3 "$HERE/tools/verify-isolation.py" "$MIRROR" "$PAYLOAD" "$NUOVA_RADICE" "$SOURCE"; then
+if ! python3 "$HERE/tools/verify-isolation.py" "$MIRROR" "$PAYLOAD" "$NUOVA_RADICE" "$SOURCE" "$VECCHIA_RADICE"; then
     echo "!! the package leans on something outside itself" >&2
     exit 1
 fi

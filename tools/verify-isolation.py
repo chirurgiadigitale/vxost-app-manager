@@ -55,8 +55,20 @@ DIRETTIVE = {
     "sslcacertificatepath": 1, "sslcarevocationfile": 1,
     "sslcarevocationpath": 1, "sslsessioncache": 1, "sslrandomseed": 2,
     "phpinidir": 1, "wsgiscriptalias": 2, "davlockdb": 1,
+    "sslpassphrasedialog": 1, "sslcryptodevice": 1, "sslstaplingcache": 1,
+    "authdbmuserfile": 1, "authdbmgroupfile": 1, "rewritemap": 2,
     "mutex": 0,  # "Mutex default:/percorso": l'argomento va spacchettato
 }
+
+# Direttive che accettano PIU' percorsi, non uno. ⚠️ LoadFile ne prende quanti
+# gliene dai: guardando solo il primo, "LoadFile interno.dylib
+# /opt/homebrew/fuori.dylib" passava senza che il secondo venisse mai visto.
+MULTI_ARGOMENTI = ("loadfile",)
+
+# I -D con cui Apache viene davvero avviato: dentro questi blocchi le
+# direttive contano, quindi l'esistenza si pretende. ⚠️ Prima QUALUNQUE
+# <IfDefine> sopprimeva il controllo, anche <IfDefine SSL>, che e' attivo.
+DEFINE_ATTIVI = ("ssl", "php")
 
 # Cosa puo' stare FUORI dal pacchetto, DIRETTIVA PER DIRETTIVA.
 #
@@ -162,6 +174,47 @@ def argomenti(riga):
         return None
 
 
+def percorsi_nell_argomento(pezzo):
+    """I percorsi nascosti dentro UN argomento.
+
+    ⚠️ Un percorso non sta sempre da solo. Apache lo infila dentro:
+
+        SSLSessionCache      shmcb:/percorso(512000)
+        SSLPassPhraseDialog  exec:/percorso
+        CustomLog            "|/percorso/programma"
+
+    Guardando l'argomento intero e chiedendo che cominci per "/", tutti e tre
+    sparivano e il controllo diceva "0 fuori" su una configurazione che
+    caricava roba da /opt/homebrew.
+    """
+    trovati = []
+    if not pezzo:
+        return trovati
+    # Un programma dietro una pipe e' un eseguibile da cui si dipende, non
+    # una cosa da saltare.
+    if pezzo.startswith("|"):
+        pezzo = pezzo[1:].strip()
+        if pezzo:
+            trovati.append(pezzo.split()[0])
+        return trovati
+    if pezzo.startswith("/"):
+        trovati.append(pezzo)
+        return trovati
+    # meccanismo:/percorso, con eventuali parametri fra parentesi in coda
+    if ":" in pezzo:
+        coda = pezzo.split(":", 1)[1]
+        coda = re.sub(r"\(.*\)$", "", coda)
+        if coda.startswith("/"):
+            trovati.append(coda)
+            return trovati
+    # ⚠️ Tutto il resto torna com'e': sono i percorsi RELATIVI a ServerRoot,
+    # che chi chiama risolve. Scartandoli, i percorsi esaminati sullo staging
+    # vero sono passati da 180 a 38 e il controllo usciva 0 lo stesso, cioe'
+    # diceva "nessuno fuori" dopo aver guardato un quinto della configurazione.
+    trovati.append(pezzo)
+    return trovati
+
+
 def percorsi_nella_configurazione(specchio):
     """Ogni percorso nominato da una direttiva attiva, con la riga.
 
@@ -235,6 +288,7 @@ def percorsi_nella_configurazione(specchio):
             righe.append((inizio, accumulata))
 
         condizionale = 0
+        profondita_ignota = []
         for numero, riga in righe:
             pulita = riga.strip()
             # ⚠️ Il punto e virgola: php.ini commenta cosi', e leggendo quelle
@@ -250,10 +304,21 @@ def percorsi_nella_configurazione(specchio):
             # il pacchetto va preteso comunque.
             minuscola = pulita.lower()
             if minuscola.startswith(("<ifdefine", "<ifmodule", "<ifversion")):
-                condizionale += 1
+                # ⚠️ <IfDefine SSL> non e' una condizione ignota: e' uno dei
+                # -D con cui Apache parte davvero, quindi li' dentro le
+                # direttive contano e l'esistenza si pretende. Prima
+                # qualunque blocco condizionale sopprimeva il controllo, e un
+                # certificato mancante sotto <IfDefine SSL> passava.
+                nome_def = re.sub(r"^<if\w+\s+!?", "", minuscola).rstrip(">").strip()
+                if not (minuscola.startswith("<ifdefine")
+                        and nome_def in DEFINE_ATTIVI):
+                    condizionale += 1
+                    profondita_ignota.append(numero)
                 continue
             if minuscola.startswith(("</ifdefine", "</ifmodule", "</ifversion")):
-                condizionale = max(0, condizionale - 1)
+                if profondita_ignota:
+                    profondita_ignota.pop()
+                    condizionale = max(0, condizionale - 1)
                 continue
 
             # Prima si guarda la prima parola: shlex si scomoda solo per una
@@ -278,12 +343,12 @@ def percorsi_nella_configurazione(specchio):
                 continue
 
             grezzi = []
-            if quale == 0:                      # Mutex: "nome meccanismo:/percorso"
+            if quale == 0 or direttiva in MULTI_ARGOMENTI:
+                # Mutex e LoadFile: si guardano TUTTI gli argomenti.
                 for pezzo in pezzi[1:]:
-                    if ":" in pezzo:
-                        grezzi.append(pezzo.split(":", 1)[1])
+                    grezzi.extend(percorsi_nell_argomento(pezzo))
             elif len(pezzi) > quale:
-                grezzi.append(pezzi[quale])
+                grezzi.extend(percorsi_nell_argomento(pezzi[quale]))
 
             for grezzo in grezzi:
                 if not grezzo or grezzo.startswith("|"):
@@ -295,11 +360,23 @@ def percorsi_nella_configurazione(specchio):
                                     "contiene una variabile non espandibile",
                                     condizionale > 0, attivo))
                     continue
-                assoluto = grezzo if grezzo.startswith("/") \
+                # ⚠️ normpath anche sugli assoluti: /usr/lib/../../opt/homebrew
+                # comincia per /usr/lib/, che e' un prefisso ammesso, e
+                # passava il controllo prima di essere normalizzato.
+                assoluto = os.path.normpath(grezzo) if grezzo.startswith("/") \
                     else os.path.normpath(os.path.join(serverroot, grezzo))
                 trovati.append((intero, numero, direttiva, assoluto, grezzo, None,
                                 condizionale > 0, attivo))
 
+                if direttiva == "include" and any(c in grezzo for c in "*?["):
+                    # ⚠️ Include con un glob che non trova niente FERMA Apache
+                    # all'avvio: solo IncludeOptional lo consente. Il commento
+                    # diceva "un glob vuoto e' lecito" confondendo le due
+                    # direttive, e il caso passava.
+                    if not glob.glob(assoluto):
+                        trovati.append((intero, numero, direttiva, None, grezzo,
+                                        "Include con un glob che non trova nessun file",
+                                        condizionale > 0, attivo))
                 if attivo and direttiva in ("include", "includeoptional"):
                     # ⚠️ Il contenuto degli inclusi va letto: un .inc che
                     # carica un modulo da /opt/homebrew non veniva mai aperto.
@@ -394,15 +471,23 @@ def candidati(lib, binario, eseguibile):
     return [lib], None
 
 
-def coda(percorso, quanti=3):
-    """Gli ultimi pezzi di un percorso: quello che la riscrittura della
-    radice non cambia. Tre bastano a distinguere postgresql/lib/libpq.5.dylib
-    da lib/libpq.5.dylib, e non tanti da dipendere da dove sta installato."""
-    pezzi = [p for p in percorso.split("/") if p]
-    return "/".join(pezzi[-quanti:])
+def normalizza(percorso, radici):
+    """Il percorso con la radice riportata a una forma sola.
+
+    ⚠️ Prima si confrontavano gli ultimi tre pezzi del percorso, e tre pezzi
+    uguali non vogliono dire stesso percorso: /review-a/team/lib/manca.dylib e
+    /review-b/team/lib/manca.dylib finivano per essere "la stessa dipendenza"
+    e una libreria mai vista veniva dichiarata ereditata. Si normalizzano solo
+    le riscritture CHE SAPPIAMO essere state fatte, e per il resto si
+    confronta alla lettera.
+    """
+    for vecchia in radici:
+        if vecchia and percorso.startswith(vecchia + "/"):
+            return "<radice>/" + percorso[len(vecchia) + 1:]
+    return percorso
 
 
-def dipendenza_gia_nella_sorgente(sorgente, relativo, lib):
+def dipendenza_gia_nella_sorgente(sorgente, relativo, lib, radici):
     """Vero se lo STESSO binario, nella sorgente, aveva gia' questa dipendenza.
 
     ⚠️ Senza questo confronto, ogni percorso che non esiste da nessuna parte
@@ -421,22 +506,26 @@ def dipendenza_gia_nella_sorgente(sorgente, relativo, lib):
         return None
     if lib in nomi:
         return True
-    # ⚠️ Il confezionamento RISCRIVE i percorsi: il binario di origine dice
-    # /Applications/XAMPP/xamppfiles/postgresql/lib/libpq.5.dylib e quello
-    # confezionato /Applications/VXOST/vxostfiles/postgresql/lib/libpq.5.dylib.
-    # Un confronto alla lettera li chiamava diversi e concludeva che la
-    # dipendenza l'avevamo introdotta noi, che e' il contrario del vero. Si
-    # confronta la CODA del percorso, che la riscrittura non tocca.
-    return coda(lib) in set(coda(n) for n in nomi)
+    # ⚠️ Il confezionamento RISCRIVE la radice: il binario di origine dice
+    # <vecchia>/postgresql/lib/libpq.5.dylib e quello confezionato
+    # <nuova>/postgresql/lib/libpq.5.dylib. Un confronto alla lettera li
+    # chiamava diversi e concludeva che la dipendenza l'avevamo introdotta
+    # noi, che e' il contrario del vero. Si normalizzano le sole radici note.
+    atteso = normalizza(lib, radici)
+    return atteso in set(normalizza(x, radici) for x in nomi)
 
 
 def main():
-    if len(sys.argv) not in (4, 5):
-        print("uso: verify-isolation.py <specchio> <payload> <radice-installazione> [<sorgente>]",
+    if len(sys.argv) not in (4, 5, 6):
+        print("uso: verify-isolation.py <specchio> <payload> <radice-installazione> "
+              "[<sorgente> [<radice-vecchia>]]",
               file=sys.stderr)
         return 2
     specchio, payload, radice = (os.path.abspath(p).rstrip("/") for p in sys.argv[1:4])
     sorgente = os.path.abspath(sys.argv[4]).rstrip("/") if len(sys.argv) > 4 else None
+    vecchia = sys.argv[5].rstrip("/") if len(sys.argv) > 5 else None
+    # Le radici che il confezionamento riscrive, e solo quelle.
+    radici = tuple(r for r in (radice, sorgente, vecchia) if r)
     for cartella in (specchio, payload):
         if not os.path.isdir(cartella):
             print("  %s non e' una cartella" % cartella, file=sys.stderr)
@@ -471,8 +560,18 @@ def main():
             continue
 
         ammessi = FUORI_AMMESSO.get(direttiva, ())
-        if ammessi and valore.startswith(ammessi):
-            continue
+        if ammessi:
+            # ⚠️ Si guardano tutte e due le forme. Il percorso normalizzato,
+            # perche' /usr/lib/../../opt/homebrew comincia per /usr/lib/ solo
+            # finche' non lo si normalizza; e quello vero, perche' su macOS
+            # /etc e' un link a /private/etc e un TypesConfig
+            # /etc/mime.types, che e' legittimo, veniva bocciato.
+            try:
+                vero = os.path.realpath(valore)
+            except OSError:
+                vero = valore
+            if valore.startswith(ammessi) or vero.startswith(ammessi):
+                continue
 
         fuori += 1
         problemi.append("%s:%d %s porta fuori dal pacchetto: %s"
@@ -508,34 +607,50 @@ def main():
                     if dove_puo is None:
                         irrisolte.append((dove, lib, motivo))
                         continue
-                    # Basta che UNO dei candidati esista e stia nel payload.
-                    if any(os.path.exists(c) and dentro(c, payload) for c in dove_puo):
-                        continue
-                    if any(os.path.exists(c) and c.startswith(SISTEMA_LIB)
-                           for c in dove_puo):
-                        continue
-                    # ⚠️ Una LC_RPATH che punta alla radice di INSTALLAZIONE
-                    # non e' un riferimento esterno: e' lo stesso caso del
-                    # percorso assoluto sotto la radice, e dopo
-                    # l'installazione quel file sara' nel pacchetto. Quello
-                    # che va chiesto e' che il pacchetto lo contenga.
-                    sotto_radice = [c for c in dove_puo if c.startswith(radice + "/")]
-                    if any(os.path.exists(os.path.join(payload,
-                                                       os.path.relpath(c, radice)))
-                           for c in sotto_radice):
-                        continue
-                    fuori_payload = [c for c in dove_puo
-                                     if os.path.exists(c) and not dentro(c, payload)
-                                     and not c.startswith(radice + "/")]
-                    if fuori_payload:
+                    # ⚠️ Vince il PRIMO che esiste, non "uno qualsiasi".
+                    # dyld prova le LC_RPATH nell'ordine in cui stanno scritte:
+                    # se la prima porta fuori dal pacchetto, e' quella che
+                    # verra' caricata, e accettare perche' piu' avanti ce n'e'
+                    # una buona vuol dire guardare un percorso che non verra'
+                    # mai usato.
+                    primo = None
+                    for c in dove_puo:
+                        if os.path.exists(c):
+                            primo = c
+                            break
+                    if primo is not None:
+                        # ⚠️ dentro() e non os.path.exists: un link dentro il
+                        # payload che punta alla cartella sorgente esiste
+                        # benissimo e non e' nel pacchetto.
+                        if dentro(primo, payload):
+                            continue
+                        if primo.startswith(SISTEMA_LIB):
+                            continue
+                        if primo.startswith(radice + "/") and os.path.exists(
+                                os.path.join(payload, os.path.relpath(primo, radice))):
+                            continue
                         perse += 1
                         problemi.append("%s: %s risolve fuori dal pacchetto (%s)"
-                                        % (dove, lib, fuori_payload[0]))
+                                        % (dove, lib, primo))
                         continue
-                    # Nessun candidato esiste: stessa domanda di sotto, e
-                    # stessa risposta. Se la sorgente non aveva questo
-                    # riferimento, l'abbiamo introdotto noi.
-                    gia = dipendenza_gia_nella_sorgente(sorgente, dove, lib)
+                    # Nessun candidato esiste nel pacchetto.
+                    #
+                    # ⚠️ La domanda non e' "la sorgente NOMINAVA questa
+                    # dipendenza" ma "nella sorgente si RISOLVEVA". Un
+                    # @loader_path/../lib/libssl.dylib c'e' in tutti e due, ma
+                    # se la libreria stava nella sorgente e nel pacchetto no,
+                    # l'abbiamo persa noi: prima finiva fra le "rotte gia'
+                    # nella sorgente".
+                    if sorgente:
+                        nella_sorgente, _m = candidati(
+                            lib, os.path.join(sorgente, dove), eseguibile)
+                        if nella_sorgente and any(os.path.exists(c)
+                                                  for c in nella_sorgente):
+                            perse += 1
+                            problemi.append("%s: %s si risolveva nella sorgente e nel "
+                                            "pacchetto no" % (dove, lib))
+                            continue
+                    gia = dipendenza_gia_nella_sorgente(sorgente, dove, lib, radici)
                     if gia is True:
                         ereditate.append((dove, lib))
                     elif gia is False:
@@ -559,7 +674,11 @@ def main():
                     # Dopo l'installazione quel percorso sara' questo file, e
                     # deve esserci.
                     relativo = os.path.relpath(lib, radice)
-                    if os.path.exists(os.path.join(payload, relativo)):
+                    _atteso = os.path.join(payload, relativo)
+                    # ⚠️ dentro() e non exists(): un link nel payload che
+                    # punta alla cartella sorgente esiste e non e' nel
+                    # pacchetto.
+                    if os.path.exists(_atteso) and dentro(_atteso, payload):
                         continue
                     if sorgente and os.path.exists(os.path.join(sorgente, relativo)):
                         perse += 1
@@ -581,7 +700,7 @@ def main():
                 # dall'assenza: un riferimento appena introdotto da una nostra
                 # patch non esiste da nessuna parte esattamente come uno rotto
                 # da sempre.
-                gia = dipendenza_gia_nella_sorgente(sorgente, dove, lib)
+                gia = dipendenza_gia_nella_sorgente(sorgente, dove, lib, radici)
                 if gia is True:
                     ereditate.append((dove, lib))
                 elif gia is False:
@@ -623,6 +742,13 @@ def main():
         if len(visti) > 6:
             print("      e altre %d librerie" % (len(visti) - 6))
 
+    if irrisolte:
+        # ⚠️ Non e' un elenco informativo: finche' c'e' una dipendenza di cui
+        # non si e' potuto dire niente, il pacchetto non si puo' chiamare
+        # autosufficiente. Il builder usa l'esito per decidere se andare
+        # avanti fino al timbro, e un dubbio non e' un via libera.
+        problemi.append("%d dipendenze non valutabili: vedi l'elenco qui sopra"
+                        % len(irrisolte))
     if binari == 0:
         problemi.append("nessun Mach-O trovato nel payload: non e' un pacchetto verificato")
 
