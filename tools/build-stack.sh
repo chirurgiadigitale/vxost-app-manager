@@ -2219,6 +2219,12 @@ echo "  projects index: index.php"
 # release diversa e il disco non si costruisce. Costa un minuto di lettura,
 # che su un rilascio e' niente.
 step "Stamping the staging with what it contains"
+# Le voci del manifesto, senza contare la riga di intestazione del formato.
+vxost_voci_manifesto() {
+    _righe=$(wc -l < "$STAGE/.verified.manifest" | xargs)
+    echo $((_righe - 1))
+}
+
 if ! python3 "$HERE/tools/stage-manifest.py" "$STAGE" > "$STAGE/.verified.manifest"; then
     echo "!! could not read the staging in full: it cannot be stamped" >&2
     exit 1
@@ -2226,10 +2232,13 @@ fi
 {
     echo "version=$VERSION"
     echo "manifest=$(shasum -a 256 "$STAGE/.verified.manifest" | cut -d" " -f1)"
-    echo "files=$(wc -l < "$STAGE/.verified.manifest" | xargs)"
+    # ⚠️ Meno uno: la prima riga del manifesto e' l'intestazione del formato,
+    # non un elemento. Con wc -l il conteggio dichiarava 27.872 elementi dove
+    # ne stavano 27.871, e il DMG ripeteva lo stesso numero.
+    echo "files=$(vxost_voci_manifesto)"
     echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } > "$STAGE/.verified"
-echo "  $(wc -l < "$STAGE/.verified.manifest" | xargs) entries, version $VERSION"
+echo "  $(vxost_voci_manifesto) entries, version $VERSION"
 
 step "Done"
 du -sh "$STAGE" | awk '{print "  staged:", $1}'

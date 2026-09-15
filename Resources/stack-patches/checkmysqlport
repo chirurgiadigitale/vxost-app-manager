@@ -116,13 +116,23 @@ leggi_opzione() {
 			n = split(gruppi, a, " ")
 			for (i = 1; i <= n; i++) ok[tolower(a[i])] = 1
 			gsub(/-/, "[-_]", opt)
-			modello = "^[[:space:]]*" opt "[[:space:]]*="
+			# ⚠️ Il prefisso loose- fa parte della sintassi: dice a MariaDB
+			# di ignorare l opzione se non la conosce, non di ignorarla. Il
+			# server legge loose-bind-address=0.0.0.0 come bind-address, e
+			# questo controllo non la vedeva: un file che apriva il database
+			# alla rete passava.
+			modello = "^[[:space:]]*(loose[-_])?" opt "[[:space:]]*="
 		}
 		/^[[:space:]]*\[/ {
 			g = $0
 			sub(/^[[:space:]]*\[/, "", g)
 			sub(/\].*$/, "", g)
-			gsub(/[[:space:]]/, "", g)
+			# ⚠️ Solo i bordi. Cancellando TUTTI gli spazi, "[my sqld]"
+			# diventava "mysqld" e veniva letto come il gruppo del server,
+			# che per MariaDB non e\47. Un gruppo inventato finiva per
+			# scavalcare quello vero.
+			sub(/^[[:space:]]+/, "", g)
+			sub(/[[:space:]]+$/, "", g)
 			g = tolower(g)
 			next
 		}
@@ -131,6 +141,14 @@ leggi_opzione() {
 				v = $0
 				sub(/^[^=]*=[[:space:]]*/, "", v)
 				sub(/[[:space:]#].*$/, "", v)
+				# I valori possono essere fra virgolette: sono sintassi,
+				# non parte del valore. bind-address="127.0.0.1" e port="3307"
+				# venivano letti con le virgolette dentro, e il primo faceva
+				# gridare al lupo mentre il secondo faceva guardare la porta
+				# sbagliata.
+				if (v ~ /^".*"$/ || v ~ /^\47.*\47$/) {
+					v = substr(v, 2, length(v) - 2)
+				}
 				value = v
 			}
 		}
@@ -235,8 +253,8 @@ else
 			# grafie: un elenco qui e uno nell'awk divergerebbero.
 			VXOST_GRUPPI="$gruppi" perl -pi -e '
 				BEGIN { %ok = map { lc($_) => 1 } split /\s+/, $ENV{VXOST_GRUPPI}; $g = "" }
-				if (/^\s*\[/) { ($g = $_) =~ s/^\s*\[//; $g =~ s/\].*$//s; $g =~ s/\s//g; $g = lc $g }
-				if ($ok{$g} && /^(\s*)bind[-_]address\s*=/) { $_ = "$1bind-address=127.0.0.1\n" }' "$f"
+				if (/^\s*\[/) { ($g = $_) =~ s/^\s*\[//; $g =~ s/\].*$//s; $g =~ s/^\s+//; $g =~ s/\s+$//; $g = lc $g }
+				if ($ok{$g} && /^(\s*)(loose[-_])?bind[-_]address\s*=/) { $_ = "$1bind-address=127.0.0.1\n" }' "$f"
 		else
 			# Written right after [mysqld], where the section it belongs to starts.
 			perl -pi -e 'if (/^\[mysqld\]/ && !$done) {
