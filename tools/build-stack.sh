@@ -483,40 +483,58 @@ cert_stato() {
     # generare uno nuovo A OGNI AVVIO di Apache, sostituendo quello buono.
     "$OPENSSL" version >/dev/null 2>&1 || return 2
 
-    # ⚠️ E i codici di uscita si leggono, non si riducono a "diverso da zero".
-    # x509 esce 1 quando il file non e' un certificato, ma anche quando non
-    # riesce ad aprirlo, e qualunque altro codice e' un guasto di openssl,
-    # non un giudizio sul certificato. Un guasto conserva quello che c'e':
-    # nel dubbio non si distrugge niente.
-    "$OPENSSL" x509 -in "$CRT" -noout -subject >/dev/null 2>&1
+    # ⚠️ Il verdetto "da sostituire" deve venire dalle DATE LETTE, non da un
+    # codice di uscita. x509 esce 1 sia quando il file non e' un certificato,
+    # sia quando non riesce ad aprirlo, sia per un guasto suo: con -checkend
+    # un errore operativo qualsiasi diventava "scaduto" e faceva sostituire un
+    # certificato valido, a ogni avvio di Apache.
+    #
+    # Qui si chiedono le due date e si confrontano. Se non si leggono:
+    # file leggibile -> non e' un certificato, si rifa'; file non leggibile o
+    # openssl che non risponde -> non lo so, si conserva.
+    # Due domande distinte, perche' hanno risposte diverse.
+    #
+    # ⚠️ Primo: e' un certificato? Se x509 non lo sa nemmeno aprire e il file
+    # si legge, non lo e' e va rifatto. Se non si legge, non lo so.
+    "$OPENSSL" x509 -in "$CRT" -noout >/dev/null 2>&1
     _esito=$?
     if [ "$_esito" -ne 0 ]; then
-        [ -r "$CRT" ] || return 2               # non leggibile: non e' un verdetto
-        [ "$_esito" -eq 1 ] || return 2         # un altro codice: guasto
-        return 1                                # leggibile e non e' un certificato
+        [ -r "$CRT" ] || return 2
+        # ⚠️ x509 esce 1 sia quando il file non e' un certificato sia per un
+        # guasto suo, e dal codice non si distingue. Lo distingue il FILE: se
+        # porta il marcatore di un certificato, non tocca a noi dichiararlo
+        # spazzatura perche' openssl non ha risposto. Senza marcatore, un
+        # certificato non e'.
+        if [ "$_esito" -eq 1 ] && ! grep -q "BEGIN CERTIFICATE" "$CRT" 2>/dev/null; then
+            return 1
+        fi
+        return 2
     fi
 
-    # Da qui il certificato si legge, quindi -checkend 0 che esce 1 vuol dire
-    # scaduto per davvero. Qualunque altro codice resta un guasto.
-    "$OPENSSL" x509 -in "$CRT" -noout -checkend 0 >/dev/null 2>&1
-    _esito=$?
-    if [ "$_esito" -ne 0 ]; then
-        [ "$_esito" -eq 1 ] || return 2
-        return 1
-    fi
+    # ⚠️ Secondo: quali sono le date? Da qui in giu' sappiamo che il file E'
+    # un certificato, quindi ogni fallimento e' un guasto di openssl e si
+    # conserva quello che c'e'. Altrimenti il difetto si sposterebbe soltanto
+    # da -checkend a -startdate.
+    _date=$("$OPENSSL" x509 -in "$CRT" -noout -startdate -enddate 2>/dev/null) || return 2
+    [ -n "$_date" ] || return 2
 
-    # -checkend non guarda notBefore. Un orologio sbagliato al momento della
-    # generazione produce un certificato valido dal futuro, che il browser
-    # rifiuta esattamente come uno scaduto.
-    _da=$("$OPENSSL" x509 -in "$CRT" -noout -startdate 2>/dev/null) || return 2
-    _da=${_da#notBefore=}
-    [ -n "$_da" ] || return 2
-    _inizio=$(date -j -f '%b %e %T %Y %Z' "$_da" '+%s' 2>/dev/null) || return 2
+    _da=$(printf '%s\n' "$_date" | sed -n 's/^notBefore=//p' | sed 's/\.[0-9]*//')
+    _a=$(printf '%s\n' "$_date" | sed -n 's/^notAfter=//p' | sed 's/\.[0-9]*//')
+    [ -n "$_da" ] && [ -n "$_a" ] || return 2
+
+    # Le date di un certificato sono in GMT e finiscono con "GMT".
+    _inizio=$(TZ=UTC date -j -f '%b %e %T %Y %Z' "$_da" '+%s' 2>/dev/null) || return 2
+    _fine=$(TZ=UTC date -j -f '%b %e %T %Y %Z' "$_a" '+%s' 2>/dev/null) || return 2
     _ora=$(date '+%s' 2>/dev/null) || return 2
-    case "$_inizio-$_ora" in
+    case "$_inizio-$_fine-$_ora" in
         ''|*[!0-9-]*) return 2 ;;
     esac
-    [ "$_inizio" -le "$_ora" ] || return 1
+
+    # Fuori dalla finestra di validita', in un senso o nell'altro: il browser
+    # lo rifiuta comunque, e un orologio sbagliato al momento della
+    # generazione produce un certificato valido dal futuro.
+    [ "$_ora" -ge "$_inizio" ] || return 1
+    [ "$_ora" -lt "$_fine" ] || return 1
 
     return 0
 }
