@@ -955,15 +955,34 @@ OUR_PIDS = '''function vxostOurPids() {
 \t# invece di sparire in un elenco vuoto.
 \tvxelenco=$(ps -axo pid=,comm= 2>/dev/null) || return 1
 \ttest -n "$vxelenco" || return 1
+\t# ⚠️ Il percorso si prende con substr sulla riga INTERA, non ricostruendo
+\t# i campi: azzerando $1 e riassemblando, awk unisce con un solo spazio e
+\t# un percorso con due spazi di fila diventa un altro percorso.
+\t#
+\t# ⚠️ E un processo che porta il nostro nome ma un percorso NON assoluto
+\t# non e' ne' nostro ne' estraneo: e' un non lo so. ps riporta il percorso
+\t# com e stato invocato, quindi "bin/httpd" lanciato da dentro la radice e
+\t# nostro a tutti gli effetti. Contarlo come assente faceva dire "fermo" a
+\t# un processo vivo. Chi non si sa classificare fa uscire 1.
 \tvxtrovati=$(printf '%s\\n' "$vxelenco" | awk -v vxroot="$VXOST_ROOT/" -v vxnome="$vxname" '
+\t\tBEGIN { dubbio = 0 }
 \t\t{
 \t\t\tvxp = $1
-\t\t\t$1 = ""
-\t\t\tsub(/^ +/, "")
-\t\t\tvxn = $0
+\t\t\tvxspazio = index($0, " ")
+\t\t\tif (vxspazio == 0) next
+\t\t\tvxcmd = substr($0, vxspazio + 1)
+\t\t\tsub(/^ +/, "", vxcmd)
+\t\t\tif (vxcmd == "") next
+\t\t\tvxn = vxcmd
 \t\t\tsub(/^.*\\//, "", vxn)
-\t\t\tif (vxn == vxnome && index($0, vxroot) == 1) print vxp
-\t\t}') || return 1
+\t\t\tif (vxn != vxnome) next
+\t\t\tif (substr(vxcmd, 1, 1) != "/") { dubbio = 1; next }
+\t\t\tif (index(vxcmd, vxroot) == 1) print vxp
+\t\t}
+\t\tEND { if (dubbio) print "?" }') || return 1
+\tcase "$vxtrovati" in
+\t\t*"?"*) return 1 ;;
+\tesac
 \ttest -z "$vxtrovati" || printf '%s\\n' "$vxtrovati"
 \treturn 0
 }
@@ -1000,13 +1019,23 @@ else:
 
 
 def sostituisci_funzione(text, nome, corpo, marcatore):
+    """Come patch_blocco: "gia' patchata" si dimostra confrontando il corpo.
+
+    ⚠️ Il marcatore da solo dice che QUALCUNO ha messo mano, non che il corpo
+    sia quello giusto. Una funzione marcata e poi modificata passava per
+    corretta.
+    """
     m = re.search(r"function " + nome + r"\(\) \{\n.*?\n\}\n", text, re.S)
     if not m:
         sys.stderr.write("!! vxost: " + nome + " non trovata, non la tocco\n")
         sys.exit(1)
-    if marcatore in m.group(0):
+    if m.group(0) == corpo:
         print("  vxost: " + nome + " gia' patchata, lasciata com'e'")
         return text
+    if marcatore in m.group(0):
+        sys.stderr.write("!! vxost: " + nome + " e' patchata ma diversa da quella "
+                         "attesa: non la sovrascrivo\n")
+        sys.exit(1)
     return text[:m.start()] + corpo + text[m.end():]
 
 stop_apache = '''function stopApache() {
@@ -1159,15 +1188,24 @@ text = sostituisci_funzione(text, "vxostOurPids", OUR_PIDS, "index() di awk")
 #    non e' piu' recuperabile a valle. E nei riavvii il vecchio processo
 #    ancora vivo fa dire "already running" allo start, che e' il modo in cui
 #    un arresto non avvenuto si traveste da riavvio riuscito.
-def patch_blocco(text, nome, vecchio, nuovo, marcatore):
-    if marcatore in text:
+def patch_blocco(text, nome, vecchio, nuovo, marcatore=None):
+    """Tre esiti, e "gia' applicata" vuol dire che c'e' il BLOCCO NUOVO.
+
+    ⚠️ Prima bastava un commento marcatore. Sostituendo l'uscita corretta con
+    "exit 0" e lasciando i commenti al loro posto, la patch diceva "gia'
+    applicata" e lasciava il difetto intatto: dichiarava verificata proprio la
+    cosa che non guardava. Il marcatore resta come parametro solo per non
+    cambiare le chiamate, e non decide piu' niente.
+    """
+    if nuovo in text:
         print("  vxost: " + nome + " gia' applicata")
         return text
-    if text.count(vecchio) != 1:
-        sys.stderr.write("!! vxost: " + nome + " non ha la forma attesa\n")
-        sys.exit(1)
-    print("  vxost: " + nome)
-    return text.replace(vecchio, nuovo)
+    if text.count(vecchio) == 1:
+        print("  vxost: " + nome)
+        return text.replace(vecchio, nuovo)
+    sys.stderr.write("!! vxost: " + nome + " non ha ne' la forma vecchia ne' "
+                     "quella nuova: qualcuno l'ha toccata\n")
+    sys.exit(1)
 
 text = patch_blocco(
     text, "stop propaga l'errore",
