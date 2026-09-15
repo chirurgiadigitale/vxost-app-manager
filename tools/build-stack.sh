@@ -967,11 +967,15 @@ OUR_PIDS = '''function vxostOurPids() {
 \tvxtrovati=$(printf '%s\\n' "$vxelenco" | awk -v vxroot="$VXOST_ROOT/" -v vxnome="$vxname" '
 \t\tBEGIN { dubbio = 0 }
 \t\t{
+\t\t\t# ⚠️ ps allinea il pid a destra con degli spazi DAVANTI. Cercando il
+\t\t\t# primo spazio della riga si trovava quel riempimento, non il
+\t\t\t# separatore dopo il pid: il percorso restava attaccato al numero e
+\t\t\t# sembrava relativo, quindi un processo assoluto e vivo faceva uscire
+\t\t\t# "non lo so". Si consuma il pid e il suo separatore, e il resto e il
+\t\t\t# percorso, spazi interni compresi.
+\t\t\tif (match($0, /^[ \\t]*[0-9]+[ \\t]/) == 0) next
 \t\t\tvxp = $1
-\t\t\tvxspazio = index($0, " ")
-\t\t\tif (vxspazio == 0) next
-\t\t\tvxcmd = substr($0, vxspazio + 1)
-\t\t\tsub(/^ +/, "", vxcmd)
+\t\t\tvxcmd = substr($0, RSTART + RLENGTH)
 \t\t\tif (vxcmd == "") next
 \t\t\tvxn = vxcmd
 \t\t\tsub(/^.*\\//, "", vxn)
@@ -1632,28 +1636,36 @@ cat > "$BLOCCO_DIAG" <<VXEOF
 # selettore di esposizione dell'app. La stessa regola sta in
 # www/dashboard/.htaccess: questa vale anche se AllowOverride viene stretto.
 #
-# ⚠️ La regola NON sta su <Directory .../www/dashboard>, e non e' una svista.
+# ⚠️ Non una <Directory> sulla dashboard, e non una concessione sui progetti.
+#
 # Una <Directory> si applica al percorso da cui il file viene RAGGIUNTO: un
 # collegamento www/linked -> www/dashboard fa arrivare la richiesta come
-# /linked/phpinfo.php, la sezione della dashboard non entra in gioco, e con
-# gli override disattivati il diagnostico rispondeva 200. Misurato.
+# /linked/phpinfo.php e la sezione della dashboard non entra in gioco.
 #
-# Quindi si nega su TUTTA la radice web e si riammette sotto projects/, dove
-# un database.php e' un endpoint ordinario di un progetto e non un nostro
-# strumento. E' lo stesso motivo per cui la regola non sta nell'.htaccess di
-# radice.
+# ⛔ E la prima versione di questa regola negava su tutta la radice web per
+# poi RIAMMETTERE sotto projects/ con "Require all granted". Sbagliato, e
+# misurato: le sezioni sui file si fondono DOPO quelle sulle directory e dopo
+# gli .htaccess, quindi quella concessione non si limitava a togliere la
+# nostra restrizione, sostituiva anche i Require che un progetto si era messo
+# da solo. Un database.php protetto con Require local diventava raggiungibile
+# dalla rete. Non si concede niente: si esclude projects/ dal modello, e cosi'
+# li' dentro non cambia nulla.
 #
 # (?i) perche' il filesystem di macOS non distingue le maiuscole: PHPINFO.php
 # e' lo stesso file di phpinfo.php.
-<Directory "$NUOVA_RADICE/www">
+#
+# ⚠️ Quello che questa regola NON copre, e va detto: un collegamento creato
+# DENTRO projects/ che punta alla dashboard, con AllowOverride stretto. In
+# quel caso protegge solo l'.htaccess, che e' attivo nel pacchetto come esce.
+<DirectoryMatch "^$NUOVA_RADICE/www/(?!projects(/|\$))">
     <FilesMatch "(?i)^(phpinfo|ports|browse|database)\.php\$">
         Require local
     </FilesMatch>
-</Directory>
+</DirectoryMatch>
 
-<Directory "$NUOVA_RADICE/www/projects">
+<Directory "$NUOVA_RADICE/www/dashboard">
     <FilesMatch "(?i)^(phpinfo|ports|browse|database)\.php\$">
-        Require all granted
+        Require local
     </FilesMatch>
 </Directory>
 VXEOF
