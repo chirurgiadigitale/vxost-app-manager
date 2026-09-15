@@ -478,11 +478,32 @@ cert_stato() {
     [ -s "$CRT" ] && [ -s "$KEY" ] || return 1
     [ -x "$OPENSSL" ] || return 2
 
-    # Illeggibile o non un certificato: va rifatto, non e' un dubbio.
-    "$OPENSSL" x509 -in "$CRT" -noout -subject >/dev/null 2>&1 || return 1
+    # ⚠️ Prima si guarda se openssl risponde del tutto. Senza, un openssl
+    # rotto o ucciso faceva dire "certificato non valido" e ne faceva
+    # generare uno nuovo A OGNI AVVIO di Apache, sostituendo quello buono.
+    "$OPENSSL" version >/dev/null 2>&1 || return 2
 
-    # -checkend 0 esce 1 quando e' gia' scaduto.
-    "$OPENSSL" x509 -in "$CRT" -noout -checkend 0 >/dev/null 2>&1 || return 1
+    # ⚠️ E i codici di uscita si leggono, non si riducono a "diverso da zero".
+    # x509 esce 1 quando il file non e' un certificato, ma anche quando non
+    # riesce ad aprirlo, e qualunque altro codice e' un guasto di openssl,
+    # non un giudizio sul certificato. Un guasto conserva quello che c'e':
+    # nel dubbio non si distrugge niente.
+    "$OPENSSL" x509 -in "$CRT" -noout -subject >/dev/null 2>&1
+    _esito=$?
+    if [ "$_esito" -ne 0 ]; then
+        [ -r "$CRT" ] || return 2               # non leggibile: non e' un verdetto
+        [ "$_esito" -eq 1 ] || return 2         # un altro codice: guasto
+        return 1                                # leggibile e non e' un certificato
+    fi
+
+    # Da qui il certificato si legge, quindi -checkend 0 che esce 1 vuol dire
+    # scaduto per davvero. Qualunque altro codice resta un guasto.
+    "$OPENSSL" x509 -in "$CRT" -noout -checkend 0 >/dev/null 2>&1
+    _esito=$?
+    if [ "$_esito" -ne 0 ]; then
+        [ "$_esito" -eq 1 ] || return 2
+        return 1
+    fi
 
     # -checkend non guarda notBefore. Un orologio sbagliato al momento della
     # generazione produce un certificato valido dal futuro, che il browser
@@ -1559,28 +1580,72 @@ echo "  $VECCHIA_RADICE -> $NUOVA_RADICE"
 # (?i) per la stessa ragione dell'.htaccess: il filesystem di macOS non
 # distingue le maiuscole e PHPINFO.php e' lo stesso file di phpinfo.php.
 VXOSTCONF="$PAYLOAD/etc/extra/httpd-vxost.conf"
-if [ -f "$VXOSTCONF" ]; then
-    if grep -q 'VXOST: i diagnostici rispondono solo a questo Mac' "$VXOSTCONF"; then
-        echo "  httpd-vxost.conf: diagnostics already restricted"
-    else
-        cat >> "$VXOSTCONF" <<VXEOF
+
+# ⚠️ Il blocco si scrive in un file temporaneo, non in una variabile con
+# $(cat <<EOF). Il bash di macOS e' il 3.2, e dentro una sostituzione di
+# comando conta gli apici anche quando stanno in un heredoc: con un numero
+# dispari di apostrofi -- e qui ce ne sono sette, fra "dell'app" e "perche'"
+# -- la citazione resta aperta e lo script non e' piu' valido da li' in giu'.
+# L'errore compariva seicento righe dopo, su una riga sana.
+BLOCCO_DIAG="$(mktemp /tmp/vxost-diag.XXXXXX)"
+cat > "$BLOCCO_DIAG" <<VXEOF
 
 # VXOST: i diagnostici rispondono solo a questo Mac, qualunque cosa dica il
 # selettore di esposizione dell'app. La stessa regola sta in
 # www/dashboard/.htaccess: questa vale anche se AllowOverride viene stretto.
-<Directory "$NUOVA_RADICE/www/dashboard">
+#
+# ⚠️ La regola NON sta su <Directory .../www/dashboard>, e non e' una svista.
+# Una <Directory> si applica al percorso da cui il file viene RAGGIUNTO: un
+# collegamento www/linked -> www/dashboard fa arrivare la richiesta come
+# /linked/phpinfo.php, la sezione della dashboard non entra in gioco, e con
+# gli override disattivati il diagnostico rispondeva 200. Misurato.
+#
+# Quindi si nega su TUTTA la radice web e si riammette sotto projects/, dove
+# un database.php e' un endpoint ordinario di un progetto e non un nostro
+# strumento. E' lo stesso motivo per cui la regola non sta nell'.htaccess di
+# radice.
+#
+# (?i) perche' il filesystem di macOS non distingue le maiuscole: PHPINFO.php
+# e' lo stesso file di phpinfo.php.
+<Directory "$NUOVA_RADICE/www">
     <FilesMatch "(?i)^(phpinfo|ports|browse|database)\.php\$">
         Require local
     </FilesMatch>
 </Directory>
+
+<Directory "$NUOVA_RADICE/www/projects">
+    <FilesMatch "(?i)^(phpinfo|ports|browse|database)\.php\$">
+        Require all granted
+    </FilesMatch>
+</Directory>
 VXEOF
-        echo "  httpd-vxost.conf: diagnostics restricted to this Mac"
-    fi
-    if ! grep -q 'phpinfo|ports|browse|database' "$VXOSTCONF"; then
-        echo "!! httpd-vxost.conf: the diagnostics rule is not there" >&2
-        exit 1
-    fi
+
+# ⚠️ La postcondizione confronta il BLOCCO INTERO, non un marcatore.
+#
+# Cercare "phpinfo|ports|browse|database" diceva di si' anche dopo aver
+# cambiato "Require local" in "Require all granted": il controllo dichiarava
+# verificata proprio la cosa che non guardava. Tre esiti, come per le patch:
+# mancante -> si aggiunge; identico -> gia' fatto; presente ma diverso ->
+# errore, perche' qualcuno l'ha toccato e non tocca a noi indovinare come.
+if [ -f "$VXOSTCONF" ]; then
+    _diag=$(python3 "$HERE/tools/blocco-presente.py" "$BLOCCO_DIAG" "$VXOSTCONF")
+    case "$_diag" in
+        identico)
+            echo "  httpd-vxost.conf: diagnostics already restricted" ;;
+        assente)
+            cat "$BLOCCO_DIAG" >> "$VXOSTCONF"
+            if [ "$(python3 "$HERE/tools/blocco-presente.py" "$BLOCCO_DIAG" "$VXOSTCONF")" != "identico" ]; then
+                echo "!! httpd-vxost.conf: il blocco dei diagnostici non e' stato scritto" >&2
+                exit 1
+            fi
+            echo "  httpd-vxost.conf: diagnostics restricted to this Mac" ;;
+        *)
+            echo "!! httpd-vxost.conf: il blocco dei diagnostici c'e' ma e' diverso" >&2
+            echo "   da quello atteso: qualcuno l'ha modificato. Non lo sovrascrivo." >&2
+            exit 1 ;;
+    esac
 fi
+rm -f "$BLOCCO_DIAG"
 
 # ⚠️ I due prefissi sono lunghi uguali, 30 caratteri, e non e' un caso: e' la
 # ragione per cui questa operazione e' sicura. install_name_tool riscrive in
