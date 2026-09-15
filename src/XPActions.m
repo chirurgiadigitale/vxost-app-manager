@@ -696,6 +696,32 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    echo \"$_q\"\n"];
     [block appendString:@"}\n"];
     [block appendString:@"prima_n=$(vxost_quante) || prima_n=''\n"];
+    [block appendString:@"vxost_segno() {\n"];
+    [block appendString:@"    _si=''\n"];
+    [block appendString:@"    _sd=0\n"];
+    [block appendString:@"    if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
+    [block appendString:@"        _si=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
+    [block appendString:@"        _sd=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
+    [block appendString:@"        [ -n \"$_sd\" ] || _sd=0\n"];
+    [block appendString:@"    fi\n"];
+    [block appendString:@"    echo \"$_si $_sd\"\n"];
+    [block appendString:@"}\n"];
+    // ⚠️ Il pid si legge in una variabile, non dentro le virgolette di un
+    // grep: "$(cat \"...\")" annidato in una stringa gia' quotata non si
+    // comporta allo stesso modo in tutte le shell, e la ricerca non trovava
+    // mai la riga nostra.
+    [block appendString:@"vxost_ultima_nostra() {\n"];
+    [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo ''; return 0; }\n"];
+    [block appendString:@"    _p=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
+    [block appendString:@"    _u=''\n"];
+    [block appendString:@"    if [ -n \"$_p\" ]; then\n"];
+    [block appendString:@"        _u=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null \\\n"];
+    [block appendString:@"             | grep -F \"[pid $_p]\" | tail -1)\n"];
+    [block appendString:@"    fi\n"];
+    [block appendString:@"    [ -n \"$_u\" ] || _u=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
+    [block appendString:@"    echo \"$_u\"\n"];
+    [block appendString:@"}\n"];
+    [block appendString:@"prima_riga=$(vxost_ultima_nostra)\n"];
     [block appendString:@"\n"];
     // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
     // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
@@ -716,25 +742,30 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
     [block appendString:@"    [ -n \"$_da_n\" ] || return 2\n"];
     [block appendString:@"    _n=$(vxost_quante) || return 2\n"];
-    [block appendString:@"    _riga=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
-    [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
     [block appendString:@"\n"];
-    // ⚠️ Chi ha scritto la riga. Apache mette il proprio pid nel messaggio:
-    // se c'e' e non e' il nostro, quella riga parla di un altro server e non
-    // dice niente di questo riavvio. Se non c'e', non si pretende di saperlo.
+    // ⚠️ Il ripiego sulla data vale SOLO se il log e' stato sostituito. Usato
+    // anche a log invariato, una riga scritta nello stesso secondo in cui
+    // parte il comando bastava a dichiarare riuscito un riavvio fallito: la
+    // data e' al secondo, e al secondo i due fatti non si distinguono.
+    // ⚠️ Inode e dimensione non bastano a riconoscere una rotazione: un log
+    // riscritto in place resta lo stesso file e puo' avere la stessa
+    // lunghezza. Quello che cambia sempre e' il TESTO dell'ultima riga
+    // nostra. Si confronta quello: se e' un altro, un messaggio nuovo c'e'.
+    [block appendString:@"    _riga=$(vxost_ultima_nostra) || return 1\n"];
+    [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
+    [block appendString:@"    [ \"$_riga\" != \"$_da_riga\" ] || return 1\n"];
+    // ⚠️ Il ripiego di vxost_ultima_nostra prende l'ultima riga QUALUNQUE
+    // quando nessuna porta il nostro pid, perche' esistono formati che il pid
+    // non lo scrivono. Ma se il pid c'e' e non e' il nostro, quella riga
+    // parla di un altro server: riscrivendo questo blocco avevo perso il
+    // controllo, e il messaggio di un altro Apache tornava a valere come
+    // prova del nostro riavvio.
     [block appendString:@"    _lpid=$(printf '%s\\n' \"$_riga\" | sed -n 's/.*\\[pid \\([0-9][0-9]*\\).*/\\1/p')\n"];
     [block appendString:@"    if [ -n \"$_lpid\" ] && [ \"$_lpid\" != \"$_pid\" ]; then return 1; fi\n"];
     [block appendString:@"\n"];
-    // Un messaggio IN PIU' e' la prova piu' diretta che il riavvio e'
-    // avvenuto: non dipende da orologi ne' da fusi.
-    [block appendString:@"    if [ \"$_n\" -gt \"$_da_n\" ]; then return 0; fi\n"];
-    [block appendString:@"\n"];
-    // ⚠️ Se il conteggio non e' salito puo' essere una ROTAZIONE, e non solo
-    // quando il totale scende: un log ruotato con un messaggio al posto di un
-    // altro resta a uno. Prima questo caso finiva in rollback con Apache vivo
-    // e la riga giusta nel log. Qui si torna alla data, che pero' deve stare
-    // FRA la partenza del comando e adesso: una riga datata nel futuro non e'
-    // una prova, e prima passava.
+
+    // Il log e' stato sostituito: si torna alla data, che deve stare fra la
+    // partenza del comando e adesso.
     [block appendString:@"    _quando=$(printf '%s\\n' \"$_riga\" \\\n"];
     [block appendString:@"        | sed -n 's/^\\[\\([^]]*\\)\\].*/\\1/p' | sed 's/\\.[0-9]*//')\n"];
     [block appendString:@"    [ -n \"$_quando\" ] || return 2\n"];
@@ -756,7 +787,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"avviato=0\n"];
     [block appendString:@"attesa=0\n"];
     [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"    vxost_ripartito \"$prima\" \"$prima_n\"; esito=$?\n"];
+    [block appendString:@"    _da_riga=\"$prima_riga\"; vxost_ripartito \"$prima\" \"$prima_n\"; esito=$?\n"];
     [block appendString:@"    if [ $esito -eq 0 ]; then avviato=1; break; fi\n"];
     // Senza un log leggibile l'attesa non puo' portare nessuna prova nuova:
     // si concede il tempo di partire e si smette, invece di fermare l'utente
@@ -828,11 +859,12 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
     [block appendString:@"    prima_rb=$(date +%s)\n"];
     [block appendString:@"    prima_rb_n=$(vxost_quante) || prima_rb_n=''\n"];
+    [block appendString:@"    prima_rb_riga=$(vxost_ultima_nostra)\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
     [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"        vxost_ripartito \"$prima_rb\" \"$prima_rb_n\"; esito=$?\n"];
+    [block appendString:@"        _da_riga=\"$prima_rb_riga\"; vxost_ripartito \"$prima_rb\" \"$prima_rb_n\"; esito=$?\n"];
     [block appendString:@"        if [ $esito -eq 0 ]; then tornato=1; break; fi\n"];
     [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"            tornato=2\n"];

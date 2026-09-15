@@ -474,56 +474,29 @@ OPENSSL="$ROOT/bin/openssl"
 #
 # -s perche' un tentativo interrotto lascia il file creato e vuoto, e senza
 # quel controllo non verrebbe mai rifatto.
+# ⚠️ QUATTRO giri di revisione su queste venti righe, e ogni volta il difetto
+# era lo stesso: una lettura fallita che diventa un giudizio. -checkend, poi
+# openssl, poi grep, poi il marcatore BEGIN CERTIFICATE, che un PEM
+# "TRUSTED CERTIFICATE" non contiene pur essendo un certificato che Apache
+# carica e usa.
+#
+# Il quinto caso non si aggiunge: si cambia l'impostazione. Due regole.
+#
+# 1. Si sostituisce SOLO con una prova positiva di inutilizzabilita': il
+#    certificato si legge E le sue date lo mettono fuori validita'. Ogni
+#    dubbio conserva.
+# 2. Quando si sostituisce, il vecchio NON si cancella: si sposta di fianco.
+#    Cosi' anche una decisione sbagliata non distrugge niente, e chi ci tiene
+#    lo rimette al suo posto.
+#
+# Cosi' la domanda "e' un certificato?" non serve piu' a decidere: serve solo
+# a sapere se si possono leggere le date.
 cert_stato() {
     [ -s "$CRT" ] && [ -s "$KEY" ] || return 1
     [ -x "$OPENSSL" ] || return 2
-
-    # ⚠️ Prima si guarda se openssl risponde del tutto. Senza, un openssl
-    # rotto o ucciso faceva dire "certificato non valido" e ne faceva
-    # generare uno nuovo A OGNI AVVIO di Apache, sostituendo quello buono.
     "$OPENSSL" version >/dev/null 2>&1 || return 2
 
-    # ⚠️ Il verdetto "da sostituire" deve venire dalle DATE LETTE, non da un
-    # codice di uscita. x509 esce 1 sia quando il file non e' un certificato,
-    # sia quando non riesce ad aprirlo, sia per un guasto suo: con -checkend
-    # un errore operativo qualsiasi diventava "scaduto" e faceva sostituire un
-    # certificato valido, a ogni avvio di Apache.
-    #
-    # Qui si chiedono le due date e si confrontano. Se non si leggono:
-    # file leggibile -> non e' un certificato, si rifa'; file non leggibile o
-    # openssl che non risponde -> non lo so, si conserva.
-    # Due domande distinte, perche' hanno risposte diverse.
-    #
-    # ⚠️ Primo: e' un certificato? Se x509 non lo sa nemmeno aprire e il file
-    # si legge, non lo e' e va rifatto. Se non si legge, non lo so.
-    "$OPENSSL" x509 -in "$CRT" -noout >/dev/null 2>&1
-    _esito=$?
-    if [ "$_esito" -ne 0 ]; then
-        [ -r "$CRT" ] || return 2
-        # ⚠️ x509 esce 1 sia quando il file non e' un certificato sia per un
-        # guasto suo, e dal codice non si distingue. Lo distingue il FILE: se
-        # porta il marcatore di un certificato, non tocca a noi dichiararlo
-        # spazzatura perche' openssl non ha risposto. Senza marcatore, un
-        # certificato non e'.
-        #
-        # ⚠️ E qui l'esito di grep si legge, non si nega. "! grep -q" mette
-        # insieme "il marcatore non c'e'" (uscita 1) e "non ho potuto
-        # cercarlo" (uscita 2 o altro): con x509 a 1 e grep a 2 si arrivava a
-        # rigenerare certificato E chiave validi. E' lo stesso difetto di
-        # sopra, spostato di due righe: la prima volta l'ho chiuso su openssl
-        # e l'ho lasciato aperto su grep.
-        grep -q "BEGIN CERTIFICATE" "$CRT" 2>/dev/null
-        _marcatore=$?
-        if [ "$_esito" -eq 1 ] && [ "$_marcatore" -eq 1 ]; then
-            return 1
-        fi
-        return 2
-    fi
-
-    # ⚠️ Secondo: quali sono le date? Da qui in giu' sappiamo che il file E'
-    # un certificato, quindi ogni fallimento e' un guasto di openssl e si
-    # conserva quello che c'e'. Altrimenti il difetto si sposterebbe soltanto
-    # da -checkend a -startdate.
+    # Le date, e nient'altro. Se non si leggono, non si sa: si conserva.
     _date=$("$OPENSSL" x509 -in "$CRT" -noout -startdate -enddate 2>/dev/null) || return 2
     [ -n "$_date" ] || return 2
 
@@ -539,12 +512,22 @@ cert_stato() {
         ''|*[!0-9-]*) return 2 ;;
     esac
 
-    # Fuori dalla finestra di validita', in un senso o nell'altro: il browser
-    # lo rifiuta comunque, e un orologio sbagliato al momento della
-    # generazione produce un certificato valido dal futuro.
+    # L'unica prova positiva che autorizza a sostituire.
     [ "$_ora" -ge "$_inizio" ] || return 1
     [ "$_ora" -lt "$_fine" ] || return 1
 
+    return 0
+}
+
+# Sposta di fianco invece di cancellare. Non fallisce mai in modo da fermare
+# l'avvio: se non si riesce a spostare, si lascia tutto com'e' e si rinuncia.
+metti_da_parte() {
+    _quando=$(date '+%Y%m%d-%H%M%S' 2>/dev/null || echo vecchio)
+    for _f in "$CRT" "$KEY"; do
+        [ -e "$_f" ] || continue
+        mv "$_f" "$_f.sostituito-$_quando" 2>/dev/null || return 1
+    done
+    echo "vxost-ssl-init: il certificato precedente e' in $CRT.sostituito-$_quando" >&2
     return 0
 }
 
@@ -552,6 +535,15 @@ cert_stato
 case $? in
     0|2) exit 0 ;;
 esac
+
+# Se c'era qualcosa, si conserva prima di rifare. Se non si riesce, non si
+# tocca niente: meglio un HTTPS fermo che una coppia buttata via.
+if [ -s "$CRT" ] || [ -s "$KEY" ]; then
+    metti_da_parte || {
+        echo "vxost-ssl-init: non riesco a mettere da parte il certificato, lo lascio com'e'" >&2
+        exit 0
+    }
+fi
 
 mkdir -p "$ROOT/etc/ssl.crt" "$ROOT/etc/ssl.key" || exit 1
 
@@ -1734,20 +1726,6 @@ if [ -f "$VXOSTCONF" ]; then
             exit 1 ;;
     esac
 
-    # ⚠️ E il file che contiene la regola deve essere incluso DAVVERO.
-    # Il blocco puo' stare al livello esterno di httpd-vxost.conf mentre
-    # l'Include che lo porta dentro sta in un <IfDefine> mai vero: Apache non
-    # lo legge, il confronto dice "identico" e il configtest dice Syntax OK.
-    _incl=$(python3 "$HERE/tools/blocco-presente.py" --riga \
-            "$PAYLOAD/etc/httpd.conf" "httpd-vxost.conf" || true)
-    case "$_incl" in
-        attivo)
-            echo "  httpd.conf: httpd-vxost.conf incluso al livello esterno" ;;
-        *)
-            echo "!! httpd.conf: l'Include di httpd-vxost.conf e' $_incl:" >&2
-            echo "   la regola dei diagnostici potrebbe non entrare mai in gioco" >&2
-            exit 1 ;;
-    esac
 fi
 rm -f "$BLOCCO_DIAG"
 
@@ -2234,6 +2212,25 @@ if [ -n "$_outside" ]; then
     exit 1
 fi
 echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files read, all inside the package"
+
+# ⚠️ E la regola dei diagnostici deve stare in un file che Apache LEGGE
+# davvero. Il confronto per sottostringa che c'era prima cercava il nome di
+# httpd-vxost.conf dentro httpd.conf: diceva "incluso" anche per un nome
+# dentro un commento, per un IncludeOptional verso un file che non esiste e
+# per un Include di un altro file con un nome simile, e rifiutava le catene e
+# i glob leciti. Guardava un testo al posto di una configurazione.
+#
+# Qui la domanda si fa ad Apache: DUMP_INCLUDES elenca i file letti davvero,
+# catene, glob e condizioni comprese.
+if [ -f "$MIRROR/etc/extra/httpd-vxost.conf" ]; then
+    if printf '%s\n' "$_read" | grep -qx "$MIRROR/etc/extra/httpd-vxost.conf"; then
+        echo "  httpd-vxost.conf: Apache lo legge, la regola dei diagnostici e' attiva"
+    else
+        echo "!! httpd-vxost.conf non compare fra i file letti da Apache:" >&2
+        echo "   la regola dei diagnostici non entrerebbe mai in gioco" >&2
+        exit 1
+    fi
+fi
 
 # ⚠️ DUMP_INCLUDES elenca gli Include, e nient'altro: moduli, DocumentRoot,
 # certificati e log non compaiono. Una configurazione che carica un modulo da

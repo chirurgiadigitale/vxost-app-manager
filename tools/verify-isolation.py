@@ -78,8 +78,43 @@ DEFINE_ATTIVI = ("SSL", "PHP")
 # Applicata a tutte, quella regola faceva sparire dal controllo un
 # AuthUserFile che non esiste ancora e un CustomLog verso un link rotto, che
 # sono riferimenti da guardare, non parole.
-CON_PAROLE_CHIAVE = ("sslpassphrasedialog", "sslsessioncache", "sslcryptodevice",
-                     "sslstaplingcache", "mutex", "rewritemap", "sslrandomseed")
+# ⚠️ ErrorLog e i log accettano "syslog" e "syslog:local7": senza, quelle
+# stringhe venivano contate come file dentro il pacchetto e il totale saliva
+# senza che nessun percorso in piu' fosse stato guardato.
+# ⚠️ Non un elenco di direttive, ma le parole chiave VERE di ognuna. Con
+# l'elenco piatto, "CustomLog escape" -- dove escape e' un collegamento rotto
+# che esce dal pacchetto -- veniva scartato come se fosse una parola. Quello
+# che conta e' la forma dell'argomento, non a quale direttiva appartiene.
+PAROLE_CHIAVE = {
+    "errorlog":            ("syslog",),
+    "customlog":           ("syslog",),
+    "transferlog":         ("syslog",),
+    "sslpassphrasedialog": ("builtin",),
+    "sslcryptodevice":     ("builtin",),
+    "sslrandomseed":       ("builtin",),
+    "sslsessioncache":     ("none", "nonenotnull"),
+    "sslstaplingcache":    ("none",),
+    "mutex":               ("default", "none", "posixsem", "sysvsem", "sem",
+                            "pthread", "fcntl", "flock", "file"),
+    "rewritemap":          (),
+}
+
+
+def e_parola_chiave(direttiva, pezzo):
+    """Vero se l'argomento e' una parola della direttiva, non un percorso."""
+    ammesse = PAROLE_CHIAVE.get(direttiva)
+    if ammesse is None:
+        return False
+    minuscolo = pezzo.lower()
+    for parola in ammesse:
+        if minuscolo == parola or minuscolo.startswith(parola + ":"):
+            return True
+    # rewritemap: int:tolower e simili sono mappe interne, non file.
+    return direttiva == "rewritemap" and ":" in pezzo
+
+# I prefissi che introducono un percorso, anche relativo: "file:entropia",
+# "txt:mappa". "int:" e' una mappa interna e non nomina nessun file.
+PREFISSI_CON_PERCORSO = ("file", "txt", "rnd", "dbm", "prg", "exec", "shmcb", "dbd")
 
 # Cosa puo' stare FUORI dal pacchetto, DIRETTIVA PER DIRETTIVA.
 #
@@ -212,23 +247,29 @@ def percorsi_nell_argomento(pezzo):
         if pezzo.startswith("$"):
             pezzo = pezzo[1:].strip()
         if pezzo:
-            trovati.append(pezzo.split()[0])
+            trovati.append((pezzo.split()[0], True))
         return trovati
     if pezzo.startswith("/"):
-        trovati.append(pezzo)
+        trovati.append((pezzo, True))
         return trovati
     # meccanismo:/percorso, con eventuali parametri fra parentesi in coda
     if ":" in pezzo:
-        coda = pezzo.split(":", 1)[1]
+        testa, coda = pezzo.split(":", 1)
         coda = re.sub(r"\(.*\)$", "", coda)
-        if coda.startswith("/"):
-            trovati.append(coda)
+        # ⚠️ Un prefisso noto introduce un percorso anche quando e' relativo:
+        # "SSLRandomSeed startup file:entropia" e "RewriteMap m txt:mappa"
+        # nominano due file, e sparivano perche' non cominciavano con "/".
+        if coda and (coda.startswith("/") or testa.lower() in PREFISSI_CON_PERCORSO):
+            # ⚠️ "certo": il prefisso dice che e' un percorso, quindi il filtro
+            # delle parole chiave non deve toccarlo. Senza, "file:entropia" e
+            # "txt:mappa" sparivano perche' la coda non ha barre.
+            trovati.append((coda, True))
             return trovati
     # ⚠️ Tutto il resto torna com'e': sono i percorsi RELATIVI a ServerRoot,
     # che chi chiama risolve. Scartandoli, i percorsi esaminati sullo staging
     # vero sono passati da 180 a 38 e il controllo usciva 0 lo stesso, cioe'
     # diceva "nessuno fuori" dopo aver guardato un quinto della configurazione.
-    trovati.append(pezzo)
+    trovati.append((pezzo, False))
     return trovati
 
 
@@ -283,7 +324,7 @@ def percorsi_nella_configurazione(specchio):
         try:
             testo = open(intero, encoding="utf-8", errors="replace").read()
         except OSError as errore:
-            trovati.append((intero, 0, None, None, None, str(errore), False, True))
+            trovati.append((intero, 0, None, None, None, str(errore), False, True, True))
             continue
 
         # ⚠️ Apache continua una direttiva sulla riga dopo con una barra
@@ -327,7 +368,7 @@ def percorsi_nella_configurazione(specchio):
             # dall'elenco quella esterna, e la profondita' andava fuori passo.
             if minuscola.startswith(("<ifdefine", "<ifmodule", "<ifversion")):
                 if minuscola.startswith("<ifdefine"):
-                    nome_def = re.sub(r"^<[Ii]f[Dd]efine\s+", "", pulita).rstrip(">").strip()
+                    nome_def = re.sub(r"^<ifdefine\s+", "", pulita, flags=re.I).rstrip(">").strip()
                     negato = nome_def.startswith("!")
                     nome_def = nome_def.lstrip("!").strip().strip('"')
                     # ⚠️ <IfDefine !SSL> con SSL attivo e' un blocco che Apache
@@ -335,7 +376,11 @@ def percorsi_nella_configurazione(specchio):
                     # falso allarme. La negazione va letta, non tolta.
                     pila.append((nome_def in define_attivi) != negato)
                 else:
-                    pila.append(False)          # non valutabile da qui
+                    # ⚠️ None, non False: di un <IfModule> non si sa se sia
+                    # attivo. Appiattirlo su "inattivo" faceva sparire un
+                    # Define scritto dentro un modulo davvero caricato, e con
+                    # lui la condizione che lo nominava.
+                    pila.append(None)
                 continue
             if minuscola.startswith(("</ifdefine", "</ifmodule", "</ifversion")):
                 if pila:
@@ -344,13 +389,18 @@ def percorsi_nella_configurazione(specchio):
 
             # ⚠️ Define crea una condizione attiva: <IfDefine EXTRA> dopo
             # "Define EXTRA" conta, e prima passava per ignoto.
-            _def = re.match(r"^Define\s+(\S+)", pulita)
+            # ⚠️ Le direttive di Apache sono INSENSIBILI alle maiuscole, i
+            # loro argomenti no. Correggendo i parametri avevo reso sensibile
+            # anche il nome della direttiva: "define EXTRA" e "<IFDEFINE SSL>"
+            # smettevano di essere riconosciuti e il validatore usciva 0 dove
+            # Apache usciva 1.
+            _def = re.match(r"^define\s+(\S+)", pulita, re.I)
             if _def:
                 # ⚠️ \s per la tabulazione, e solo se il ramo e' ATTIVO: un
                 # "Define EXTRA" dentro un <IfDefine> mai vero non definisce
                 # niente, e registrarlo faceva considerare attivo il blocco
                 # che lo nomina.
-                if all(pila):
+                if False not in pila:
                     define_attivi.add(_def.group(1).strip('"'))
                 continue
 
@@ -383,7 +433,7 @@ def percorsi_nella_configurazione(specchio):
             elif len(pezzi) > quale:
                 grezzi.extend(percorsi_nell_argomento(pezzi[quale]))
 
-            for grezzo in grezzi:
+            for grezzo, certo in grezzi:
                 if not grezzo or grezzo.startswith("|"):
                     continue                    # un programma, non un file
                 if "${" in grezzo or "%" in grezzo:
@@ -391,7 +441,7 @@ def percorsi_nella_configurazione(specchio):
                     # si scarta.
                     trovati.append((intero, numero, direttiva, None, grezzo,
                                     "contiene una variabile non espandibile",
-                                    (not all(pila)), attivo))
+                                    (not all(x is True for x in pila)), attivo, certo))
                     continue
                 # ⚠️ normpath anche sugli assoluti: /usr/lib/../../opt/homebrew
                 # comincia per /usr/lib/, che e' un prefisso ammesso, e
@@ -399,7 +449,7 @@ def percorsi_nella_configurazione(specchio):
                 assoluto = os.path.normpath(grezzo) if grezzo.startswith("/") \
                     else os.path.normpath(os.path.join(serverroot, grezzo))
                 trovati.append((intero, numero, direttiva, assoluto, grezzo, None,
-                                (not all(pila)), attivo))
+                                (not all(x is True for x in pila)), attivo, certo))
 
                 if direttiva == "include" and any(c in grezzo for c in "*?["):
                     # ⚠️ Include con un glob che non trova niente FERMA Apache
@@ -409,7 +459,7 @@ def percorsi_nella_configurazione(specchio):
                     if not glob.glob(assoluto):
                         trovati.append((intero, numero, direttiva, None, grezzo,
                                         "Include con un glob che non trova nessun file",
-                                        (not all(pila)), attivo))
+                                        (not all(x is True for x in pila)), attivo, True))
                 if attivo and direttiva in ("include", "includeoptional"):
                     # ⚠️ Il contenuto degli inclusi va letto: un .inc che
                     # carica un modulo da /opt/homebrew non veniva mai aperto.
@@ -571,7 +621,7 @@ def main():
     fuori = 0
     non_valutabili = 0
     for (file_conf, numero, direttiva, valore, grezzo, errore, condizionale,
-         attivo) in percorsi_nella_configurazione(specchio):
+         attivo, certo) in percorsi_nella_configurazione(specchio):
         dove = os.path.relpath(file_conf, specchio)
         if errore:
             # ⚠️ Quello che non si sa leggere si DICHIARA. Prima le righe non
@@ -592,8 +642,10 @@ def main():
         # le direttive che DEVONO nominare un file la regola non vale: li' un
         # nome senza barra e' un percorso relativo, e se non esiste e' un
         # problema, non una parola chiave.
-        if direttiva in CON_PAROLE_CHIAVE and "/" not in grezzo \
-                and not os.path.exists(valore):
+        # ⚠️ Niente os.path.exists: l'esistenza per caso di un file chiamato
+        # "builtin" non cambia il significato della direttiva, e lo faceva
+        # contare come percorso.
+        if not certo and "/" not in grezzo and e_parola_chiave(direttiva, grezzo):
             continue
 
         esaminate += 1

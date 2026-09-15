@@ -320,7 +320,7 @@ fi
 # ⚠️ Il file non e' il demone. Quello in esecuzione tiene il listener che
 # ha aperto all'avvio, e lo cambia solo riavviando: il riavvio si fa, e poi
 # si guarda la porta invece di darlo per fatto.
-if test "$daemon_ok" = "false" && test "$file_ok" = "true"
+if test "$daemon_ok" = "false" && test "$file_ok" = "true" && test "$porta_letta" = "true"
 then
 	echo "VXOST: " $($GETTEXT 'The running MySQL still listens beyond this computer. Restarting it.')
 	$VXOST_ROOT/vxost stopmysql
@@ -349,8 +349,12 @@ then
 			exit 1
 			;;
 	esac
-elif test "$daemon_ok" = "true"
+elif test "$daemon_ok" = "true" && test "$porta_letta" = "true"
 then
+	# ⚠️ La guardia vale per TUTTI i rami che dicono qualcosa sul demone,
+	# non solo per "e' fermo". Con la porta di ripiego si guardava un
+	# listener che non e' quello del server, e "ascolta solo su 127.0.0.1"
+	# era una conferma tratta da un controllo appena dichiarato incompleto.
 	echo "VXOST: " $($GETTEXT 'The running MySQL listens on 127.0.0.1 only.')
 elif test "$daemon_ok" = "stopped" && test "$porta_letta" = "true"
 then
