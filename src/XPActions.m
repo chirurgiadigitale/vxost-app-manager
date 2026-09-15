@@ -661,30 +661,24 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    *)       LOG=\"$R/$LOG\" ;;\n"];
     [block appendString:@"esac\n"];
     [block appendString:@"\n"];
-    // ⚠️ Il segno si prende in byte, non in righe. Con la rotazione il file
-    // riparte da zero e la riga nuova finisce alla riga 1: un "dalla riga 101
-    // in poi" non la vedrebbe mai.
+    // ⚠️ La prova che il messaggio appartiene A QUESTO riavvio non e' il
+    // segno in byte, e nemmeno l'inode (rilievo Q8). L'inode distingue
+    // l'oggetto, non l'origine del contenuto: copiando il vecchio log in un
+    // file nuovo e sostituendolo, il vecchio "resuming normal operations"
+    // ricompariva e il riavvio risultava verificato senza che fosse successo
+    // niente; e con copytruncate e ricrescita il messaggio nuovo finiva prima
+    // del segno e andava perso.
     //
-    // ⚠️ E non basta guardare se si e' accorciato: un file ruotato e
-    // sostituito puo' essere gia' piu' lungo della vecchia soglia quando lo
-    // si guarda, e allora la riga nuova resta prima del segno. Il file si
-    // riconosce dall'inode, che cambia quando il file e' un altro.
-    [block appendString:@"prima=0\n"];
-    [block appendString:@"prima_ino=''\n"];
-    [block appendString:@"if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
-    [block appendString:@"    prima=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
-    [block appendString:@"    [ -n \"$prima\" ] || prima=0\n"];
-    [block appendString:@"    prima_ino=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"fi\n"];
+    // Apache la data ce l'ha scritta accanto. Si prende l'ora di partenza e
+    // si chiede che la riga sia PIU' RECENTE: non dipende da rotazioni,
+    // troncamenti o dimensioni.
+    [block appendString:@"prima=$(date +%s)\n"];
     [block appendString:@"\n"];
     // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
     // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
     // copie divergono alla prima correzione.
     //
     // Tre esiti, non due: 0 verificato, 2 vivo ma non verificabile, 1 no.
-    // ⚠️ Il 2 esisteva gia' nei fatti e veniva riportato come 0: senza un log
-    // leggibile bastava un pid vivo, e nella riproduzione esterna passava il
-    // pid della shell di prova, senza Apache e senza nessun riavvio.
     [block appendString:@"vxost_ripartito() {\n"];
     [block appendString:@"    _da=\"$1\"\n"];
     [block appendString:@"    _pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
@@ -696,15 +690,17 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    [ \"${_cmd##*/}\" = 'httpd' ] || return 1\n"];
     [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
-    [block appendString:@"    _ino=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"    _dopo=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
-    [block appendString:@"    [ -n \"$_dopo\" ] || _dopo=0\n"];
-    [block appendString:@"    if [ -z \"$prima_ino\" ] || [ \"$_ino\" != \"$prima_ino\" ]; then\n"];
-    [block appendString:@"        _da=0\n"];
-    [block appendString:@"    elif [ \"$_dopo\" -lt \"$_da\" ]; then\n"];
-    [block appendString:@"        _da=0\n"];
-    [block appendString:@"    fi\n"];
-    [block appendString:@"    tail -c +$((_da + 1)) \"$LOG\" 2>/dev/null | grep -q 'resuming normal operations' || return 1\n"];
+    [block appendString:@"    _riga=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
+    [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
+    // "[Mon Sep 15 15:14:51.574038 2026]" -> "Mon Sep 15 15:14:51 2026"
+    [block appendString:@"    _quando=$(printf '%s\\n' \"$_riga\" \\\n"];
+    [block appendString:@"        | sed -n 's/^\\[\\([^]]*\\)\\].*/\\1/p' | sed 's/\\.[0-9]*//')\n"];
+    [block appendString:@"    [ -n \"$_quando\" ] || return 2\n"];
+    [block appendString:@"    _epoca=$(date -j -f '%a %b %d %T %Y' \"$_quando\" '+%s' 2>/dev/null) || return 2\n"];
+    [block appendString:@"    case \"$_epoca\" in ''|*[!0-9]*) return 2 ;; esac\n"];
+    // Due secondi di tolleranza per lo scarto fra l'ora del comando e quella
+    // che Apache scrive.
+    [block appendString:@"    [ \"$_epoca\" -ge \"$((_da - 2))\" ] || return 1\n"];
     [block appendString:@"    return 0\n"];
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
@@ -723,9 +719,14 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // Senza un log leggibile l'attesa non puo' portare nessuna prova nuova:
     // si concede il tempo di partire e si smette, invece di fermare l'utente
     // quindici secondi a ogni progetto su una macchina che logga su syslog.
+    // ⚠️ Lo stato si riscrive a ogni tentativo. Restando appeso al 2 del
+    // primo giro, Apache poteva sparire nel frattempo e il comando diceva
+    // lo stesso "e' in esecuzione".
     [block appendString:@"    if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"        avviato=2\n"];
     [block appendString:@"        [ $attesa -ge 3 ] && break\n"];
+    [block appendString:@"    else\n"];
+    [block appendString:@"        avviato=0\n"];
     [block appendString:@"    fi\n"];
     [block appendString:@"    sleep 1\n"];
     [block appendString:@"    attesa=$((attesa + 1))\n"];
@@ -735,12 +736,20 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
         [block appendString:@"\n"];
         [block appendString:@"# Vivo non basta: deve ascoltare la porta del progetto nuovo.\n"];
         [block appendString:@"if [ $avviato -ne 0 ]; then\n"];
+        // ⚠️ Non basta che la porta sia occupata: deve tenerla IL NOSTRO
+        // httpd. Un altro programma in ascolto su quella porta faceva
+        // promuovere "non verificabile" a "verificato", cioe' dichiarava
+        // riuscito un riavvio guardando il processo di qualcun altro.
         [block appendString:@"    inascolto=0\n"];
         [block appendString:@"    attesa=0\n"];
         [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-        [block appendFormat:@"        if /usr/sbin/lsof -nP -iTCP:%ld -sTCP:LISTEN >/dev/null 2>&1; then\n",
+        [block appendFormat:@"        for _lp in $(/usr/sbin/lsof -nP -iTCP:%ld -sTCP:LISTEN -t 2>/dev/null); do\n",
                             (long)port];
-        [block appendString:@"            inascolto=1\n"];
+        [block appendString:@"            _lc=$(ps -p \"$_lp\" -o comm= 2>/dev/null)\n"];
+        [block appendString:@"            [ \"${_lc##*/}\" = 'httpd' ] || continue\n"];
+        [block appendString:@"            case \"$_lc\" in \"$R\"/*) inascolto=1 ;; esac\n"];
+        [block appendString:@"        done\n"];
+        [block appendString:@"        if [ $inascolto -eq 1 ]; then\n"];
         [block appendString:@"            break\n"];
         [block appendString:@"        fi\n"];
         [block appendString:@"        sleep 1\n"];
@@ -775,13 +784,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // com'erano non serve a niente se poi Apache non risale. Quando non
     // risale, la configurazione su disco e quella caricata non coincidono
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
-    [block appendString:@"    prima_rb=0\n"];
-    [block appendString:@"    prima_ino=''\n"];
-    [block appendString:@"    if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
-    [block appendString:@"        prima_rb=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
-    [block appendString:@"        [ -n \"$prima_rb\" ] || prima_rb=0\n"];
-    [block appendString:@"        prima_ino=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"    fi\n"];
+    [block appendString:@"    prima_rb=$(date +%s)\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
@@ -791,6 +794,8 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"            tornato=2\n"];
     [block appendString:@"            [ $attesa -ge 3 ] && break\n"];
+    [block appendString:@"        else\n"];
+    [block appendString:@"            tornato=0\n"];
     [block appendString:@"        fi\n"];
     [block appendString:@"        sleep 1\n"];
     [block appendString:@"        attesa=$((attesa + 1))\n"];
