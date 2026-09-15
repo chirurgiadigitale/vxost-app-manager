@@ -696,20 +696,12 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    echo \"$_q\"\n"];
     [block appendString:@"}\n"];
     [block appendString:@"prima_n=$(vxost_quante) || prima_n=''\n"];
-    [block appendString:@"vxost_segno() {\n"];
-    [block appendString:@"    _si=''\n"];
-    [block appendString:@"    _sd=0\n"];
-    [block appendString:@"    if [ -n \"$LOG\" ] && [ -f \"$LOG\" ]; then\n"];
-    [block appendString:@"        _si=$(stat -f %i \"$LOG\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"        _sd=$(wc -c < \"$LOG\" 2>/dev/null | tr -d ' ')\n"];
-    [block appendString:@"        [ -n \"$_sd\" ] || _sd=0\n"];
-    [block appendString:@"    fi\n"];
-    [block appendString:@"    echo \"$_si $_sd\"\n"];
-    [block appendString:@"}\n"];
+    // vxost_segno, che leggeva inode e dimensione, e' stata tolta: non
+    // riconosceva un log riscritto in place e non la chiamava piu' nessuno.
+    //
     // ⚠️ Il pid si legge in una variabile, non dentro le virgolette di un
     // grep: "$(cat \"...\")" annidato in una stringa gia' quotata non si
-    // comporta allo stesso modo in tutte le shell, e la ricerca non trovava
-    // mai la riga nostra.
+    // comporta allo stesso modo in tutte le shell.
     [block appendString:@"vxost_ultima_nostra() {\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo ''; return 0; }\n"];
     [block appendString:@"    _p=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
@@ -718,7 +710,15 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"        _u=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null \\\n"];
     [block appendString:@"             | grep -F \"[pid $_p]\" | tail -1)\n"];
     [block appendString:@"    fi\n"];
-    [block appendString:@"    [ -n \"$_u\" ] || _u=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
+    // ⚠️ Una ricerca FALLITA non e' "nessuna riga". Concludendo con un echo
+    // vuoto, il segno di partenza diventava la stringa vuota e alla lettura
+    // dopo una riga vecchia qualunque risultava "diversa": un errore di
+    // lettura si trasformava di nuovo in prova.
+    [block appendString:@"    if [ -z \"$_u\" ]; then\n"];
+    [block appendString:@"        _u=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
+    [block appendString:@"        _e=$?\n"];
+    [block appendString:@"        [ \"$_e\" -le 1 ] || return 1\n"];
+    [block appendString:@"    fi\n"];
     [block appendString:@"    echo \"$_u\"\n"];
     [block appendString:@"}\n"];
     [block appendString:@"prima_riga=$(vxost_ultima_nostra)\n"];
@@ -772,7 +772,12 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    _epoca=$(date -j -f '%a %b %d %T %Y' \"$_quando\" '+%s' 2>/dev/null) || return 2\n"];
     [block appendString:@"    _adesso=$(date '+%s' 2>/dev/null) || return 2\n"];
     [block appendString:@"    case \"$_epoca-$_adesso\" in ''|*[!0-9-]*) return 2 ;; esac\n"];
-    [block appendString:@"    [ \"$_epoca\" -ge \"$_da\" ] || return 1\n"];
+    // ⚠️ Strettamente maggiore. La data del log ha la precisione del secondo,
+    // quindi una riga scritta NELLO STESSO secondo in cui parte il comando
+    // non si distingue da una scritta subito dopo: accettarla ha gia'
+    // prodotto due falsi successi. Un riavvio vero dura piu' di un secondo,
+    // e nel dubbio si sbaglia dalla parte che non dichiara riuscito niente.
+    [block appendString:@"    [ \"$_epoca\" -gt \"$_da\" ] || return 1\n"];
     [block appendString:@"    [ \"$_epoca\" -le \"$_adesso\" ] || return 1\n"];
     [block appendString:@"    return 0\n"];
     [block appendString:@"}\n"];

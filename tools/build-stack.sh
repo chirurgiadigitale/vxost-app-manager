@@ -496,7 +496,19 @@ cert_stato() {
     [ -x "$OPENSSL" ] || return 2
     "$OPENSSL" version >/dev/null 2>&1 || return 2
 
-    # Le date, e nient'altro. Se non si leggono, non si sa: si conserva.
+    # ⚠️ Un certificato che openssl non sa nemmeno aprire non e' utilizzabile,
+    # e Apache con -DSSL non parte: e' la lezione del 7 settembre, il rimedio
+    # dietro la porta che non si apre. Qui si puo' agire su una prova piu'
+    # debole SOLO perche' la sostituzione non distrugge piu' niente: la coppia
+    # vecchia finisce in .sostituito-<data> e si rimette con un mv.
+    #
+    # Il prezzo, dichiarato: se openssl ha un guasto proprio su questa
+    # chiamata, una coppia buona viene archiviata e rifatta. Nessuno perde
+    # niente, ma l'HTTPS cambia certificato.
+    "$OPENSSL" x509 -in "$CRT" -noout >/dev/null 2>&1 || return 1
+
+    # Le date. Da qui in giu' sappiamo che il file E' un certificato, quindi
+    # ogni fallimento e' un guasto e si conserva.
     _date=$("$OPENSSL" x509 -in "$CRT" -noout -startdate -enddate 2>/dev/null) || return 2
     [ -n "$_date" ] || return 2
 
@@ -519,15 +531,42 @@ cert_stato() {
     return 0
 }
 
-# Sposta di fianco invece di cancellare. Non fallisce mai in modo da fermare
-# l'avvio: se non si riesce a spostare, si lascia tutto com'e' e si rinuncia.
+# Sposta di fianco invece di cancellare.
+#
+# ⚠️ Due difetti della prima versione, tutti e due riprodotti: se il secondo
+# mv falliva restava la coppia a META', con il certificato archiviato e la
+# chiave al suo posto, e lo script diceva "non ho cambiato niente" mentre il
+# percorso configurato per HTTPS non esisteva piu'. E il nome con la data al
+# secondo non e' unico: mv sovrascrive, quindi un archivio valido poteva
+# essere distrutto da uno nuovo.
+#
+# Adesso: prima si cerca un nome libero, poi si spostano tutti e due, e se il
+# secondo non si sposta si rimette indietro il primo. O si archivia la coppia
+# intera, o non si tocca niente.
 metti_da_parte() {
-    _quando=$(date '+%Y%m%d-%H%M%S' 2>/dev/null || echo vecchio)
-    for _f in "$CRT" "$KEY"; do
-        [ -e "$_f" ] || continue
-        mv "$_f" "$_f.sostituito-$_quando" 2>/dev/null || return 1
+    _base=$(date '+%Y%m%d-%H%M%S' 2>/dev/null || echo vecchio)
+    _suffisso="$_base"
+    _n=0
+    while [ -e "$CRT.sostituito-$_suffisso" ] || [ -e "$KEY.sostituito-$_suffisso" ]; do
+        _n=$((_n + 1))
+        [ "$_n" -lt 100 ] || return 1
+        _suffisso="$_base-$_n"
     done
-    echo "vxost-ssl-init: il certificato precedente e' in $CRT.sostituito-$_quando" >&2
+
+    if [ -e "$CRT" ]; then
+        mv "$CRT" "$CRT.sostituito-$_suffisso" 2>/dev/null || return 1
+    fi
+    if [ -e "$KEY" ]; then
+        if ! mv "$KEY" "$KEY.sostituito-$_suffisso" 2>/dev/null; then
+            # Indietro tutta: meglio la coppia vecchia al suo posto che mezza
+            # archiviata e mezza no.
+            if [ -e "$CRT.sostituito-$_suffisso" ]; then
+                mv "$CRT.sostituito-$_suffisso" "$CRT" 2>/dev/null || true
+            fi
+            return 1
+        fi
+    fi
+    echo "vxost-ssl-init: la coppia precedente e' in *.sostituito-$_suffisso" >&2
     return 0
 }
 
@@ -2216,14 +2255,32 @@ echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files read, all inside
 # ⚠️ E la regola dei diagnostici deve stare in un file che Apache LEGGE
 # davvero. Il confronto per sottostringa che c'era prima cercava il nome di
 # httpd-vxost.conf dentro httpd.conf: diceva "incluso" anche per un nome
-# dentro un commento, per un IncludeOptional verso un file che non esiste e
-# per un Include di un altro file con un nome simile, e rifiutava le catene e
-# i glob leciti. Guardava un testo al posto di una configurazione.
+# dentro un commento. Qui la domanda si fa ad Apache, che elenca i file letti.
 #
-# Qui la domanda si fa ad Apache: DUMP_INCLUDES elenca i file letti davvero,
-# catene, glob e condizioni comprese.
+# ⚠️ Tre trappole trovate dalla revisione, tutte e tre chiuse qui.
+#
+# grep -qx con il percorso come MODELLO: il punto fra "vxost" e "conf" accetta
+# qualunque carattere, quindi un file "httpd-vxostXconf" incluso al posto del
+# nostro faceva dire di si'. Serve un confronto letterale.
+#
+# Il dump si ottiene con -D DUMP_INCLUDES: una configurazione che si
+# condiziona a QUEL define comparirebbe nel dump e non nell'avvio ordinario.
+# Se qualcuno scrive <IfDefine DUMP_INCLUDES> ci si ferma, perche' da qui non
+# si potrebbe piu' distinguere.
+#
+# E i percorsi si confrontano SCIOLTI: il dump stampa l'alias con cui il file
+# e' stato raggiunto, quindi un Include attraverso un collegamento lecito
+# veniva respinto.
+if grep -rq 'IfDefine[[:space:]]*!\{0,1\}DUMP_INCLUDES' "$MIRROR/etc" 2>/dev/null; then
+    echo "!! la configurazione si condiziona a DUMP_INCLUDES: da qui non si puo'" >&2
+    echo "   distinguere quello che Apache legge all'avvio da quello che legge" >&2
+    echo "   durante questo controllo" >&2
+    exit 1
+fi
+
 if [ -f "$MIRROR/etc/extra/httpd-vxost.conf" ]; then
-    if printf '%s\n' "$_read" | grep -qx "$MIRROR/etc/extra/httpd-vxost.conf"; then
+    if VXATTESO="$MIRROR/etc/extra/httpd-vxost.conf" \
+       python3 "$HERE/tools/incluso-davvero.py" /tmp/configtest-includes.log; then
         echo "  httpd-vxost.conf: Apache lo legge, la regola dei diagnostici e' attiva"
     else
         echo "!! httpd-vxost.conf non compare fra i file letti da Apache:" >&2

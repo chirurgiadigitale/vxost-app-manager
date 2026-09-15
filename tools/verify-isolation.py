@@ -86,9 +86,11 @@ DEFINE_ATTIVI = ("SSL", "PHP")
 # che esce dal pacchetto -- veniva scartato come se fosse una parola. Quello
 # che conta e' la forma dell'argomento, non a quale direttiva appartiene.
 PAROLE_CHIAVE = {
+    # ⚠️ syslog e' una destinazione di ErrorLog, non di CustomLog: li'
+    # "CustomLog syslog common" nomina un file relativo, e trattarlo come
+    # parola lo faceva sparire dal controllo. Provato: un Apache di prova con
+    # quella riga crea davvero il file "syslog" nella radice.
     "errorlog":            ("syslog",),
-    "customlog":           ("syslog",),
-    "transferlog":         ("syslog",),
     "sslpassphrasedialog": ("builtin",),
     "sslcryptodevice":     ("builtin",),
     "sslrandomseed":       ("builtin",),
@@ -109,8 +111,16 @@ def e_parola_chiave(direttiva, pezzo):
     for parola in ammesse:
         if minuscolo == parola or minuscolo.startswith(parola + ":"):
             return True
-    # rewritemap: int:tolower e simili sono mappe interne, non file.
-    return direttiva == "rewritemap" and ":" in pezzo
+    if direttiva != "rewritemap":
+        return False
+    # ⚠️ "dbm=sdbm:mapfile" nomina un file: l'eccezione generica "rewritemap
+    # con i due punti e' una parola" lo scartava. Le mappe che non nominano
+    # file sono int: e quelle senza due punti.
+    testa = pezzo.split(":", 1)[0].lower()
+    if testa.startswith("dbm=") or testa in ("txt", "rnd", "dbm", "prg", "dbd",
+                                             "fastdbd"):
+        return False
+    return ":" in pezzo
 
 # I prefissi che introducono un percorso, anche relativo: "file:entropia",
 # "txt:mappa". "int:" e' una mappa interna e non nomina nessun file.
@@ -259,7 +269,10 @@ def percorsi_nell_argomento(pezzo):
         # ⚠️ Un prefisso noto introduce un percorso anche quando e' relativo:
         # "SSLRandomSeed startup file:entropia" e "RewriteMap m txt:mappa"
         # nominano due file, e sparivano perche' non cominciavano con "/".
-        if coda and (coda.startswith("/") or testa.lower() in PREFISSI_CON_PERCORSO):
+        _t = testa.lower()
+        if _t.startswith("dbm="):
+            _t = "dbm"
+        if coda and (coda.startswith("/") or _t in PREFISSI_CON_PERCORSO):
             # ⚠️ "certo": il prefisso dice che e' un percorso, quindi il filtro
             # delle parole chiave non deve toccarlo. Senza, "file:entropia" e
             # "txt:mappa" sparivano perche' la coda non ha barre.
@@ -289,6 +302,7 @@ def percorsi_nella_configurazione(specchio):
     # ../../fuori.conf, che e' il modo piu' semplice di uscire dal pacchetto.
     serverroot = specchio
     define_attivi = set(DEFINE_ATTIVI)
+    define_incerti = set()
 
     # ⚠️ Due insiemi diversi. ATTIVO e' quello che Apache legge davvero,
     # partendo da httpd.conf e seguendo gli Include: solo li' ha senso
@@ -374,7 +388,14 @@ def percorsi_nella_configurazione(specchio):
                     # ⚠️ <IfDefine !SSL> con SSL attivo e' un blocco che Apache
                     # NON legge: pretendere che i suoi file esistano e' un
                     # falso allarme. La negazione va letta, non tolta.
-                    pila.append((nome_def in define_attivi) != negato)
+                    if nome_def in define_incerti and nome_def not in define_attivi:
+                        pila.append(None)
+                        trovati.append((intero, numero, "ifdefine", None, nome_def,
+                                        "la condizione dipende da un Define sotto "
+                                        "una condizione non valutabile",
+                                        True, attivo, True))
+                    else:
+                        pila.append((nome_def in define_attivi) != negato)
                 else:
                     # ⚠️ None, non False: di un <IfModule> non si sa se sia
                     # attivo. Appiattirlo su "inattivo" faceva sparire un
@@ -400,8 +421,17 @@ def percorsi_nella_configurazione(specchio):
                 # "Define EXTRA" dentro un <IfDefine> mai vero non definisce
                 # niente, e registrarlo faceva considerare attivo il blocco
                 # che lo nomina.
-                if False not in pila:
-                    define_attivi.add(_def.group(1).strip('"'))
+                _nome = _def.group(1).strip('"')
+                if all(x is True for x in pila):
+                    define_attivi.add(_nome)
+                elif False not in pila:
+                    # ⚠️ Sotto una condizione IGNOTA non si sa se il Define
+                    # avvenga. Registrarlo lo dava per certo, e un
+                    # <IfDefine !EXTRA> successivo veniva giudicato inattivo:
+                    # il controllo usciva 0 dove Apache usciva 1. Qui si tiene
+                    # da parte come incerto, e chi lo nomina diventa incerto
+                    # a sua volta.
+                    define_incerti.add(_nome)
                 continue
 
             # Prima si guarda la prima parola: shlex si scomoda solo per una
@@ -413,7 +443,13 @@ def percorsi_nella_configurazione(specchio):
             pezzi = argomenti(pulita)
             if pezzi is None:
                 trovati.append((intero, numero, primo, None, pulita,
-                                "riga non interpretabile", False, attivo))
+                                # ⚠️ Nove campi, non otto: il chiamante ne
+                                # aspetta nove e questo ramo ne dava otto, per
+                                # cui una direttiva con le virgolette non
+                                # chiuse faceva morire il controllo con
+                                # ValueError invece di segnalarla.
+                                "riga non interpretabile",
+                                (not all(x is True for x in pila)), attivo, True))
                 continue
             if not pezzi:
                 continue
@@ -426,8 +462,13 @@ def percorsi_nella_configurazione(specchio):
                 continue
 
             grezzi = []
-            if quale == 0 or direttiva in MULTI_ARGOMENTI:
-                # Mutex e LoadFile: si guardano TUTTI gli argomenti.
+            if direttiva == "mutex":
+                # ⚠️ "Mutex default ssl-cache": il secondo argomento e' il NOME
+                # del mutex, non un file, e veniva contato come percorso. Solo
+                # il primo puo' portare un percorso, e solo con un prefisso.
+                if len(pezzi) > 1:
+                    grezzi.extend(percorsi_nell_argomento(pezzi[1]))
+            elif quale == 0 or direttiva in MULTI_ARGOMENTI:
                 for pezzo in pezzi[1:]:
                     grezzi.extend(percorsi_nell_argomento(pezzo))
             elif len(pezzi) > quale:
