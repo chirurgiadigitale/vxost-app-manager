@@ -37,9 +37,38 @@ def annidato(testo, posizione):
     return profondita > 0
 
 
+def riga_attiva(percorso, frammento):
+    """La riga che contiene il frammento sta al livello esterno del file?
+
+    ⚠️ Serve perche' un blocco puo' stare benissimo al livello esterno del
+    SUO file, mentre quel file viene incluso da dentro un <IfDefine> mai
+    vero. In quel caso Apache non lo legge, il confronto testuale dice
+    "identico" e il configtest dice Syntax OK: il controllo dichiarava
+    attiva una regola che non entra mai in gioco.
+    """
+    try:
+        testo = open(percorso, encoding="utf-8", errors="replace").read()
+    except OSError as errore:
+        print("illeggibile", file=sys.stderr)
+        print("  %s" % errore, file=sys.stderr)
+        return 2
+    posizione = testo.find(frammento)
+    if posizione < 0:
+        print("assente")
+        return 1
+    if testo.count(frammento) > 1:
+        print("piu-volte")
+        return 1
+    print("annidato" if annidato(testo, posizione) else "attivo")
+    return 0
+
+
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--riga":
+        return riga_attiva(sys.argv[2], sys.argv[3])
     if len(sys.argv) != 3:
         print("uso: blocco-presente.py <blocco> <file>", file=sys.stderr)
+        print("     blocco-presente.py --riga <file> <frammento>", file=sys.stderr)
         return 2
     try:
         blocco = open(sys.argv[1], encoding="utf-8").read()

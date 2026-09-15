@@ -68,7 +68,18 @@ MULTI_ARGOMENTI = ("loadfile",)
 # I -D con cui Apache viene davvero avviato: dentro questi blocchi le
 # direttive contano, quindi l'esistenza si pretende. ⚠️ Prima QUALUNQUE
 # <IfDefine> sopprimeva il controllo, anche <IfDefine SSL>, che e' attivo.
-DEFINE_ATTIVI = ("ssl", "php")
+# ⚠️ Maiuscole come le scrive Apache: "-DSSL" definisce SSL, e i nomi dei
+# parametri sono sensibili alle maiuscole. Abbassandoli, "Define extra"
+# rendeva attivo un <IfDefine EXTRA> che Apache considera un altro nome.
+DEFINE_ATTIVI = ("SSL", "PHP")
+
+# Le direttive che al posto di un percorso accettano anche PAROLE CHIAVE.
+# ⚠️ Solo per queste vale "senza barra e inesistente non e' un percorso".
+# Applicata a tutte, quella regola faceva sparire dal controllo un
+# AuthUserFile che non esiste ancora e un CustomLog verso un link rotto, che
+# sono riferimenti da guardare, non parole.
+CON_PAROLE_CHIAVE = ("sslpassphrasedialog", "sslsessioncache", "sslcryptodevice",
+                     "sslstaplingcache", "mutex", "rewritemap", "sslrandomseed")
 
 # Cosa puo' stare FUORI dal pacchetto, DIRETTIVA PER DIRETTIVA.
 #
@@ -316,7 +327,7 @@ def percorsi_nella_configurazione(specchio):
             # dall'elenco quella esterna, e la profondita' andava fuori passo.
             if minuscola.startswith(("<ifdefine", "<ifmodule", "<ifversion")):
                 if minuscola.startswith("<ifdefine"):
-                    nome_def = re.sub(r"^<ifdefine\s+", "", minuscola).rstrip(">").strip()
+                    nome_def = re.sub(r"^<[Ii]f[Dd]efine\s+", "", pulita).rstrip(">").strip()
                     negato = nome_def.startswith("!")
                     nome_def = nome_def.lstrip("!").strip().strip('"')
                     # ⚠️ <IfDefine !SSL> con SSL attivo e' un blocco che Apache
@@ -333,10 +344,14 @@ def percorsi_nella_configurazione(specchio):
 
             # ⚠️ Define crea una condizione attiva: <IfDefine EXTRA> dopo
             # "Define EXTRA" conta, e prima passava per ignoto.
-            if minuscola.startswith("define "):
-                _pezzi = pulita.split()
-                if len(_pezzi) > 1:
-                    define_attivi.add(_pezzi[1].lower())
+            _def = re.match(r"^Define\s+(\S+)", pulita)
+            if _def:
+                # ⚠️ \s per la tabulazione, e solo se il ramo e' ATTIVO: un
+                # "Define EXTRA" dentro un <IfDefine> mai vero non definisce
+                # niente, e registrarlo faceva considerare attivo il blocco
+                # che lo nomina.
+                if all(pila):
+                    define_attivi.add(_def.group(1).strip('"'))
                 continue
 
             # Prima si guarda la prima parola: shlex si scomoda solo per una
@@ -577,7 +592,7 @@ def main():
         # le direttive che DEVONO nominare un file la regola non vale: li' un
         # nome senza barra e' un percorso relativo, e se non esiste e' un
         # problema, non una parola chiave.
-        if direttiva not in DEVE_ESISTERE and "/" not in grezzo \
+        if direttiva in CON_PAROLE_CHIAVE and "/" not in grezzo \
                 and not os.path.exists(valore):
             continue
 

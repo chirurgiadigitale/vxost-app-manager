@@ -165,6 +165,11 @@ case "$port_value" in
 	+*) port_value=${port_value#+} ;;
 esac
 porta_letta="true"
+# Gli zeri davanti sono sintassi: il demone legge 3307 da "003307", e cercare
+# "003307" nell'output di netstat non trova niente. Si normalizza il numero.
+case "$port_value" in
+	0*[0-9]*) port_value=$(printf '%s' "$port_value" | sed 's/^0*//') ;;
+esac
 case "$port_value" in
 	'') port_value=3306 ;;
 	*[!0-9]*)
@@ -347,8 +352,11 @@ then
 elif test "$daemon_ok" = "true"
 then
 	echo "VXOST: " $($GETTEXT 'The running MySQL listens on 127.0.0.1 only.')
-elif test "$daemon_ok" = "stopped"
+elif test "$daemon_ok" = "stopped" && test "$porta_letta" = "true"
 then
+	# ⚠️ Solo se la porta si e' potuta leggere. Senza, "non e' in esecuzione"
+	# e' una conclusione tratta da un controllo appena dichiarato incompleto:
+	# si e' guardata la porta di ripiego, non quella del server.
 	echo "VXOST: " $($GETTEXT 'MySQL is not running: the setting applies at the next start.')
 elif test "$daemon_ok" = "unreadable"
 then

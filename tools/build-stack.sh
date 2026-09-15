@@ -505,7 +505,16 @@ cert_stato() {
         # porta il marcatore di un certificato, non tocca a noi dichiararlo
         # spazzatura perche' openssl non ha risposto. Senza marcatore, un
         # certificato non e'.
-        if [ "$_esito" -eq 1 ] && ! grep -q "BEGIN CERTIFICATE" "$CRT" 2>/dev/null; then
+        #
+        # ⚠️ E qui l'esito di grep si legge, non si nega. "! grep -q" mette
+        # insieme "il marcatore non c'e'" (uscita 1) e "non ho potuto
+        # cercarlo" (uscita 2 o altro): con x509 a 1 e grep a 2 si arrivava a
+        # rigenerare certificato E chiave validi. E' lo stesso difetto di
+        # sopra, spostato di due righe: la prima volta l'ho chiuso su openssl
+        # e l'ho lasciato aperto su grep.
+        grep -q "BEGIN CERTIFICATE" "$CRT" 2>/dev/null
+        _marcatore=$?
+        if [ "$_esito" -eq 1 ] && [ "$_marcatore" -eq 1 ]; then
             return 1
         fi
         return 2
@@ -1722,6 +1731,21 @@ if [ -f "$VXOSTCONF" ]; then
         *)
             echo "!! httpd-vxost.conf: il blocco dei diagnostici c'e' ma e' diverso" >&2
             echo "   da quello atteso: qualcuno l'ha modificato. Non lo sovrascrivo." >&2
+            exit 1 ;;
+    esac
+
+    # ⚠️ E il file che contiene la regola deve essere incluso DAVVERO.
+    # Il blocco puo' stare al livello esterno di httpd-vxost.conf mentre
+    # l'Include che lo porta dentro sta in un <IfDefine> mai vero: Apache non
+    # lo legge, il confronto dice "identico" e il configtest dice Syntax OK.
+    _incl=$(python3 "$HERE/tools/blocco-presente.py" --riga \
+            "$PAYLOAD/etc/httpd.conf" "httpd-vxost.conf" || true)
+    case "$_incl" in
+        attivo)
+            echo "  httpd.conf: httpd-vxost.conf incluso al livello esterno" ;;
+        *)
+            echo "!! httpd.conf: l'Include di httpd-vxost.conf e' $_incl:" >&2
+            echo "   la regola dei diagnostici potrebbe non entrare mai in gioco" >&2
             exit 1 ;;
     esac
 fi

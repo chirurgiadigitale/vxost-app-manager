@@ -669,9 +669,10 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // niente; e con copytruncate e ricrescita il messaggio nuovo finiva prima
     // del segno e andava perso.
     //
-    // Apache la data ce l'ha scritta accanto. Si prende l'ora di partenza e
-    // si chiede che la riga sia PIU' RECENTE: non dipende da rotazioni,
-    // troncamenti o dimensioni.
+    // Apache la data ce l'ha scritta accanto, ma la data da sola non lega il
+    // messaggio al tentativo. La prova principale e' che ne sia arrivato uno
+    // IN PIU'; la data serve al solo caso della rotazione, dove il conteggio
+    // non e' confrontabile.
     // ⚠️ La prova che il messaggio appartiene A QUESTO tentativo non e' la
     // sua data: una riga gia' presente un secondo prima passava, e una con la
     // data nel futuro pure. Quello che lega messaggio e tentativo e' che ne
@@ -680,15 +681,21 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // La data resta per il solo caso in cui il log si e' accorciato, cioe' e'
     // stato ruotato: li' il conteggio non e' confrontabile.
     [block appendString:@"prima=$(date +%s)\n"];
+    // ⚠️ Un conteggio che fallisce non e' zero. Ripiegando su 0, alla lettura
+    // dopo un messaggio VECCHIO sembrava arrivato adesso: un controllo fallito
+    // diventava un dato misurato, che e' la forma di difetto che questo
+    // progetto insegue da settimane. Qui la funzione esce 1 e chi chiama lo
+    // tratta come "non lo so".
     [block appendString:@"vxost_quante() {\n"];
-    [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo 0; return; }\n"];
-    // ⚠️ grep -c stampa 0 E esce 1 quando non trova niente: con "|| echo 0"
-    // il conteggio diventava "0\n0" e il confronto numerico falliva sempre.
-    [block appendString:@"    _q=$(grep -c 'resuming normal operations' \"$LOG\" 2>/dev/null) || _q=0\n"];
-    [block appendString:@"    case \"$_q\" in ''|*[!0-9]*) _q=0 ;; esac\n"];
+    [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo 0; return 0; }\n"];
+    [block appendString:@"    _q=$(grep -c 'resuming normal operations' \"$LOG\" 2>/dev/null)\n"];
+    [block appendString:@"    _e=$?\n"];
+    // grep: 0 trovato, 1 nessuna corrispondenza (e stampa 0), oltre e' errore.
+    [block appendString:@"    [ \"$_e\" -le 1 ] || return 1\n"];
+    [block appendString:@"    case \"$_q\" in ''|*[!0-9]*) return 1 ;; esac\n"];
     [block appendString:@"    echo \"$_q\"\n"];
     [block appendString:@"}\n"];
-    [block appendString:@"prima_n=$(vxost_quante)\n"];
+    [block appendString:@"prima_n=$(vxost_quante) || prima_n=''\n"];
     [block appendString:@"\n"];
     // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
     // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
@@ -707,21 +714,35 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    [ \"${_cmd##*/}\" = 'httpd' ] || return 1\n"];
     [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
-    [block appendString:@"    _n=$(vxost_quante)\n"];
-    [block appendString:@"    if [ \"$_n\" -gt \"$_da_n\" ]; then return 0; fi\n"];
-    // Se il log non si e' accorciato, nessun messaggio nuovo e' arrivato.
-    [block appendString:@"    [ \"$_n\" -lt \"$_da_n\" ] || return 1\n"];
+    [block appendString:@"    [ -n \"$_da_n\" ] || return 2\n"];
+    [block appendString:@"    _n=$(vxost_quante) || return 2\n"];
     [block appendString:@"    _riga=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
     [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
-    // "[Mon Sep 15 15:14:51.574038 2026]" -> "Mon Sep 15 15:14:51 2026"
+    [block appendString:@"\n"];
+    // ⚠️ Chi ha scritto la riga. Apache mette il proprio pid nel messaggio:
+    // se c'e' e non e' il nostro, quella riga parla di un altro server e non
+    // dice niente di questo riavvio. Se non c'e', non si pretende di saperlo.
+    [block appendString:@"    _lpid=$(printf '%s\\n' \"$_riga\" | sed -n 's/.*\\[pid \\([0-9][0-9]*\\).*/\\1/p')\n"];
+    [block appendString:@"    if [ -n \"$_lpid\" ] && [ \"$_lpid\" != \"$_pid\" ]; then return 1; fi\n"];
+    [block appendString:@"\n"];
+    // Un messaggio IN PIU' e' la prova piu' diretta che il riavvio e'
+    // avvenuto: non dipende da orologi ne' da fusi.
+    [block appendString:@"    if [ \"$_n\" -gt \"$_da_n\" ]; then return 0; fi\n"];
+    [block appendString:@"\n"];
+    // ⚠️ Se il conteggio non e' salito puo' essere una ROTAZIONE, e non solo
+    // quando il totale scende: un log ruotato con un messaggio al posto di un
+    // altro resta a uno. Prima questo caso finiva in rollback con Apache vivo
+    // e la riga giusta nel log. Qui si torna alla data, che pero' deve stare
+    // FRA la partenza del comando e adesso: una riga datata nel futuro non e'
+    // una prova, e prima passava.
     [block appendString:@"    _quando=$(printf '%s\\n' \"$_riga\" \\\n"];
     [block appendString:@"        | sed -n 's/^\\[\\([^]]*\\)\\].*/\\1/p' | sed 's/\\.[0-9]*//')\n"];
     [block appendString:@"    [ -n \"$_quando\" ] || return 2\n"];
     [block appendString:@"    _epoca=$(date -j -f '%a %b %d %T %Y' \"$_quando\" '+%s' 2>/dev/null) || return 2\n"];
-    [block appendString:@"    case \"$_epoca\" in ''|*[!0-9]*) return 2 ;; esac\n"];
-    // Due secondi di tolleranza per lo scarto fra l'ora del comando e quella
-    // che Apache scrive.
+    [block appendString:@"    _adesso=$(date '+%s' 2>/dev/null) || return 2\n"];
+    [block appendString:@"    case \"$_epoca-$_adesso\" in ''|*[!0-9-]*) return 2 ;; esac\n"];
     [block appendString:@"    [ \"$_epoca\" -ge \"$_da\" ] || return 1\n"];
+    [block appendString:@"    [ \"$_epoca\" -le \"$_adesso\" ] || return 1\n"];
     [block appendString:@"    return 0\n"];
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
@@ -806,7 +827,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // risale, la configurazione su disco e quella caricata non coincidono
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
     [block appendString:@"    prima_rb=$(date +%s)\n"];
-    [block appendString:@"    prima_rb_n=$(vxost_quante)\n"];
+    [block appendString:@"    prima_rb_n=$(vxost_quante) || prima_rb_n=''\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
