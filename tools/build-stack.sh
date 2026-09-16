@@ -1932,6 +1932,20 @@ if [ "$RESTI" != "0" ]; then
 fi
 echo "  no file carries the old name any more"
 
+# ----------------------------------------------------------- impronte PHAR ---
+#
+# bin/phar.phar non partiva: "SHA1 signature could not be verified". La
+# rinomina del 13/08 ne aveva riscritto l'intestazione senza ricalcolare
+# l'impronta (trovato dal dodicesimo giro, identico nella sorgente). Si
+# ricalcola qui, e subito dopo la firma PHP legge ogni voce: e' quella lettura,
+# che controlla il CRC di ciascuna, a dire se il contenuto e' sano.
+# ⚠️ PRIMA dei nomi: la loro verifica segnala anche un PHAR con l'impronta
+# rotta, e con l'ordine inverso la build del 16/09 alle 15:37 si e' fermata li'.
+step "Repairing PHAR signatures"
+if ! python3 "$HERE/tools/phar-impronte.py" ripara "$PAYLOAD"; then
+    exit 1
+fi
+
 # ------------------------------------------------------ nomi di partenza ---
 #
 # ⛔ Decisione di Davide, 16/09/2026: nel pacchetto non compaiono in nessun
@@ -1946,7 +1960,7 @@ echo "  no file carries the old name any more"
 # php, perl, openssl, mysqld, httpd, mysql e curl riscritti partono ancora.
 step "Removing the names of what VXOST is built from"
 if ! python3 "$HERE/tools/nomi-a-monte.py" riscrivi "$PAYLOAD"; then
-    echo "!! the payload still names what it is built from" >&2
+    echo "!! the check on the upstream names and on the archives failed, see above" >&2
     exit 1
 fi
 
@@ -2088,6 +2102,43 @@ if [ "$NONVERIFICATI" -ne 0 ] || [ "$NONADHOC" -ne 0 ]; then
     exit 1
 fi
 echo "  all $FIRMATI signatures verified with codesign --verify --strict"
+
+step "Checking the PHAR archives"
+# ⚠️ Dopo la firma: e' il php del pacchetto a leggerli, e prima della firma non
+# partirebbe. Ogni voce viene letta per intero (PHP ne verifica il CRC) e
+# guardata per i nomi di partenza, che nelle voci compresse un confronto di
+# byte non vede.
+_phars="$(python3 "$HERE/tools/phar-impronte.py" elenca "$PAYLOAD")" || exit 1
+_nphar=0
+while IFS= read -r _phar; do
+    [ -n "$_phar" ] || continue
+    _nphar=$((_nphar + 1))
+    if ! "$PAYLOAD/bin/php" -d phar.readonly=1 -r '
+        $p = new Phar($argv[1]); $n = 0;
+        foreach (new RecursiveIteratorIterator($p) as $f) {
+            $c = file_get_contents($f->getPathname());
+            if ($c === false) { fwrite(STDERR, "voce illeggibile: " . $f->getPathname() . "\n"); exit(1); }
+            if (preg_match("/" . "xa" . "mpp|" . "bit" . "nami/i", $c . $f->getPathname())) {
+                fwrite(STDERR, "nomina lo stack di partenza: " . $f->getPathname() . "\n"); exit(1);
+            }
+            $n++;
+        }
+        echo "  " . basename($argv[1]) . ": " . $n . " voci lette, nessuna menzione\n";
+    ' "$_phar"; then
+        echo "!! $_phar: PHP non lo legge, o contiene i nomi di partenza" >&2
+        exit 1
+    fi
+done <<EOF
+$_phars
+EOF
+if [ -f "$PAYLOAD/bin/phar.phar" ]; then
+    if ! "$PAYLOAD/bin/php" "$PAYLOAD/bin/phar.phar" help >/dev/null 2>&1; then
+        echo "!! bin/phar.phar does not start" >&2
+        exit 1
+    fi
+    echo "  bin/phar.phar starts"
+fi
+echo "  $_nphar PHAR checked"
 
 step "Adding the VXOST app"
 APP_BUNDLE="$HERE/build/VXOST.app"
