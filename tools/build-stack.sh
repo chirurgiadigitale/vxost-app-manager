@@ -583,9 +583,15 @@ LUCCHETTO="$ROOT/etc/.vxost-ssl-init.lock"
 _atteso=0
 until mkdir "$LUCCHETTO" 2>/dev/null; do
     if [ "$_atteso" -ge 20 ]; then
-        echo "vxost-ssl-init: il certificato e' bloccato da un'altra invocazione, non tocco niente." >&2
-        echo "vxost-ssl-init: se non ne sta girando nessuna: sudo rmdir $LUCCHETTO" >&2
-        exit 0
+        # ⚠️ Uscita 1, non 0. Il tredicesimo giro: con l'altra invocazione ferma
+        # fra i due rename oltre venti secondi, chi aspettava usciva 0 e il suo
+        # Apache partiva con la coppia mista. I chiamanti proseguono comunque
+        # (|| true), perche' un lucchetto abbandonato non deve impedire di
+        # avviare Apache per sempre; ma l'esito dice la verita' e il messaggio
+        # resta a video.
+        echo "vxost-ssl-init: il certificato e' bloccato da un'altra invocazione da venti secondi." >&2
+        echo "vxost-ssl-init: la coppia potrebbe essere a meta'. Se non ne sta girando nessuna: sudo rmdir $LUCCHETTO" >&2
+        exit 1
     fi
     sleep 1
     _atteso=$((_atteso + 1))
@@ -648,9 +654,11 @@ if [ -e "$CRT" ] || [ -e "$KEY" ]; then
 fi
 
 # ⚠️ Due rename, e fra i due la coppia attiva e' mista. Chi passa da questo
-# script aspetta il lucchetto, quindi non la vede; chi legge i file SENZA
-# passare da qui (un httpd avviato a mano) si'. Limite dichiarato, non chiuso:
-# la pubblicazione atomica di due file in due cartelle non esiste. Se il secondo rename
+# script aspetta il lucchetto, quindi non la vede, SE l'altra invocazione
+# finisce entro venti secondi; oltre, esce 1 e il chiamante prosegue lo stesso.
+# Chi legge i file senza passare da qui (un httpd avviato a mano) la vede.
+# Limiti dichiarati, non chiusi: la pubblicazione atomica di due file in due
+# cartelle non esiste. Se il secondo rename
 # fallisce lo si dice, e alla prossima invocazione cert_stato riconosce la
 # coppia che non corrisponde e la rifa. Quella di prima e' nell'archivio.
 mv "$TMPKEY" "$KEY" || { echo "vxost-ssl-init: non riesco a installare la chiave, la coppia attiva e' quella di prima" >&2; exit 1; }
@@ -721,8 +729,13 @@ prefix = match.group(1)
 block = f"""
 # Il certificato di questa macchina, se manca. Lo stesso script viene chiamato
 # dallo script vxost prima del suo controllo di sintassi: qui serve per
-# chiunque avvii Apache senza passare di li'.
-'{prefix}/bin/vxost-ssl-init' || true
+# chiunque avvii Apache senza passare di li'. Non per fermarlo: il generatore
+# puo' aspettare fino a venti secondi un lucchetto, e uno stop non ha bisogno
+# di nessun certificato.
+case "$ARGV" in
+    stop|graceful-stop|status|fullstatus) ;;
+    *) '{prefix}/bin/vxost-ssl-init' || true ;;
+esac
 """
 
 # After the envvars block, so the generated certificate is in place before any
