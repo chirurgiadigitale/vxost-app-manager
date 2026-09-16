@@ -124,7 +124,12 @@ def e_parola_chiave(direttiva, pezzo):
 
 # I prefissi che introducono un percorso, anche relativo: "file:entropia",
 # "txt:mappa". "int:" e' una mappa interna e non nomina nessun file.
-PREFISSI_CON_PERCORSO = ("file", "txt", "rnd", "dbm", "prg", "exec", "shmcb", "dbd")
+# ⚠️ fcntl e flock erano assenti: "Mutex fcntl:escape default" nomina un
+# file esattamente come "file:escape", e con escape collegamento verso una
+# cartella temporanea fuori dallo specchio il controllo usciva 0 contando il
+# solo ServerRoot. La forma file: veniva segnalata e le altre due no.
+PREFISSI_CON_PERCORSO = ("file", "txt", "rnd", "dbm", "prg", "exec", "shmcb", "dbd",
+                         "fcntl", "flock")
 
 # Cosa puo' stare FUORI dal pacchetto, DIRETTIVA PER DIRETTIVA.
 #
@@ -303,6 +308,15 @@ def percorsi_nella_configurazione(specchio):
     serverroot = specchio
     define_attivi = set(DEFINE_ATTIVI)
     define_incerti = set()
+    # ⚠️ I moduli CARICATI da un LoadModule in un ramo certamente attivo.
+    # Senza, ogni <IfModule> restava ignoto e la prudenza costava una verifica
+    # vera: httpd-ssl.conf e' incluso sotto <IfModule ssl_module>, quindi con
+    # la pila ereditata il controllo "il certificato deve esistere" smetteva
+    # di scattare. Era proprio il guasto del 7 settembre.
+    #
+    # Un modulo ASSENTE da qui resta ignoto, non inattivo: puo' essere
+    # compilato dentro httpd invece che caricato, e questo file non lo sa.
+    moduli_attivi = set()
 
     # ⚠️ Due insiemi diversi. ATTIVO e' quello che Apache legge davvero,
     # partendo da httpd.conf e seguendo gli Include: solo li' ha senso
@@ -313,8 +327,14 @@ def percorsi_nella_configurazione(specchio):
     # configurazioni di partenza, e i suoi certificati non esistono e non
     # devono esistere.
     principale = os.path.join(etc, "httpd.conf")
-    da_leggere = [principale] if os.path.exists(principale) else []
-    attivi = set(os.path.realpath(f) for f in da_leggere)
+    # ⚠️ Ogni file in coda porta con se' la PILA delle condizioni aperte nel
+    # punto in cui e' stato incluso. Prima si accodava il solo percorso e il
+    # file veniva letto con una pila vuota: un "Define EXTRA" dentro un file
+    # incluso sotto <IfModule qualcosa-che-non-so> diventava CERTO, e un
+    # <IfDefine !EXTRA> successivo veniva dichiarato inattivo. Apache usciva
+    # 1 per l'Include obbligatorio mancante, il validatore 0.
+    da_leggere = [(principale, [])] if os.path.exists(principale) else []
+    attivi = set(os.path.realpath(f) for f, _ in da_leggere)
     altri = []
     for cartella, _, nomi in os.walk(etc):
         for nome in sorted(nomi):
@@ -326,10 +346,11 @@ def percorsi_nella_configurazione(specchio):
     visti = set()
     while da_leggere or altri:
         if da_leggere:
-            intero = da_leggere.pop(0)
+            intero, pila_ereditata = da_leggere.pop(0)
             attivo = True
         else:
             intero = altri.pop(0)
+            pila_ereditata = []
             attivo = False
         vero = os.path.realpath(intero)
         if vero in visti:
@@ -360,7 +381,7 @@ def percorsi_nella_configurazione(specchio):
         if accumulata:
             righe.append((inizio, accumulata))
 
-        pila = []
+        pila = list(pila_ereditata)
         for numero, riga in righe:
             pulita = riga.strip()
             # ⚠️ Il punto e virgola: php.ini commenta cosi', e leggendo quelle
@@ -390,17 +411,35 @@ def percorsi_nella_configurazione(specchio):
                     # falso allarme. La negazione va letta, non tolta.
                     if nome_def in define_incerti and nome_def not in define_attivi:
                         pila.append(None)
-                        trovati.append((intero, numero, "ifdefine", None, nome_def,
-                                        "la condizione dipende da un Define sotto "
-                                        "una condizione non valutabile",
-                                        True, attivo, True))
+                        # ⚠️ Si segnala solo dove l'incertezza cambia qualcosa.
+                        # Dentro un ramo gia' CERTAMENTE falso il blocco non
+                        # viene letto comunque, e in un .conf che nessuno
+                        # include non partecipa alla configurazione attiva:
+                        # in tutti e due i casi Apache esce 0, e dichiarare
+                        # "non valutabile" rendeva non confezionabile un
+                        # pacchetto sano. Il difetto era che il record veniva
+                        # consumato senza guardare ne' la pila ne' attivo.
+                        if attivo and False not in pila:
+                            trovati.append((intero, numero, "ifdefine", None, nome_def,
+                                            "la condizione dipende da un Define sotto "
+                                            "una condizione non valutabile",
+                                            True, attivo, True))
                     else:
                         pila.append((nome_def in define_attivi) != negato)
+                elif minuscola.startswith("<ifmodule"):
+                    nome_mod = re.sub(r"^<ifmodule\s+", "", pulita, flags=re.I).rstrip(">").strip()
+                    negato_mod = nome_mod.startswith("!")
+                    nome_mod = nome_mod.lstrip("!").strip().strip('"')
+                    if nome_mod in moduli_attivi:
+                        pila.append(True != negato_mod)
+                    else:
+                        # ⚠️ None, non False: di un modulo che non abbiamo
+                        # visto caricare non si sa se sia attivo, perche'
+                        # potrebbe essere compilato dentro httpd. Appiattirlo
+                        # su "inattivo" faceva sparire un Define scritto
+                        # dentro un modulo davvero caricato.
+                        pila.append(None)
                 else:
-                    # ⚠️ None, non False: di un <IfModule> non si sa se sia
-                    # attivo. Appiattirlo su "inattivo" faceva sparire un
-                    # Define scritto dentro un modulo davvero caricato, e con
-                    # lui la condizione che lo nominava.
                     pila.append(None)
                 continue
             if minuscola.startswith(("</ifdefine", "</ifmodule", "</ifversion")):
@@ -415,6 +454,18 @@ def percorsi_nella_configurazione(specchio):
             # anche il nome della direttiva: "define EXTRA" e "<IFDEFINE SSL>"
             # smettevano di essere riconosciuti e il validatore usciva 0 dove
             # Apache usciva 1.
+            # ⚠️ LoadModule in un ramo certamente attivo rende NOTO un
+            # <IfModule>. Apache accetta due grafie per lo stesso modulo, il
+            # nome simbolico (ssl_module) e il file sorgente (mod_ssl.c), e
+            # vanno registrate tutte e due o meta' delle condizioni resta
+            # ignota senza motivo.
+            _mod = re.match(r"^loadmodule\s+(\S+)\s+(\S+)", pulita, re.I)
+            if _mod and all(x is True for x in pila):
+                moduli_attivi.add(_mod.group(1).strip('"'))
+                _so = os.path.basename(_mod.group(2).strip('"'))
+                if _so.endswith(".so"):
+                    moduli_attivi.add(_so[:-3] + ".c")
+
             _def = re.match(r"^define\s+(\S+)", pulita, re.I)
             if _def:
                 # ⚠️ \s per la tabulazione, e solo se il ramo e' ATTIVO: un
@@ -508,10 +559,10 @@ def percorsi_nella_configurazione(specchio):
                         if os.path.isdir(incluso):
                             for c, _, n in os.walk(incluso):
                                 for x in sorted(n):
-                                    da_leggere.append(os.path.join(c, x))
+                                    da_leggere.append((os.path.join(c, x), list(pila)))
                                     attivi.add(os.path.realpath(os.path.join(c, x)))
                         elif os.path.isfile(incluso):
-                            da_leggere.append(incluso)
+                            da_leggere.append((incluso, list(pila)))
                             attivi.add(os.path.realpath(incluso))
     return trovati
 
