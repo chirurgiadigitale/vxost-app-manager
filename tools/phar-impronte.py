@@ -28,6 +28,19 @@ import sys
 
 HASH = {1: hashlib.md5, 2: hashlib.sha1, 3: hashlib.sha256, 4: hashlib.sha512}
 
+# ⚠️ Si ripara SOLO quello che si sa perche' e' rotto. Il tredicesimo giro:
+# riparando ogni impronta sbagliata, un PHAR con lo stub PHP danneggiato
+# passava la riparazione e anche la lettura di tutte le voci (i CRC delle voci
+# non coprono lo stub), mentre eseguendolo usciva 255 per errore di sintassi.
+# Un'impronta sbagliata e' un segnale di danno: si ricalcola solo per il file
+# del caso conosciuto, riconosciuto dalla sua impronta SHA-256 come arriva
+# dalla sorgente, cioe' con l'intestazione riscritta dalla rinomina del 13/08.
+# Qualunque altro PHAR con l'impronta sbagliata ferma la build.
+CONOSCIUTI = {
+    "a516b0676368712b6c5e36bc440c8efbcd7cfcb28e4aa7da102ea550f1b0c94b":
+        "bin/phar.phar, intestazione riscritta dalla rinomina del 13/08/2026",
+}
+
 
 def e_phar(dati):
     return len(dati) > 12 and dati.endswith(b"GBMB") and b"__HALT_COMPILER();" in dati
@@ -86,10 +99,14 @@ def ripara(radici):
                     errori.append("firma non a hash, non ricalcolabile: %s" % p)
                 elif valida:
                     sani += 1
-                else:
+                elif hashlib.sha256(dati).hexdigest() in CONOSCIUTI:
                     scrivi_sul_posto(p, firma(dati))
                     riparati += 1
-                    print("  impronta ricalcolata: %s" % os.path.relpath(p, radice))
+                    print("  impronta ricalcolata: %s (%s)" % (os.path.relpath(p, radice),
+                          CONOSCIUTI[hashlib.sha256(dati).hexdigest()]))
+                else:
+                    errori.append("PHAR con impronta sbagliata e non fra i casi conosciuti, "
+                                  "non lo riparo: %s" % p)
     for e in errori:
         print("!! %s" % e, file=sys.stderr)
     print("  %d PHAR con l'impronta gia' giusta, %d ricalcolate" % (sani, riparati))

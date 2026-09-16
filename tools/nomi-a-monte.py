@@ -83,6 +83,14 @@ def formato_compresso(dati):
     for magia, nome in COMPRESSI:
         if dati.startswith(magia):
             return nome
+    # ⚠️ Uno ZIP non deve cominciare con la sua firma: uno ZIP eseguibile ha
+    # davanti "#!/usr/bin/env python3" e resta uno ZIP valido, perche' il
+    # lettore parte dalla directory centrale in fondo. Il tredicesimo giro:
+    # guardando solo il byte zero la verifica diceva "nessuna menzione" su un
+    # archivio che eseguito stampava i due nomi, e la riscrittura ne rompeva il
+    # CRC. is_zipfile cerca la directory centrale come fa il lettore.
+    if b"PK\x05\x06" in dati[-65536 - 22:] and zipfile.is_zipfile(io.BytesIO(dati)):
+        return "zip"
     return None
 
 

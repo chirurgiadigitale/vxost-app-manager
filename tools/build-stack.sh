@@ -2139,6 +2139,13 @@ while IFS= read -r _phar; do
         echo "!! $_phar: PHP non lo legge, o contiene i nomi di partenza" >&2
         exit 1
     fi
+    # ⚠️ I CRC delle voci non coprono lo stub, cioe' il PHP che parte quando
+    # l'archivio si esegue. php -l lo controlla per ogni PHAR, non solo per
+    # phar.phar.
+    if ! "$PAYLOAD/bin/php" -l "$_phar" >/dev/null 2>&1; then
+        echo "!! $_phar: lo stub PHP non e' valido" >&2
+        exit 1
+    fi
 done <<EOF
 $_phars
 EOF
