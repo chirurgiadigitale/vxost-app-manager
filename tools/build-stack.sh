@@ -732,10 +732,19 @@ block = f"""
 # chiunque avvii Apache senza passare di li'. Non per fermarlo: il generatore
 # puo' aspettare fino a venti secondi un lucchetto, e uno stop non ha bisogno
 # di nessun certificato.
-case "$ARGV" in
-    stop|graceful-stop|status|fullstatus) ;;
-    *) '{prefix}/bin/vxost-ssl-init' || true ;;
-esac
+#
+# Si decide sul VERBO, parola per parola, non sull'intera riga: lo script vxost
+# chiama "apachectl -k stop -DSSL -DPHP", che confrontata tutta insieme non e'
+# "stop" e aspettava il certificato per venti secondi (quattordicesimo giro).
+vxost_certificato=1
+for vxost_parola in "$@"; do
+    case "$vxost_parola" in
+        stop|graceful-stop|status|fullstatus) vxost_certificato=0 ;;
+    esac
+done
+if [ "$vxost_certificato" = 1 ]; then
+    '{prefix}/bin/vxost-ssl-init' || true
+fi
 """
 
 # After the envvars block, so the generated certificate is in place before any
