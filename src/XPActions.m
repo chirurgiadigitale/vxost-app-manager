@@ -756,21 +756,28 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"}\n"];
     // Tre esiti: 0 verificato, 2 vivo ma non verificabile, 1 no.
     [block appendString:@"vxost_ripartito() {\n"];
-    [block appendString:@"    _da=\"$1\"; _da_s=\"$2\"; _da_h=\"$3\"; _pid_prima=\"$4\"; _ctl=\"$5\"\n"];
+    // ⚠️ ${5:-} e non $5. Lo script gira con set -u, e il quattordicesimo giro
+    // ha trovato il ritorno indietro che passava quattro argomenti: la shell
+    // si fermava con "$5: unbound variable" prima di dire com'era andata.
+    // Ora tutte le chiamate ne passano cinque, e un esito mancante e' un
+    // esito sconosciuto, non un'interruzione.
+    [block appendString:@"    _da=\"${1:-}\"; _da_s=\"${2:-}\"; _da_h=\"${3:-}\"; _pid_prima=\"${4:-}\"; _ctl=\"${5:-}\"\n"];
     [block appendString:@"    _pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    [ -n \"$_pid\" ] && kill -0 \"$_pid\" 2>/dev/null || return 1\n"];
     // Vivo non basta: dev'essere il NOSTRO httpd.
     [block appendString:@"    _cmd=$(ps -p \"$_pid\" -o comm= 2>/dev/null)\n"];
     [block appendString:@"    [ \"${_cmd##*/}\" = 'httpd' ] || return 1\n"];
     [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
-    // Stesso processo: niente da attribuire. Ma se il comando e' anche FALLITO,
-    // il riavvio non e' avvenuto, ed e' un fallimento, non un dubbio: prima
-    // l'esito del comando veniva catturato e mai usato.
-    [block appendString:@"    if [ \"$_pid\" = \"$_pid_prima\" ]; then\n"];
-    [block appendString:@"        [ \"$_ctl\" = 0 ] && return 2\n"];
-    [block appendString:@"        [ -n \"$_ctl\" ] && return 1\n"];
-    [block appendString:@"        return 2\n"];
-    [block appendString:@"    fi\n"];
+    // ⛔ Un comando fallito non si attesta MAI come riuscito, qualunque cosa
+    // dicano pid e log. Il quattordicesimo giro l'ha dimostrato: restartapache
+    // tenta lo start anche se lo stop fallisce, lo start trova vivo un Apache
+    // pubblicato da un altro tentativo e dice "already running", e il pid
+    // diverso con la sua riga nel log faceva dire VXOST_OK a un comando uscito
+    // 1. Un pid nuovo prova che un processo e' partito, non che l'abbia fatto
+    // partire questo comando. Solo l'esito del comando lo lega a noi.
+    [block appendString:@"    [ \"$_ctl\" = 0 ] || return 1\n"];
+    // Stesso processo e comando riuscito: niente da attribuire.
+    [block appendString:@"    [ \"$_pid\" = \"$_pid_prima\" ] && return 2\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
     // Senza la misura iniziale non c'e' niente con cui confrontare.
     [block appendString:@"    [ -n \"$_da_s\" ] && [ -n \"$_da_h\" ] || return 2\n"];
@@ -807,13 +814,13 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    return 0\n"];
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
-    [block appendString:@"if pgrep -x httpd >/dev/null 2>&1; then\n"];
-    [block appendString:@"    pid_prima=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"    \"$CTL\" restartapache > \"$OUT\" 2>&1; ctl=$?\n"];
-    [block appendString:@"else\n"];
-    [block appendString:@"    pid_prima=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"    \"$CTL\" startapache > \"$OUT\" 2>&1; ctl=$?\n"];
-    [block appendString:@"fi\n"];
+    // ⚠️ Sempre restartapache, anche con Apache fermo. Prima si sceglieva con
+    // pgrep, e pgrep in errore (uscita 2) veniva letto come "fermo": si
+    // lanciava startapache, che con Apache vivo risponde "already running" ed
+    // esce 0 senza ricaricare niente. restartapache copre i due casi da solo:
+    // con Apache fermo lo stop dice "not running" ed esce 0, poi parte lo start.
+    [block appendString:@"pid_prima=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
+    [block appendString:@"\"$CTL\" restartapache > \"$OUT\" 2>&1; ctl=$?\n"];
     [block appendString:@"\n"];
     // 1 verificato, 2 vivo ma non verificabile, 0 no.
     [block appendString:@"avviato=0\n"];
@@ -895,11 +902,13 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    if [ -n \"$prima_rb_m\" ]; then prima_rb_s=${prima_rb_m%% *}; prima_rb_h=${prima_rb_m#* }; fi\n"];
     [block appendString:@"    prima_rb=$(date +%s)\n"];
     [block appendString:@"    pid_prima_rb=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
+    // L'esito si tiene: vxost_ripartito ne ha bisogno, e senza il quinto
+    // argomento la shell si fermava qui.
+    [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1; ctl_rb=$?\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
     [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"        vxost_ripartito \"$prima_rb\" \"$prima_rb_s\" \"$prima_rb_h\" \"$pid_prima_rb\"; esito=$?\n"];
+    [block appendString:@"        vxost_ripartito \"$prima_rb\" \"$prima_rb_s\" \"$prima_rb_h\" \"$pid_prima_rb\" \"$ctl_rb\"; esito=$?\n"];
     [block appendString:@"        if [ $esito -eq 0 ]; then tornato=1; break; fi\n"];
     [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"            tornato=2\n"];

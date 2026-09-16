@@ -76,6 +76,29 @@ int main(void) { @autoreleasepool {
     check([script hasSuffix:@"exit 0\n"], @"esce sempre con 0");
     check([script containsString:@"-t -d"], @"valida prima di riavviare");
 
+    // Quattordicesimo giro: il ritorno indietro chiamava vxost_ripartito con
+    // quattro argomenti su cinque, e sotto set -u la shell si fermava. La prova
+    // eseguibile e' in vxost-prove-quattordicesimo-giro; qui si guarda lo
+    // script INTERO, che e' quello che l'app lancia davvero.
+    check([script containsString:@"\nset -u\n"], @"lo script intero gira con set -u");
+    NSRegularExpression *call = [NSRegularExpression regularExpressionWithPattern:
+                                 @"^\\s*vxost_ripartito((?: \"[^\"]*\")*);"
+                                                                          options:NSRegularExpressionAnchorsMatchLines
+                                                                            error:NULL];
+    NSArray<NSTextCheckingResult *> *calls = [call matchesInString:script options:0
+                                                             range:NSMakeRange(0, script.length)];
+    NSUInteger fiveArgs = 0;
+    for (NSTextCheckingResult *m in calls) {
+        NSString *args = [script substringWithRange:[m rangeAtIndex:1]];
+        if ([args componentsSeparatedByString:@"\" \""].count == 5) fiveArgs++;
+    }
+    check(calls.count >= 2, @"verifica del riavvio e del ritorno indietro presenti");
+    check(calls.count > 0 && fiveArgs == calls.count, @"ogni chiamata di vxost_ripartito passa cinque argomenti");
+    // ⚠️ Col nome del comando davanti: "restartapache" contiene "startapache",
+    // e senza l'ancora il controllo falliva proprio sul codice corretto.
+    check(![script containsString:@"\"$CTL\" startapache > \"$OUT\""], @"il riavvio non sceglie startapache con pgrep");
+    check([script containsString:@"\"$CTL\" restartapache > \"$OUT\""], @"il riavvio usa sempre restartapache");
+
     // ⛔ Il difetto del 15/08: $STAMP dentro apici singoli non si espande.
     check(![script containsString:@"'.vxost-$STAMP"],
           @"il nome del backup non sta fra apici singoli");
