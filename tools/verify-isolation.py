@@ -508,7 +508,7 @@ def percorsi_nella_configurazione(specchio):
                                 # chiuse faceva morire il controllo con
                                 # ValueError invece di segnalarla.
                                 "riga non interpretabile",
-                                (not all(x is True for x in pila)), attivo, True))
+                                _condizione(pila), attivo, True))
                 continue
             if not pezzi:
                 continue
@@ -541,7 +541,7 @@ def percorsi_nella_configurazione(specchio):
                     # si scarta.
                     trovati.append((intero, numero, direttiva, None, grezzo,
                                     "contiene una variabile non espandibile",
-                                    (not all(x is True for x in pila)), attivo, certo))
+                                    _condizione(pila), attivo, certo))
                     continue
                 # ⚠️ normpath anche sugli assoluti: /usr/lib/../../opt/homebrew
                 # comincia per /usr/lib/, che e' un prefisso ammesso, e
@@ -549,7 +549,7 @@ def percorsi_nella_configurazione(specchio):
                 assoluto = os.path.normpath(grezzo) if grezzo.startswith("/") \
                     else os.path.normpath(os.path.join(serverroot, grezzo))
                 trovati.append((intero, numero, direttiva, assoluto, grezzo, None,
-                                (not all(x is True for x in pila)), attivo, certo))
+                                _condizione(pila), attivo, certo))
 
                 if direttiva == "include" and any(c in grezzo for c in "*?["):
                     # ⚠️ Include con un glob che non trova niente FERMA Apache
@@ -559,7 +559,7 @@ def percorsi_nella_configurazione(specchio):
                     if not glob.glob(assoluto):
                         trovati.append((intero, numero, direttiva, None, grezzo,
                                         "Include con un glob che non trova nessun file",
-                                        (not all(x is True for x in pila)), attivo, True))
+                                        _condizione(pila), attivo, True))
                 if attivo and direttiva in ("include", "includeoptional"):
                     # ⚠️ Il contenuto degli inclusi va letto: un .inc che
                     # carica un modulo da /opt/homebrew non veniva mai aperto.
@@ -567,10 +567,10 @@ def percorsi_nella_configurazione(specchio):
                         if os.path.isdir(incluso):
                             for c, _, n in os.walk(incluso):
                                 for x in sorted(n):
-                                    da_leggere.append((os.path.join(c, x), list(pila)))
+                                    da_leggere.append((os.path.join(c, x), _riassunto(pila)))
                                     attivi.add(os.path.realpath(os.path.join(c, x)))
                         elif os.path.isfile(incluso):
-                            da_leggere.append((incluso, list(pila)))
+                            da_leggere.append((incluso, _riassunto(pila)))
                             attivi.add(os.path.realpath(incluso))
     return trovati
 
@@ -672,6 +672,34 @@ def _rinomina(percorso):
     for vecchio, nuovo in NOMI_DI_PARTENZA:
         percorso = percorso.replace(vecchio, nuovo)
     return percorso
+
+
+def _condizione(pila):
+    """Tre valori, non due. False: ogni condizione aperta e' vera. True: almeno
+    una e' certamente falsa, Apache quel ramo non lo legge. None: nessuna e'
+    falsa ma almeno una e' ignota.
+
+    ⚠️ Con due soli valori "ignoto" e "spento" erano la stessa cosa, e un file
+    obbligatorio mancante sotto <IfModule mod_authz_core.c> (nome sorgente, che
+    da qui non si sa risolvere) veniva saltato in silenzio: Apache usciva 1,
+    il validatore 0 con "0 non valutabili"."""
+    if False in pila:
+        return True
+    if None in pila:
+        return None
+    return False
+
+
+def _riassunto(pila):
+    """Il contesto che viaggia con un file incluso, ridotto a quello che conta.
+
+    ⚠️ Passando la pila intera, un file che include se stesso sotto un ramo
+    spento veniva letto con pile sempre piu' lunghe, (False), (False, False),
+    e ogni chiave era nuova: il controllo non terminava. Nel file incluso si
+    usano solo "tutte vere", "qualcuna falsa" e "qualcuna ignota", quindi tre
+    stati bastano e le chiavi sono finite."""
+    c = _condizione(pila)
+    return [False] if c is True else ([None] if c is None else [])
 
 
 def normalizza(percorso, radici):
@@ -779,12 +807,21 @@ def main():
         esaminate += 1
 
         if dentro(valore, specchio, payload):
-            if direttiva in DEVE_ESISTERE and attivo and not condizionale \
+            if direttiva in DEVE_ESISTERE and attivo and condizionale is not True \
                     and not any(c in grezzo for c in "*?[") \
                     and not os.path.exists(valore):
-                problemi.append("%s:%d %s nomina %s, che non esiste"
-                                % (dove, numero, direttiva, grezzo))
-                fuori += 1
+                if condizionale is None:
+                    # Il file manca e non si sa se Apache lo leggera': lo si
+                    # dichiara, invece di concludere in nessuna delle due
+                    # direzioni.
+                    non_valutabili += 1
+                    problemi.append("%s:%d %s nomina %s, che non esiste, sotto una "
+                                    "condizione non valutabile"
+                                    % (dove, numero, direttiva, grezzo))
+                else:
+                    problemi.append("%s:%d %s nomina %s, che non esiste"
+                                    % (dove, numero, direttiva, grezzo))
+                    fuori += 1
             continue
 
         ammessi = FUORI_AMMESSO.get(direttiva, ())
