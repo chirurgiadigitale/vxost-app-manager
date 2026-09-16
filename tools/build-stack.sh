@@ -533,40 +533,62 @@ cert_stato() {
 
 # Sposta di fianco invece di cancellare.
 #
-# ⚠️ Due difetti della prima versione, tutti e due riprodotti: se il secondo
-# mv falliva restava la coppia a META', con il certificato archiviato e la
-# chiave al suo posto, e lo script diceva "non ho cambiato niente" mentre il
-# percorso configurato per HTTPS non esisteva piu'. E il nome con la data al
-# secondo non e' unico: mv sovrascrive, quindi un archivio valido poteva
-# essere distrutto da uno nuovo.
+# ⚠️ QUINTO giro su questo blocco, e il difetto non era piu' la distruzione:
+# era che il nome dell'archivio veniva CONTROLLATO e non RISERVATO. Fra il
+# [ -e ] che lo dichiarava libero e il mv che ci scriveva dentro, un'altra
+# invocazione poteva prendersi lo stesso nome, e mv sovrascrive. Codex l'ha
+# dimostrato con due invocazioni ordinate da una barriera: la coppia iniziale
+# spariva dai file attivi E da ogni archivio.
 #
-# Adesso: prima si cerca un nome libero, poi si spostano tutti e due, e se il
-# secondo non si sposta si rimette indietro il primo. O si archivia la coppia
-# intera, o non si tocca niente.
+# Un altro controllo prima di mv non chiude niente, perche' la finestra fra
+# controllo e uso resta. Cambia invece l'operazione: mkdir FALLISCE se la
+# directory esiste, e fallisce in modo indivisibile. Chi la crea l'ha
+# riservata, e due invocazioni ottengono due archivi diversi.
+#
+# Da qui la seconda conseguenza: l'archivio e' una directory che contiene la
+# COPPIA, invece di due file con lo stesso suffisso in due cartelle diverse.
+# Un archivio a meta' non e' piu' rappresentabile.
 metti_da_parte() {
     _base=$(date '+%Y%m%d-%H%M%S' 2>/dev/null || echo vecchio)
-    _suffisso="$_base"
     _n=0
-    while [ -e "$CRT.sostituito-$_suffisso" ] || [ -e "$KEY.sostituito-$_suffisso" ]; do
+    _arch="$ROOT/etc/ssl.sostituito-$_base"
+    until mkdir "$_arch" 2>/dev/null; do
+        # ⚠️ mkdir puo' fallire anche per un motivo che il prossimo nome non
+        # risolve (cartella non scrivibile, disco pieno). Si insiste solo se
+        # il motivo e' che quel nome e' gia' preso.
+        [ -e "$_arch" ] || return 1
         _n=$((_n + 1))
         [ "$_n" -lt 100 ] || return 1
-        _suffisso="$_base-$_n"
+        _arch="$ROOT/etc/ssl.sostituito-$_base-$_n"
     done
 
     if [ -e "$CRT" ]; then
-        mv "$CRT" "$CRT.sostituito-$_suffisso" 2>/dev/null || return 1
-    fi
-    if [ -e "$KEY" ]; then
-        if ! mv "$KEY" "$KEY.sostituito-$_suffisso" 2>/dev/null; then
-            # Indietro tutta: meglio la coppia vecchia al suo posto che mezza
-            # archiviata e mezza no.
-            if [ -e "$CRT.sostituito-$_suffisso" ]; then
-                mv "$CRT.sostituito-$_suffisso" "$CRT" 2>/dev/null || true
-            fi
+        if ! mv "$CRT" "$_arch/server.crt" 2>/dev/null; then
+            rmdir "$_arch" 2>/dev/null
             return 1
         fi
     fi
-    echo "vxost-ssl-init: la coppia precedente e' in *.sostituito-$_suffisso" >&2
+    if [ -e "$KEY" ]; then
+        if ! mv "$KEY" "$_arch/server.key" 2>/dev/null; then
+            # Indietro tutta: meglio la coppia vecchia al suo posto che mezza
+            # archiviata e mezza no.
+            if [ ! -e "$_arch/server.crt" ] || mv "$_arch/server.crt" "$CRT" 2>/dev/null; then
+                rmdir "$_arch" 2>/dev/null
+                return 1
+            fi
+            # ⚠️ Il ripristino e' fallito a sua volta: la coppia attiva e'
+            # SPEZZATA, il certificato e' nell'archivio e la chiave al suo
+            # posto. Prima questo caso usciva 0 dicendo "non ho cambiato
+            # niente", che era falso e lasciava HTTPS senza certificato.
+            # Adesso ha un esito suo, e il messaggio nomina i due percorsi
+            # perche' chi legge deve poterli rimettere a mano.
+            echo "vxost-ssl-init: ATTENZIONE, la coppia e' rimasta spezzata." >&2
+            echo "vxost-ssl-init: certificato in $_arch/server.crt" >&2
+            echo "vxost-ssl-init: chiave ancora in $KEY" >&2
+            return 3
+        fi
+    fi
+    echo "vxost-ssl-init: la coppia precedente e' in $_arch" >&2
     return 0
 }
 
@@ -578,10 +600,21 @@ esac
 # Se c'era qualcosa, si conserva prima di rifare. Se non si riesce, non si
 # tocca niente: meglio un HTTPS fermo che una coppia buttata via.
 if [ -s "$CRT" ] || [ -s "$KEY" ]; then
-    metti_da_parte || {
-        echo "vxost-ssl-init: non riesco a mettere da parte il certificato, lo lascio com'e'" >&2
-        exit 0
-    }
+    metti_da_parte
+    case $? in
+        0) ;;
+        3)
+            # La coppia e' spezzata e il messaggio l'ha gia' detto. Non si
+            # prosegue a generare: se un mv non e' riuscito, nemmeno scrivere
+            # una coppia nuova ha buone probabilita', e uscire 0 qui
+            # significherebbe dichiarare a posto un HTTPS che non lo e'.
+            exit 1
+            ;;
+        *)
+            echo "vxost-ssl-init: non riesco a mettere da parte il certificato, lo lascio com'e'" >&2
+            exit 0
+            ;;
+    esac
 fi
 
 mkdir -p "$ROOT/etc/ssl.crt" "$ROOT/etc/ssl.key" || exit 1
