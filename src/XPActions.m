@@ -721,12 +721,6 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // di questo punto ha una data non successiva, e non basta piu'.
     [block appendString:@"prima=$(date +%s)\n"];
     [block appendString:@"\n"];
-    // L'ultima riga di ripartenza scritta da noi, o da un formato che il pid non
-    // lo scrive. Una riga con il pid di un altro processo non conta. Nessuna
-    // pipe: l'esito della funzione e' quello di awk.
-    [block appendString:@"vxost_nostra_in() {\n"];
-    [block appendString:@"    awk -v p=\"[pid $2]\" '/resuming normal operations/ && (index($0, p) > 0 || index($0, \"[pid \") == 0) { u = $0 } END { print u }' \"$1\" 2>/dev/null\n"];
-    [block appendString:@"}\n"];
     [block appendString:@"vxost_epoca() {\n"];
     [block appendString:@"    _q=$(printf '%s\\n' \"$1\" | sed -n 's/^\\[\\([^]]*\\)\\].*/\\1/p' | sed 's/\\.[0-9]*//')\n"];
     // Qui una pipe fallita da' una stringa vuota, e la stringa vuota non diventa
@@ -738,14 +732,45 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
     // Tre esiti: 0 verificato, 2 vivo ma non verificabile, 1 no.
+    // ⚠️ Che cosa lega un messaggio del log a QUESTO tentativo.
+    //
+    // Tredici giri di revisione su questa domanda, con prove basate sulle date e
+    // sui byte, e ognuna aveva un controesempio: una riga di un tentativo
+    // precedente, arrivata un attimo prima del comando, passava per nuova.
+    //
+    // La prova strutturale c'era: restartapache FERMA e RIAVVIA Apache, e un
+    // riavvio vero cambia sempre il processo principale. Si legge il pid subito
+    // prima del comando; dopo, il pid dev'essere un altro, vivo e nostro, e nei
+    // byte aggiunti al log ci dev'essere una riga con QUEL pid. Una riga di un
+    // tentativo precedente porta il pid vecchio. Le date servono solo ai formati
+    // di log che il pid non lo scrivono.
+    //
+    // Pid invariato: niente da attribuire, l'esito e' "non verificabile".
+    // Limite dichiarato: il riuso dello stesso numero di pid da parte di un
+    // processo diverso nello stesso intervallo.
+    [block appendString:@"vxost_riga_del_pid() {\n"];
+    [block appendString:@"    awk -v p=\"[pid $2]\" '/resuming normal operations/ && index($0, p) > 0 { u = $0 } END { print u }' \"$1\" 2>/dev/null\n"];
+    [block appendString:@"}\n"];
+    [block appendString:@"vxost_riga_senza_pid() {\n"];
+    [block appendString:@"    awk '/resuming normal operations/ && index($0, \"[pid \") == 0 { u = $0 } END { print u }' \"$1\" 2>/dev/null\n"];
+    [block appendString:@"}\n"];
+    // Tre esiti: 0 verificato, 2 vivo ma non verificabile, 1 no.
     [block appendString:@"vxost_ripartito() {\n"];
-    [block appendString:@"    _da=\"$1\"; _da_s=\"$2\"; _da_h=\"$3\"\n"];
+    [block appendString:@"    _da=\"$1\"; _da_s=\"$2\"; _da_h=\"$3\"; _pid_prima=\"$4\"; _ctl=\"$5\"\n"];
     [block appendString:@"    _pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    [ -n \"$_pid\" ] && kill -0 \"$_pid\" 2>/dev/null || return 1\n"];
     // Vivo non basta: dev'essere il NOSTRO httpd.
     [block appendString:@"    _cmd=$(ps -p \"$_pid\" -o comm= 2>/dev/null)\n"];
     [block appendString:@"    [ \"${_cmd##*/}\" = 'httpd' ] || return 1\n"];
     [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
+    // Stesso processo: niente da attribuire. Ma se il comando e' anche FALLITO,
+    // il riavvio non e' avvenuto, ed e' un fallimento, non un dubbio: prima
+    // l'esito del comando veniva catturato e mai usato.
+    [block appendString:@"    if [ \"$_pid\" = \"$_pid_prima\" ]; then\n"];
+    [block appendString:@"        [ \"$_ctl\" = 0 ] && return 2\n"];
+    [block appendString:@"        [ -n \"$_ctl\" ] && return 1\n"];
+    [block appendString:@"        return 2\n"];
+    [block appendString:@"    fi\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
     // Senza la misura iniziale non c'e' niente con cui confrontare.
     [block appendString:@"    [ -n \"$_da_s\" ] && [ -n \"$_da_h\" ] || return 2\n"];
@@ -760,22 +785,22 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    fi\n"];
     [block appendString:@"    if [ \"$_aggiunta\" = 1 ]; then\n"];
     [block appendString:@"        tail -c +\"$((_da_s + 1))\" \"$LOG\" > \"$T\" 2>/dev/null || return 2\n"];
-    [block appendString:@"        _riga=$(vxost_nostra_in \"$T\" \"$_pid\") || return 2\n"];
+    // La riga del processo nuovo, nei byte scritti dopo la misura: e' la prova.
+    [block appendString:@"        _riga=$(vxost_riga_del_pid \"$T\" \"$_pid\") || return 2\n"];
+    [block appendString:@"        [ -n \"$_riga\" ] && return 0\n"];
+    // Un formato senza pid: resta la data, e lo stesso secondo non attesta.
+    [block appendString:@"        _riga=$(vxost_riga_senza_pid \"$T\") || return 2\n"];
     [block appendString:@"        [ -n \"$_riga\" ] || return 1\n"];
     [block appendString:@"        _ep=$(vxost_epoca \"$_riga\") || return 2\n"];
-    // ⚠️ Nei byte aggiunti una riga NELLO STESSO SECONDO della partenza non
-    // prova niente: l'undicesimo giro ha ricopiato in coda una riga gia'
-    // presente, datata quel secondo, e il codice diceva VXOST_OK senza nessun
-    // riavvio. Nessun controllo sulla riga distingue un evento nuovo da una
-    // copia, quindi non si attesta: "vivo ma non verificabile". Un avvio
-    // rapido non viene dichiarato fallito, e nemmeno riuscito.
     [block appendString:@"        [ \"$_ep\" -le \"$_adesso\" ] || return 1\n"];
     [block appendString:@"        [ \"$_ep\" -ge \"$_da\" ] || return 1\n"];
     [block appendString:@"        [ \"$_ep\" -gt \"$_da\" ] || return 2\n"];
     [block appendString:@"        return 0\n"];
     [block appendString:@"    fi\n"];
-    // Il log e' stato sostituito: resta la data, strettamente successiva.
-    [block appendString:@"    _riga=$(vxost_nostra_in \"$LOG\" \"$_pid\") || return 2\n"];
+    // Il log e' stato sostituito: riga del processo nuovo, o senza pid, con
+    // data strettamente successiva.
+    [block appendString:@"    _riga=$(vxost_riga_del_pid \"$LOG\" \"$_pid\") || return 2\n"];
+    [block appendString:@"    [ -n \"$_riga\" ] || { _riga=$(vxost_riga_senza_pid \"$LOG\") || return 2; }\n"];
     [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
     [block appendString:@"    _ep=$(vxost_epoca \"$_riga\") || return 2\n"];
     [block appendString:@"    [ \"$_ep\" -gt \"$_da\" ] && [ \"$_ep\" -le \"$_adesso\" ] || return 1\n"];
@@ -783,8 +808,10 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
     [block appendString:@"if pgrep -x httpd >/dev/null 2>&1; then\n"];
+    [block appendString:@"    pid_prima=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    \"$CTL\" restartapache > \"$OUT\" 2>&1; ctl=$?\n"];
     [block appendString:@"else\n"];
+    [block appendString:@"    pid_prima=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    \"$CTL\" startapache > \"$OUT\" 2>&1; ctl=$?\n"];
     [block appendString:@"fi\n"];
     [block appendString:@"\n"];
@@ -792,7 +819,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"avviato=0\n"];
     [block appendString:@"attesa=0\n"];
     [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"    vxost_ripartito \"$prima\" \"$prima_s\" \"$prima_h\"; esito=$?\n"];
+    [block appendString:@"    vxost_ripartito \"$prima\" \"$prima_s\" \"$prima_h\" \"$pid_prima\" \"$ctl\"; esito=$?\n"];
     [block appendString:@"    if [ $esito -eq 0 ]; then avviato=1; break; fi\n"];
     // Senza un log leggibile l'attesa non puo' portare nessuna prova nuova:
     // si concede il tempo di partire e si smette, invece di fermare l'utente
@@ -851,7 +878,8 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"elif [ $avviato -eq 2 ]; then\n"];
     [block appendString:@"    rm -f \"$OUT\" \"$T\"\n"];
     [block appendString:@"    echo \"NOTE: Apache is running, but the reload could not be verified:\"\n"];
-    [block appendString:@"    echo \"the error log is not a readable file (syslog, or a program behind a pipe).\"\n"];
+    [block appendString:@"    echo \"the error log gives no proof tied to this attempt (unreadable log, or the\"\n"];
+    [block appendString:@"    echo \"server process did not change).\"\n"];
     [block appendString:@"    echo \"Open the site before relying on it.\"\n"];
     [block appendString:@"    echo VXOST_OK_UNVERIFIED\n"];
     [block appendString:@"else\n"];
@@ -866,11 +894,12 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    prima_rb_s=''; prima_rb_h=''\n"];
     [block appendString:@"    if [ -n \"$prima_rb_m\" ]; then prima_rb_s=${prima_rb_m%% *}; prima_rb_h=${prima_rb_m#* }; fi\n"];
     [block appendString:@"    prima_rb=$(date +%s)\n"];
+    [block appendString:@"    pid_prima_rb=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
     [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"        vxost_ripartito \"$prima_rb\" \"$prima_rb_s\" \"$prima_rb_h\"; esito=$?\n"];
+    [block appendString:@"        vxost_ripartito \"$prima_rb\" \"$prima_rb_s\" \"$prima_rb_h\" \"$pid_prima_rb\"; esito=$?\n"];
     [block appendString:@"        if [ $esito -eq 0 ]; then tornato=1; break; fi\n"];
     [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"            tornato=2\n"];
@@ -886,7 +915,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"        echo \"the previous configuration is back and Apache is serving it\"\n"];
     [block appendString:@"    elif [ $tornato -eq 2 ]; then\n"];
     [block appendString:@"        echo \"the files were restored and Apache is running, but the reload could not be\"\n"];
-    [block appendString:@"        echo \"verified: the error log is not a readable file. Open a project page to check.\"\n"];
+    [block appendString:@"        echo \"verified from the error log. Open a project page to check.\"\n"];
     [block appendString:@"    else\n"];
     [block appendString:@"        echo \"WARNING: the files were restored but Apache did not come back up.\"\n"];
     [block appendString:@"        echo \"What is on disk and what is running no longer match. Start it by hand:\"\n"];
