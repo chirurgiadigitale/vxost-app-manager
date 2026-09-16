@@ -236,6 +236,14 @@ static const CGFloat XPEditorWidth = 420;
         return;
     }
 
+    // Lo storico non si puo' salvare: il tracker rifiuterebbe, e senza questo
+    // controllo l'editor direbbe «la fine viene prima dell'inizio», che e'
+    // falso e manda a cercare l'errore nel posto sbagliato.
+    if (![XPTracker shared].canRecord) {
+        self.errorLabel.stringValue = NSLocalizedString(@"tracker.unusable.short", nil);
+        return;
+    }
+
     NSString *task = self.taskField.stringValue;
     BOOL ok;
     if (self.entry) {

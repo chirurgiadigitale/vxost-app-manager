@@ -567,6 +567,15 @@
 
 "tool.security" = "Проверка безопасности";
 
+/* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
+"tracker.unusable.body" = "VXOST не может прочитать журнал часов, поэтому не записывает новые: они пропали бы при закрытии приложения. Уже записанные часы не изменены.\n\nПроверьте права доступа к этому файлу и снова откройте VXOST:\n%@";
+
+/* Errore nell'editor di una sessione quando lo storico non si puo' salvare */
+"tracker.unusable.short" = "Часы нельзя сохранить: существующий журнал не читается. Ничего не изменено.";
+
+/* Titolo dell'avviso: lo storico delle ore esiste ma non si legge, quindi non si registra */
+"tracker.unusable.title" = "Сейчас нельзя сохранить часы";
+
 /* Voce di menu con spunta: controllo automatico */
 "update.automatic" = "Проверять автоматически";
 

@@ -27,6 +27,8 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
     /// si salva niente: riscrivere quel file vorrebbe dire completare una
     /// perdita di dati invece di limitarla.
     BOOL _storageUnusable;
+    /// Il file che ha reso lo storico non salvabile, per dirlo all'utente.
+    NSString *_storageProblemPath;
 }
 @property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *openEntries;
 @property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *entries;
@@ -80,6 +82,29 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
     [self.idleTimer invalidate];
 }
 
+#pragma mark - Registrazione possibile
+
+- (BOOL)canRecord {
+    return !_storageUnusable;
+}
+
+- (NSString *)storageProblemPath {
+    return _storageUnusable ? _storageProblemPath : nil;
+}
+
+/// ⚠️ Il blocco stava solo in save, e il quattordicesimo giro di Codex ha
+/// mostrato il prezzo: Avvia e l'inserimento manuale venivano accettati, la
+/// vista li mostrava come registrati, e alla chiusura dell'app sparivano.
+/// Un'ora che si vede e non esiste e' peggio di un pulsante che dice di no.
+/// Ogni operazione che cambia lo storico passa di qui prima di toccare la
+/// memoria.
+- (BOOL)refusesChanges {
+    if (!_storageUnusable) return NO;
+    NSLog(@"VXOST: modifica rifiutata, lo storico non si puo' salvare (%@).",
+          _storageProblemPath ?: @"percorso sconosciuto");
+    return YES;
+}
+
 #pragma mark - Sessioni
 
 - (NSArray<XPTimeEntry *> *)currentEntries {
@@ -95,6 +120,7 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
 
 - (void)startProject:(XPTrackableProject *)project task:(NSString *)task {
     if (!project) return;
+    if ([self refusesChanges]) return;
     // Lo stesso progetto due volte in parallelo conterebbe il tempo doppio.
     if ([self currentEntryForProjectKey:project.key]) return;
 
@@ -292,6 +318,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     NSString *trimmed = [name stringByTrimmingCharactersInSet:
                          [NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (trimmed.length == 0) return nil;
+    if ([self refusesChanges]) return nil;
 
     NSString *key = [NSString stringWithFormat:@"custom:%@", trimmed];
     for (XPTrackableProject *existing in [self allProjects]) {
@@ -309,6 +336,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 }
 
 - (void)removeCustomProjectWithKey:(NSString *)key {
+    if ([self refusesChanges]) return;
     NSUInteger index = NSNotFound;
     for (NSUInteger i = 0; i < self.customProjects.count; i++) {
         if ([self.customProjects[i].key isEqualToString:key]) { index = i; break; }
@@ -401,6 +429,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 }
 
 - (void)deleteEntry:(XPTimeEntry *)entry {
+    if ([self refusesChanges]) return;
     [self.entries removeObject:entry];
     [self save];
     [self notifyChange];
@@ -415,6 +444,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     // scenderebbe aggiungendo lavoro. Si rifiuta qui: l'interfaccia mostra il
     // motivo, ma il motore non deve fidarsi di chi lo chiama.
     if ([end compare:start] != NSOrderedDescending) return NO;
+    if ([self refusesChanges]) return NO;
 
     entry.startDate = start;
     entry.endDate   = end;
@@ -438,6 +468,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
                                 end:(NSDate *)end {
     if (!project || !start || !end) return nil;
     if ([end compare:start] != NSOrderedDescending) return nil;
+    if ([self refusesChanges]) return nil;
 
     XPTimeEntry *entry = [[XPTimeEntry alloc] init];
     entry.projectKey  = project.key;
@@ -512,6 +543,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
                 // giro l'ha riprodotto. Ora i salvataggi si bloccano, come per
                 // uno storico illeggibile, e al prossimo avvio si riprova.
                 _storageUnusable = YES;
+                _storageProblemPath = legacy;
                 NSLog(@"VXOST: impossibile recuperare lo storico dalla cartella precedente: %@. "
                       @"Non salvo niente finche' il recupero non riesce.",
                       error.localizedDescription);
@@ -539,6 +571,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
         NSLog(@"VXOST: lo storico esiste ma non si legge (%@). "
               @"Non verrà sovrascritto.", error.localizedDescription);
         _storageUnusable = YES;
+        _storageProblemPath = path;
         return;
     }
 
@@ -558,6 +591,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
                   @"metterlo da parte (%@). Non verrà sovrascritto.",
                   error.localizedDescription);
             _storageUnusable = YES;
+            _storageProblemPath = path;
         }
         return;
     }

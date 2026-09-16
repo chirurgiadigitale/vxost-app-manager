@@ -567,6 +567,15 @@
 
 "tool.security" = "Biztonsági ellenőrzés";
 
+/* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
+"tracker.unusable.body" = "A VXOST nem tudja beolvasni a meglévő óranyilvántartást, ezért nem rögzít új órákat: az alkalmazás bezárásakor elvesznének. A meglévő órák nem változtak.\n\nEllenőrizd a fájl jogosultságait, majd nyisd meg újra a VXOST-ot:\n%@";
+
+/* Errore nell'editor di una sessione quando lo storico non si puo' salvare */
+"tracker.unusable.short" = "Az órák nem menthetők: a meglévő nyilvántartás nem olvasható. Semmi sem változott.";
+
+/* Titolo dell'avviso: lo storico delle ore esiste ma non si legge, quindi non si registra */
+"tracker.unusable.title" = "Az órák most nem menthetők";
+
 /* Voce di menu con spunta: controllo automatico */
 "update.automatic" = "Automatikus keresés";
 

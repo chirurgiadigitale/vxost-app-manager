@@ -567,6 +567,15 @@
 
 "tool.security" = "Comprobación de seguridad";
 
+/* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
+"tracker.unusable.body" = "VXOST no puede leer tu registro de horas, así que no registrará horas nuevas: se perderían al cerrar la app. Tus horas existentes no se han modificado.\n\nRevisa los permisos de este archivo y vuelve a abrir VXOST:\n%@";
+
+/* Errore nell'editor di una sessione quando lo storico non si puo' salvare */
+"tracker.unusable.short" = "No se pueden guardar las horas: el registro existente no se puede leer. No se ha cambiado nada.";
+
+/* Titolo dell'avviso: lo storico delle ore esiste ma non si legge, quindi non si registra */
+"tracker.unusable.title" = "Ahora no se pueden guardar las horas";
+
 /* Voce di menu con spunta: controllo automatico */
 "update.automatic" = "Buscar automáticamente";
 

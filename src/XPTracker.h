@@ -28,6 +28,19 @@ extern NSString *const XPTrackerDidChangeNotification;
 
 + (instancetype)shared;
 
+#pragma mark - Registrazione possibile
+
+/// NO quando lo storico su disco esiste ma non si riesce a leggere o a
+/// recuperare. In quel caso avvio, inserimento manuale, modifica ed
+/// eliminazione vengono rifiutati: salvarli e' impossibile senza sovrascrivere
+/// le ore precedenti, e accettarli solo in memoria vorrebbe dire perderli alla
+/// chiusura dell'app mentre la finestra li mostra come registrati.
+@property (nonatomic, readonly) BOOL canRecord;
+
+/// Il file che impedisce di registrare, da mostrare all'utente. nil se
+/// `canRecord` vale YES.
+@property (nonatomic, readonly, copy) NSString *storageProblemPath;
+
 #pragma mark - Sessioni in corso
 //
 // Si può lavorare su più progetti nello stesso momento, quindi il tracker
@@ -41,7 +54,8 @@ extern NSString *const XPTrackerDidChangeNotification;
 /// Sessione aperta per quel progetto, nil se non ce n'è.
 - (XPTimeEntry *)currentEntryForProjectKey:(NSString *)key;
 
-/// Avvia una sessione. Se il progetto ne ha già una aperta non fa nulla.
+/// Avvia una sessione. Se il progetto ne ha già una aperta, o se `canRecord`
+/// vale NO, non fa nulla.
 - (void)startProject:(XPTrackableProject *)project task:(NSString *)task;
 
 - (void)pauseEntry:(XPTimeEntry *)entry;

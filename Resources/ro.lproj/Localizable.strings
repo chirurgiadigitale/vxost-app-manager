@@ -567,6 +567,15 @@
 
 "tool.security" = "Verificare de securitate";
 
+/* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
+"tracker.unusable.body" = "VXOST nu poate citi istoricul orelor, așa că nu înregistrează ore noi: s-ar pierde la închiderea aplicației. Orele existente nu au fost modificate.\n\nVerifică permisiunile acestui fișier, apoi redeschide VXOST:\n%@";
+
+/* Errore nell'editor di una sessione quando lo storico non si puo' salvare */
+"tracker.unusable.short" = "Orele nu pot fi salvate: istoricul existent nu poate fi citit. Nu s-a modificat nimic.";
+
+/* Titolo dell'avviso: lo storico delle ore esiste ma non si legge, quindi non si registra */
+"tracker.unusable.title" = "Orele nu pot fi salvate acum";
+
 /* Voce di menu con spunta: controllo automatico */
 "update.automatic" = "Caută automat";
 

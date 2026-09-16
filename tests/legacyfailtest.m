@@ -54,6 +54,24 @@ int main(void) { @autoreleasepool {
           @"nessuno storico nuovo scritto senza le ore precedenti");
     check([[NSData dataWithContentsOfFile:old] isEqual:data], @"lo storico precedente resta identico");
 
+    // Quattordicesimo giro di Codex: il blocco valeva solo per save. Avvio e
+    // inserimento manuale venivano accettati, la vista li mostrava, e alla
+    // chiusura dell'app le ore sparivano. Finche' non si puo' salvare, non si
+    // registra niente.
+    printf("\n\033[1mNuove registrazioni con lo storico non salvabile\033[0m\n");
+    XPTrackableProject *p = [XPTrackableProject new];
+    p.key = @"custom:prova"; p.name = @"Prova";
+    [t startProject:p task:@"avvio"];
+    check(t.currentEntries.count == 0, @"Avvia non apre una sessione che non si potrebbe salvare");
+    XPTimeEntry *manuale = [t addEntryForProject:p task:@"manuale"
+                                           start:[NSDate dateWithTimeIntervalSinceNow:-600]
+                                             end:[NSDate date]];
+    check(manuale == nil, @"l'inserimento manuale viene rifiutato");
+    check([t entriesForDay:[NSDate date]].count == 0, @"nessuna sessione nuova in memoria");
+    check([t addCustomProjectNamed:@"altro"] == nil, @"un nuovo progetto a mano viene rifiutato");
+    check(!t.canRecord, @"il tracker dichiara che non si puo' registrare");
+    check([t.storageProblemPath isEqualToString:old], @"e nomina il file che lo impedisce");
+
     [fm removeItemAtPath:supportRoot error:NULL];
     printf("\n\033[1m%d passati, %d falliti\033[0m\n\n", sPassed, sFailed);
     return sFailed ? 1 : 0;

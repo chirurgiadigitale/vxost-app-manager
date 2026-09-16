@@ -567,6 +567,15 @@
 
 "tool.security" = "セキュリティ確認";
 
+/* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
+"tracker.unusable.body" = "VXOST は既存の作業時間の記録を読み込めないため、新しい時間を記録しません。記録してもアプリの終了時に失われてしまいます。既存の時間は変更されていません。\n\n次のファイルのアクセス権を確認してから、VXOST を開き直してください：\n%@";
+
+/* Errore nell'editor di una sessione quando lo storico non si puo' salvare */
+"tracker.unusable.short" = "時間を保存できません：既存の記録を読み込めません。何も変更されていません。";
+
+/* Titolo dell'avviso: lo storico delle ore esiste ma non si legge, quindi non si registra */
+"tracker.unusable.title" = "現在、作業時間を保存できません";
+
 /* Voce di menu con spunta: controllo automatico */
 "update.automatic" = "自動で確認";
 

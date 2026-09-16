@@ -308,6 +308,15 @@ static XPTrackableProject *XPTimerProjectForKey(NSString *key) {
 }
 
 - (void)startFromPicker {
+    // ⚠️ Prima di tutto: se lo storico non si puo' salvare, un timer avviato
+    // qui scorrerebbe a video e sparirebbe alla chiusura dell'app. Il tracker
+    // lo rifiuta comunque; qui si spiega perche', altrimenti il clic sembra
+    // un pulsante rotto.
+    if (![XPTracker shared].canRecord) {
+        [self explainStorageUnusable];
+        return;
+    }
+
     NSMenuItem *item = self.projectPicker.selectedItem;
     if (item.tag == XPTimerNewProjectTag) {
         [self promptForCustomProject];
@@ -331,6 +340,16 @@ static XPTrackableProject *XPTimerProjectForKey(NSString *key) {
 
     [[XPTracker shared] startProject:project task:self.taskField.stringValue];
     self.taskField.stringValue = @"";
+}
+
+- (void)explainStorageUnusable {
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.alertStyle = NSAlertStyleWarning;
+    alert.messageText = NSLocalizedString(@"tracker.unusable.title", nil);
+    alert.informativeText = [NSString stringWithFormat:
+        NSLocalizedString(@"tracker.unusable.body", nil),
+        [XPTracker shared].storageProblemPath ?: @"—"];
+    [alert runModal];
 }
 
 /// ⚠️ L'elenco dei progetti viene dal disco, ma il menu si ricostruiva solo
