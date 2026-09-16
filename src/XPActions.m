@@ -706,22 +706,32 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo ''; return 0; }\n"];
     [block appendString:@"    _p=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    _u=''\n"];
+    // ⚠️ Niente pipe. "$?" dopo "grep ... | tail -1" e' l'esito di TAIL,
+    // quindi un grep che esce 2 perche' non riesce a leggere il log passava
+    // per ricerca riuscita e senza risultati: un errore di lettura tornava a
+    // valere come prova, che e' il difetto gia' chiuso quattro volte altrove.
+    // awk fa selezione e "ultima riga" in un passaggio solo, e il suo codice
+    // di uscita e' il suo.
     [block appendString:@"    if [ -n \"$_p\" ]; then\n"];
-    [block appendString:@"        _u=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null \\\n"];
-    [block appendString:@"             | grep -F \"[pid $_p]\" | tail -1)\n"];
+    [block appendString:@"        _u=$(awk -v p=\"[pid $_p]\" '/resuming normal operations/ && index($0, p) > 0 { u = $0 } END { print u }' \"$LOG\" 2>/dev/null)\n"];
+    [block appendString:@"        [ $? -eq 0 ] || return 1\n"];
     [block appendString:@"    fi\n"];
     // ⚠️ Una ricerca FALLITA non e' "nessuna riga". Concludendo con un echo
     // vuoto, il segno di partenza diventava la stringa vuota e alla lettura
     // dopo una riga vecchia qualunque risultava "diversa": un errore di
     // lettura si trasformava di nuovo in prova.
     [block appendString:@"    if [ -z \"$_u\" ]; then\n"];
-    [block appendString:@"        _u=$(grep 'resuming normal operations' \"$LOG\" 2>/dev/null | tail -1)\n"];
-    [block appendString:@"        _e=$?\n"];
-    [block appendString:@"        [ \"$_e\" -le 1 ] || return 1\n"];
+    [block appendString:@"        _u=$(awk '/resuming normal operations/ { u = $0 } END { print u }' \"$LOG\" 2>/dev/null)\n"];
+    [block appendString:@"        [ $? -eq 0 ] || return 1\n"];
     [block appendString:@"    fi\n"];
     [block appendString:@"    echo \"$_u\"\n"];
     [block appendString:@"}\n"];
-    [block appendString:@"prima_riga=$(vxost_ultima_nostra)\n"];
+    // ⚠️ L'esito si CONSERVA. Prima veniva scartato: se la lettura iniziale
+    // falliva, la baseline restava vuota e alla lettura dopo una riga vecchia
+    // qualunque risultava "nuova". Codex l'ha riprodotto con l'orologio vero
+    // e il comando di servizio fallito: VXOST_OK senza che il log fosse
+    // cambiato di un byte.
+    [block appendString:@"prima_riga=$(vxost_ultima_nostra); prima_riga_ok=$?\n"];
     [block appendString:@"\n"];
     // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
     // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
@@ -741,6 +751,9 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
     [block appendString:@"    [ -n \"$_da_n\" ] || return 2\n"];
+    // ⚠️ Se la misura iniziale non e' riuscita, non c'e' niente con cui
+    // confrontare: si dice "non verificabile", non "riuscito".
+    [block appendString:@"    [ \"${_da_riga_ok:-1}\" -eq 0 ] 2>/dev/null || return 2\n"];
     [block appendString:@"    _n=$(vxost_quante) || return 2\n"];
     [block appendString:@"\n"];
     // ⚠️ Il ripiego sulla data vale SOLO se il log e' stato sostituito. Usato
@@ -764,8 +777,18 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    if [ -n \"$_lpid\" ] && [ \"$_lpid\" != \"$_pid\" ]; then return 1; fi\n"];
     [block appendString:@"\n"];
 
-    // Il log e' stato sostituito: si torna alla data, che deve stare fra la
-    // partenza del comando e adesso.
+    // ⚠️ Due prove, e la prima e' piu' forte. Se il conteggio e' AUMENTATO e
+    // l'ultima riga nostra e' un'altra, un messaggio nuovo e' arrivato: e' un
+    // fatto, non una deduzione dall'orologio. Pretendere ANCHE la data
+    // rifiutava un avvio riuscito nello stesso secondo in cui parte il
+    // comando, cosa normale sul ramo "start", che non ha la pausa del ramo
+    // "restart". E il conteggio veniva calcolato e poi buttato via.
+    [block appendString:@"    if [ \"$_n\" -gt \"$_da_n\" ] 2>/dev/null; then return 0; fi\n"];
+    [block appendString:@"\n"];
+    // Il conteggio non e' confrontabile, cioe' il log e' stato ruotato o
+    // riscritto: si torna alla data, che deve stare fra la partenza del
+    // comando e adesso. Qui il secondo di scarto non si distingue, quindi si
+    // sbaglia dalla parte che non dichiara riuscito niente.
     [block appendString:@"    _quando=$(printf '%s\\n' \"$_riga\" \\\n"];
     [block appendString:@"        | sed -n 's/^\\[\\([^]]*\\)\\].*/\\1/p' | sed 's/\\.[0-9]*//')\n"];
     [block appendString:@"    [ -n \"$_quando\" ] || return 2\n"];
@@ -792,7 +815,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"avviato=0\n"];
     [block appendString:@"attesa=0\n"];
     [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"    _da_riga=\"$prima_riga\"; vxost_ripartito \"$prima\" \"$prima_n\"; esito=$?\n"];
+    [block appendString:@"    _da_riga=\"$prima_riga\"; _da_riga_ok=\"$prima_riga_ok\"; vxost_ripartito \"$prima\" \"$prima_n\"; esito=$?\n"];
     [block appendString:@"    if [ $esito -eq 0 ]; then avviato=1; break; fi\n"];
     // Senza un log leggibile l'attesa non puo' portare nessuna prova nuova:
     // si concede il tempo di partire e si smette, invece di fermare l'utente
@@ -864,12 +887,12 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
     [block appendString:@"    prima_rb=$(date +%s)\n"];
     [block appendString:@"    prima_rb_n=$(vxost_quante) || prima_rb_n=''\n"];
-    [block appendString:@"    prima_rb_riga=$(vxost_ultima_nostra)\n"];
+    [block appendString:@"    prima_rb_riga=$(vxost_ultima_nostra); prima_rb_riga_ok=$?\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
     [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"        _da_riga=\"$prima_rb_riga\"; vxost_ripartito \"$prima_rb\" \"$prima_rb_n\"; esito=$?\n"];
+    [block appendString:@"        _da_riga=\"$prima_rb_riga\"; _da_riga_ok=\"$prima_rb_riga_ok\"; vxost_ripartito \"$prima_rb\" \"$prima_rb_n\"; esito=$?\n"];
     [block appendString:@"        if [ $esito -eq 0 ]; then tornato=1; break; fi\n"];
     [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"            tornato=2\n"];
