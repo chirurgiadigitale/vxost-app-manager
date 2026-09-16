@@ -743,15 +743,28 @@ def dipendenza_gia_nella_sorgente(sorgente, relativo, lib, radici):
     nomi, errore = dipendenze(originale)
     if nomi is None:
         return None
-    if lib in nomi:
-        return True
-    # ⚠️ Il confezionamento RISCRIVE la radice: il binario di origine dice
-    # <vecchia>/postgresql/lib/libpq.5.dylib e quello confezionato
-    # <nuova>/postgresql/lib/libpq.5.dylib. Un confronto alla lettera li
-    # chiamava diversi e concludeva che la dipendenza l'avevamo introdotta
-    # noi, che e' il contrario del vero. Si normalizzano le sole radici note.
+    # ⚠️ Il confezionamento RISCRIVE la radice e i nomi di partenza: il binario
+    # di origine dice <vecchia>/postgresql/lib/libpq.5.dylib e quello
+    # confezionato <nuova>/postgresql/lib/libpq.5.dylib. Si normalizzano le
+    # sole riscritture note per trovare QUALE dipendenza della sorgente e'.
     atteso = normalizza(lib, radici)
-    return atteso in set(normalizza(x, radici) for x in nomi)
+    corrispondenti = [x for x in nomi if x == lib or normalizza(x, radici) == atteso]
+    if not corrispondenti:
+        return False
+    # ⚠️ Trovarla non basta: bisogna che nella sorgente fosse ROTTA davvero.
+    # Il dodicesimo giro ha costruito una libreria che nella sorgente si
+    # caricava e restituiva 42; dopo la riscrittura dei nomi il percorso nuovo
+    # non esisteva, dyld diceva "Library not loaded", e questo controllo la
+    # dichiarava "rotta gia' nella sorgente" perche' i due nomi normalizzati
+    # coincidevano. Rendere uguali due nomi non dice come si risolveva il
+    # primo. Si guarda il percorso ORIGINALE: se esiste, nella sorgente
+    # funzionava e l'abbiamo persa noi.
+    for x in corrispondenti:
+        if not x.startswith("/"):
+            return None                   # @rpath e simili: da qui non si sa
+        if os.path.exists(x):
+            return False
+    return True
 
 
 def main():
@@ -928,7 +941,7 @@ def main():
                     elif gia is False:
                         perse += 1
                         problemi.append("%s dipende da %s, che nella sorgente non "
-                                        "c'era: l'ha introdotta il confezionamento"
+                                        "c'era o si risolveva: l'ha rotta il confezionamento"
                                         % (dove, lib))
                     else:
                         irrisolte.append((dove, lib, "nessun candidato esiste"))
@@ -977,8 +990,8 @@ def main():
                     ereditate.append((dove, lib))
                 elif gia is False:
                     perse += 1
-                    problemi.append("%s dipende da %s, che nella sorgente non c'era: "
-                                    "l'ha introdotta il confezionamento" % (dove, lib))
+                    problemi.append("%s dipende da %s, che nella sorgente non c'era o si "
+                                    "risolveva: l'ha rotta il confezionamento" % (dove, lib))
                 else:
                     irrisolte.append((dove, lib,
                                       "non esiste, e la sorgente non e' consultabile"))
