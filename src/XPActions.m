@@ -679,7 +679,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // Se i primi N byte non sono piu' quelli, il log e' stato sostituito: resta
     // solo la data, strettamente successiva alla partenza, con il limite
     // dichiarato che un avvio nello stesso secondo di una rotazione non si prova.
-    [block appendString:@"prima=$(date +%s)\n"];
+
     // Un file di lavoro, per non passare mai da una pipe: dopo una pipe "$?" e'
     // l'esito dell'ultimo comando, ed e' cosi' che un errore di lettura e' tornato
     // piu' volte a valere come prova.
@@ -713,6 +713,13 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"prima_m=$(vxost_misura) || prima_m=''\n"];
     [block appendString:@"prima_s=''; prima_h=''\n"];
     [block appendString:@"if [ -n \"$prima_m\" ]; then prima_s=${prima_m%% *}; prima_h=${prima_m#* }; fi\n"];
+    // ⚠️ L'ora di partenza si prende DOPO la misura del log, non prima. Il
+    // dodicesimo giro ha fatto arrivare una riga del nostro pid durante la
+    // misura, nel secondo successivo a "prima" e oltre i byte misurati: il
+    // controllo la trovava fra i byte aggiunti, con la data giusta, e diceva
+    // VXOST_OK su un comando fallito. Presa qui, qualunque riga scritta prima
+    // di questo punto ha una data non successiva, e non basta piu'.
+    [block appendString:@"prima=$(date +%s)\n"];
     [block appendString:@"\n"];
     // L'ultima riga di ripartenza scritta da noi, o da un formato che il pid non
     // lo scrive. Una riga con il pid di un altro processo non conta. Nessuna
@@ -855,10 +862,10 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // com'erano non serve a niente se poi Apache non risale. Quando non
     // risale, la configurazione su disco e quella caricata non coincidono
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
-    [block appendString:@"    prima_rb=$(date +%s)\n"];
     [block appendString:@"    prima_rb_m=$(vxost_misura) || prima_rb_m=''\n"];
     [block appendString:@"    prima_rb_s=''; prima_rb_h=''\n"];
     [block appendString:@"    if [ -n \"$prima_rb_m\" ]; then prima_rb_s=${prima_rb_m%% *}; prima_rb_h=${prima_rb_m#* }; fi\n"];
+    [block appendString:@"    prima_rb=$(date +%s)\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];

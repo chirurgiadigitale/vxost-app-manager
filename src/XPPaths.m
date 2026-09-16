@@ -98,8 +98,13 @@ static NSString *XPDetectControlScript(NSString *root) {
     // Per i test, sullo stesso schema di VXOST_TRACKER_STORE: pickertest crea
     // e toglie cartelle, e non deve farlo nella www/projects vera di chi
     // lavora. Letto a ogni chiamata, prima della cache.
+#ifdef VXOST_TEST
+    // ⚠️ Solo nei test (make pickertest ne compila i sorgenti con -DVXOST_TEST).
+    // Letto anche nell'app, un valore ereditato dall'ambiente avrebbe mostrato
+    // i progetti di un'altra radice con le stesse chiavi folder:nome.
     NSString *override = NSProcessInfo.processInfo.environment[@"VXOST_PROJECTS_ROOT"];
     if (override.length > 0) return override;
+#endif
 
     // Stesso ragionamento della radice web: progetti e' diventata projects il
     // 13/08, ma chi non ha ancora migrato ha la vecchia.
