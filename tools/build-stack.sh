@@ -563,21 +563,18 @@ cert_stato() {
 
 LUCCHETTO="$ROOT/etc/.vxost-ssl-init.lock"
 
-prendi_lucchetto() {
-    mkdir "$LUCCHETTO" 2>/dev/null && return 0
-    # ⚠️ Un lucchetto lasciato da un'invocazione morta bloccherebbe per sempre
-    # la rigenerazione. Oltre dieci minuti si considera abbandonato: una
-    # generazione RSA dura secondi. Si riprova UNA volta, e se nel frattempo
-    # qualcun altro l'ha preso si rinuncia.
-    if [ -n "$(find "$LUCCHETTO" -maxdepth 0 -mmin +10 2>/dev/null)" ]; then
-        rmdir "$LUCCHETTO" 2>/dev/null
-        mkdir "$LUCCHETTO" 2>/dev/null && return 0
-    fi
-    return 1
-}
-
-if ! prendi_lucchetto; then
-    echo "vxost-ssl-init: un'altra invocazione sta lavorando sul certificato, non tocco niente" >&2
+# ⚠️ Nessun recupero automatico del lucchetto. Il decimo giro lo recuperava
+# dopo dieci minuti con rmdir+mkdir, e l'undicesimo ha dimostrato che un
+# rmdir ritardato poteva togliere il lucchetto appena preso da un'altra
+# invocazione: due generatori concludevano con uscita 0 e coppia mista.
+# Distinguere un lucchetto abbandonato da uno vivo richiede un proprietario
+# verificabile, cioe' altra complessita' sullo stesso blocco. Invece: se il
+# lucchetto c'e', non si tocca niente e si dice come toglierlo. Il costo e'
+# che dopo un'invocazione uccisa a meta' il certificato non si rigenera da
+# solo finche' qualcuno non lo toglie; Apache parte con la coppia che c'e'.
+if ! mkdir "$LUCCHETTO" 2>/dev/null; then
+    echo "vxost-ssl-init: il certificato e' bloccato da un'altra invocazione, non tocco niente." >&2
+    echo "vxost-ssl-init: se non ne sta girando nessuna: sudo rmdir $LUCCHETTO" >&2
     exit 0
 fi
 trap 'rm -f "$TMPCRT" "$TMPKEY" 2>/dev/null; rmdir "$LUCCHETTO" 2>/dev/null' EXIT
@@ -638,9 +635,13 @@ if [ -e "$CRT" ] || [ -e "$KEY" ]; then
 fi
 
 # ⚠️ Due rename, e fra i due la coppia attiva e' mista. Il lucchetto impedisce
-# che un'altra invocazione ci entri in mezzo; se il secondo rename fallisce,
-# lo si dice, e alla prossima invocazione cert_stato riconosce la coppia che
-# non corrisponde e la rifa. Quella di prima e' comunque nell'archivio.
+# che un'altra invocazione ci entri in mezzo, ma NON protegge chi legge i file
+# senza passare da qui: un Apache avviato da un'altra strada proprio in quel
+# momento vedrebbe chiave nuova e certificato vecchio. Limite dichiarato, non
+# chiuso: i chiamanti del pacchetto (apachectl, vxost) invocano questo script
+# prima di avviare httpd, nella stessa sequenza. Se il secondo rename
+# fallisce lo si dice, e alla prossima invocazione cert_stato riconosce la
+# coppia che non corrisponde e la rifa. Quella di prima e' nell'archivio.
 mv "$TMPKEY" "$KEY" || { echo "vxost-ssl-init: non riesco a installare la chiave, la coppia attiva e' quella di prima" >&2; exit 1; }
 if ! mv "$TMPCRT" "$CRT"; then
     echo "vxost-ssl-init: ATTENZIONE, chiave nuova e certificato vecchio non corrispondono." >&2
