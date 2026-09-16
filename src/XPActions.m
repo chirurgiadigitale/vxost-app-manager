@@ -661,147 +661,109 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"    *)       LOG=\"$R/$LOG\" ;;\n"];
     [block appendString:@"esac\n"];
     [block appendString:@"\n"];
-    // ⚠️ La prova che il messaggio appartiene A QUESTO riavvio non e' il
-    // segno in byte, e nemmeno l'inode (rilievo Q8). L'inode distingue
-    // l'oggetto, non l'origine del contenuto: copiando il vecchio log in un
-    // file nuovo e sostituendolo, il vecchio "resuming normal operations"
-    // ricompariva e il riavvio risultava verificato senza che fosse successo
-    // niente; e con copytruncate e ricrescita il messaggio nuovo finiva prima
-    // del segno e andava perso.
+    // ⚠️ Che cosa prova che il messaggio appartiene a QUESTO tentativo.
     //
-    // Apache la data ce l'ha scritta accanto, ma la data da sola non lega il
-    // messaggio al tentativo. La prova principale e' che ne sia arrivato uno
-    // IN PIU'; la data serve al solo caso della rotazione, dove il conteggio
-    // non e' confrontabile.
-    // ⚠️ La prova che il messaggio appartiene A QUESTO tentativo non e' la
-    // sua data: una riga gia' presente un secondo prima passava, e una con la
-    // data nel futuro pure. Quello che lega messaggio e tentativo e' che ne
-    // sia arrivato UNO IN PIU'. Si conta prima e si riconta dopo.
+    // Nove giri di revisione su questa domanda, e ogni risposta aveva un
+    // controesempio: il segno in byte, l'inode, il testo dell'ultima riga, il
+    // conteggio. L'ultimo e' il piu' istruttivo: un log RISCRITTO con piu' righe
+    // di prima (rotazione, ripristino, un altro Apache sullo stesso file) faceva
+    // salire il conteggio senza che nessun riavvio fosse avvenuto.
     //
-    // La data resta per il solo caso in cui il log si e' accorciato, cioe' e'
-    // stato ruotato: li' il conteggio non e' confrontabile.
+    // La domanda giusta e' un'altra: il file e' CRESCIUTO per aggiunta? Si misura
+    // prima la dimensione e l'impronta dei suoi byte; dopo, se i primi N byte sono
+    // ancora quelli, tutto quello che segue e' stato scritto dopo la misura, e il
+    // messaggio si cerca SOLO li'. La data serve ancora a scartare righe vecchie
+    // ricopiate in coda, ma lo stesso secondo e' ammesso: i byte nuovi bastano a
+    // legare il messaggio al tentativo, e un avvio rapido non viene rifiutato.
+    //
+    // Se i primi N byte non sono piu' quelli, il log e' stato sostituito: resta
+    // solo la data, strettamente successiva alla partenza, con il limite
+    // dichiarato che un avvio nello stesso secondo di una rotazione non si prova.
     [block appendString:@"prima=$(date +%s)\n"];
-    // ⚠️ Un conteggio che fallisce non e' zero. Ripiegando su 0, alla lettura
-    // dopo un messaggio VECCHIO sembrava arrivato adesso: un controllo fallito
-    // diventava un dato misurato, che e' la forma di difetto che questo
-    // progetto insegue da settimane. Qui la funzione esce 1 e chi chiama lo
-    // tratta come "non lo so".
-    [block appendString:@"vxost_quante() {\n"];
-    [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo 0; return 0; }\n"];
-    [block appendString:@"    _q=$(grep -c 'resuming normal operations' \"$LOG\" 2>/dev/null)\n"];
-    [block appendString:@"    _e=$?\n"];
-    // grep: 0 trovato, 1 nessuna corrispondenza (e stampa 0), oltre e' errore.
-    [block appendString:@"    [ \"$_e\" -le 1 ] || return 1\n"];
-    [block appendString:@"    case \"$_q\" in ''|*[!0-9]*) return 1 ;; esac\n"];
-    [block appendString:@"    echo \"$_q\"\n"];
+    // Un file di lavoro, per non passare mai da una pipe: dopo una pipe "$?" e'
+    // l'esito dell'ultimo comando, ed e' cosi' che un errore di lettura e' tornato
+    // piu' volte a valere come prova.
+    [block appendString:@"T=$(mktemp /tmp/vxost-log.XXXXXX)\n"];
+    // ⚠️ I primi N byte del log, in $T. Con N = 0 non si chiama head: quello di
+    // macOS rifiuta "-c 0" ed esce 1, e un log vuoto o non ancora creato
+    // finiva sempre in "non verificabile", cioe' la prima partenza di
+    // un'installazione nuova non si poteva mai provare.
+    [block appendString:@"vxost_primi() {\n"];
+    [block appendString:@"    if [ \"$1\" -eq 0 ]; then : > \"$T\"; else head -c \"$1\" \"$LOG\" > \"$T\" 2>/dev/null; fi\n"];
     [block appendString:@"}\n"];
-    [block appendString:@"prima_n=$(vxost_quante) || prima_n=''\n"];
-    // vxost_segno, che leggeva inode e dimensione, e' stata tolta: non
-    // riconosceva un log riscritto in place e non la chiamava piu' nessuno.
-    //
-    // ⚠️ Il pid si legge in una variabile, non dentro le virgolette di un
-    // grep: "$(cat \"...\")" annidato in una stringa gia' quotata non si
-    // comporta allo stesso modo in tutte le shell.
-    [block appendString:@"vxost_ultima_nostra() {\n"];
-    [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || { echo ''; return 0; }\n"];
-    [block appendString:@"    _p=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
-    [block appendString:@"    _u=''\n"];
-    // ⚠️ Niente pipe. "$?" dopo "grep ... | tail -1" e' l'esito di TAIL,
-    // quindi un grep che esce 2 perche' non riesce a leggere il log passava
-    // per ricerca riuscita e senza risultati: un errore di lettura tornava a
-    // valere come prova, che e' il difetto gia' chiuso quattro volte altrove.
-    // awk fa selezione e "ultima riga" in un passaggio solo, e il suo codice
-    // di uscita e' il suo.
-    [block appendString:@"    if [ -n \"$_p\" ]; then\n"];
-    [block appendString:@"        _u=$(awk -v p=\"[pid $_p]\" '/resuming normal operations/ && index($0, p) > 0 { u = $0 } END { print u }' \"$LOG\" 2>/dev/null)\n"];
-    [block appendString:@"        [ $? -eq 0 ] || return 1\n"];
+    [block appendString:@"vxost_misura() {\n"];
+    [block appendString:@"    [ -n \"$LOG\" ] && [ -n \"$T\" ] || return 1\n"];
+    // Un log che ancora non esiste e' un log vuoto: la prima partenza di
+    // un'installazione nuova deve potersi verificare.
+    [block appendString:@"    if [ ! -e \"$LOG\" ]; then\n"];
+    [block appendString:@"        _h=$(shasum -a 256 < /dev/null 2>/dev/null) || return 1\n"];
+    [block appendString:@"        echo \"0 $_h\"; return 0\n"];
     [block appendString:@"    fi\n"];
-    // ⚠️ Una ricerca FALLITA non e' "nessuna riga". Concludendo con un echo
-    // vuoto, il segno di partenza diventava la stringa vuota e alla lettura
-    // dopo una riga vecchia qualunque risultava "diversa": un errore di
-    // lettura si trasformava di nuovo in prova.
-    [block appendString:@"    if [ -z \"$_u\" ]; then\n"];
-    [block appendString:@"        _u=$(awk '/resuming normal operations/ { u = $0 } END { print u }' \"$LOG\" 2>/dev/null)\n"];
-    [block appendString:@"        [ $? -eq 0 ] || return 1\n"];
-    [block appendString:@"    fi\n"];
-    [block appendString:@"    echo \"$_u\"\n"];
+    [block appendString:@"    [ -f \"$LOG\" ] || return 1\n"];
+    [block appendString:@"    _s=$(stat -f %z \"$LOG\" 2>/dev/null) || return 1\n"];
+    [block appendString:@"    case \"$_s\" in ''|*[!0-9]*) return 1 ;; esac\n"];
+    // Si copiano ESATTAMENTE i primi _s byte e si controlla di averli: se il
+    // file cresce fra stat e lettura, l'impronta resta quella dei byte misurati.
+    [block appendString:@"    vxost_primi \"$_s\" || return 1\n"];
+    [block appendString:@"    _s2=$(stat -f %z \"$T\" 2>/dev/null) || return 1\n"];
+    [block appendString:@"    [ \"$_s2\" = \"$_s\" ] || return 1\n"];
+    [block appendString:@"    _h=$(shasum -a 256 < \"$T\" 2>/dev/null) || return 1\n"];
+    [block appendString:@"    echo \"$_s $_h\"\n"];
     [block appendString:@"}\n"];
-    // ⚠️ L'esito si CONSERVA. Prima veniva scartato: se la lettura iniziale
-    // falliva, la baseline restava vuota e alla lettura dopo una riga vecchia
-    // qualunque risultava "nuova". Codex l'ha riprodotto con l'orologio vero
-    // e il comando di servizio fallito: VXOST_OK senza che il log fosse
-    // cambiato di un byte.
-    [block appendString:@"prima_riga=$(vxost_ultima_nostra); prima_riga_ok=$?\n"];
+    [block appendString:@"prima_m=$(vxost_misura) || prima_m=''\n"];
+    [block appendString:@"prima_s=''; prima_h=''\n"];
+    [block appendString:@"if [ -n \"$prima_m\" ]; then prima_s=${prima_m%% *}; prima_h=${prima_m#* }; fi\n"];
     [block appendString:@"\n"];
-    // La riga che cerca la prova nel log, usata due volte: dopo il riavvio e
-    // dopo un eventuale ritorno indietro. Scritta una volta sola, perche' due
-    // copie divergono alla prima correzione.
-    //
-    // Tre esiti, non due: 0 verificato, 2 vivo ma non verificabile, 1 no.
+    // L'ultima riga di ripartenza scritta da noi, o da un formato che il pid non
+    // lo scrive. Una riga con il pid di un altro processo non conta. Nessuna
+    // pipe: l'esito della funzione e' quello di awk.
+    [block appendString:@"vxost_nostra_in() {\n"];
+    [block appendString:@"    awk -v p=\"[pid $2]\" '/resuming normal operations/ && (index($0, p) > 0 || index($0, \"[pid \") == 0) { u = $0 } END { print u }' \"$1\" 2>/dev/null\n"];
+    [block appendString:@"}\n"];
+    [block appendString:@"vxost_epoca() {\n"];
+    [block appendString:@"    _q=$(printf '%s\\n' \"$1\" | sed -n 's/^\\[\\([^]]*\\)\\].*/\\1/p' | sed 's/\\.[0-9]*//')\n"];
+    // Qui una pipe fallita da' una stringa vuota, e la stringa vuota non diventa
+    // mai una data: l'errore finisce in "non verificabile", non in "riuscito".
+    [block appendString:@"    [ -n \"$_q\" ] || return 1\n"];
+    [block appendString:@"    _ep=$(date -j -f '%a %b %d %T %Y' \"$_q\" '+%s' 2>/dev/null) || return 1\n"];
+    [block appendString:@"    case \"$_ep\" in ''|*[!0-9]*) return 1 ;; esac\n"];
+    [block appendString:@"    echo \"$_ep\"\n"];
+    [block appendString:@"}\n"];
+    [block appendString:@"\n"];
+    // Tre esiti: 0 verificato, 2 vivo ma non verificabile, 1 no.
     [block appendString:@"vxost_ripartito() {\n"];
-    [block appendString:@"    _da=\"$1\"\n"];
-    [block appendString:@"    _da_n=\"$2\"\n"];
+    [block appendString:@"    _da=\"$1\"; _da_s=\"$2\"; _da_h=\"$3\"\n"];
     [block appendString:@"    _pid=$(cat \"$R/logs/httpd.pid\" 2>/dev/null || echo '')\n"];
     [block appendString:@"    [ -n \"$_pid\" ] && kill -0 \"$_pid\" 2>/dev/null || return 1\n"];
-    // Vivo non basta: dev'essere il NOSTRO httpd. Un pid riciclato da un
-    // altro programma, o l'httpd di sistema, non dicono niente di questo
-    // riavvio.
+    // Vivo non basta: dev'essere il NOSTRO httpd.
     [block appendString:@"    _cmd=$(ps -p \"$_pid\" -o comm= 2>/dev/null)\n"];
     [block appendString:@"    [ \"${_cmd##*/}\" = 'httpd' ] || return 1\n"];
     [block appendString:@"    case \"$_cmd\" in \"$R\"/*) ;; *) return 1 ;; esac\n"];
     [block appendString:@"    [ -n \"$LOG\" ] && [ -f \"$LOG\" ] || return 2\n"];
-    [block appendString:@"    [ -n \"$_da_n\" ] || return 2\n"];
-    // ⚠️ Se la misura iniziale non e' riuscita, non c'e' niente con cui
-    // confrontare: si dice "non verificabile", non "riuscito".
-    [block appendString:@"    [ \"${_da_riga_ok:-1}\" -eq 0 ] 2>/dev/null || return 2\n"];
-    [block appendString:@"    _n=$(vxost_quante) || return 2\n"];
-    [block appendString:@"\n"];
-    // ⚠️ Il ripiego sulla data vale SOLO se il log e' stato sostituito. Usato
-    // anche a log invariato, una riga scritta nello stesso secondo in cui
-    // parte il comando bastava a dichiarare riuscito un riavvio fallito: la
-    // data e' al secondo, e al secondo i due fatti non si distinguono.
-    // ⚠️ Inode e dimensione non bastano a riconoscere una rotazione: un log
-    // riscritto in place resta lo stesso file e puo' avere la stessa
-    // lunghezza. Quello che cambia sempre e' il TESTO dell'ultima riga
-    // nostra. Si confronta quello: se e' un altro, un messaggio nuovo c'e'.
-    [block appendString:@"    _riga=$(vxost_ultima_nostra) || return 1\n"];
-    [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
-    [block appendString:@"    [ \"$_riga\" != \"$_da_riga\" ] || return 1\n"];
-    // ⚠️ Il ripiego di vxost_ultima_nostra prende l'ultima riga QUALUNQUE
-    // quando nessuna porta il nostro pid, perche' esistono formati che il pid
-    // non lo scrivono. Ma se il pid c'e' e non e' il nostro, quella riga
-    // parla di un altro server: riscrivendo questo blocco avevo perso il
-    // controllo, e il messaggio di un altro Apache tornava a valere come
-    // prova del nostro riavvio.
-    [block appendString:@"    _lpid=$(printf '%s\\n' \"$_riga\" | sed -n 's/.*\\[pid \\([0-9][0-9]*\\).*/\\1/p')\n"];
-    [block appendString:@"    if [ -n \"$_lpid\" ] && [ \"$_lpid\" != \"$_pid\" ]; then return 1; fi\n"];
-    [block appendString:@"\n"];
-
-    // ⚠️ Due prove, e la prima e' piu' forte. Se il conteggio e' AUMENTATO e
-    // l'ultima riga nostra e' un'altra, un messaggio nuovo e' arrivato: e' un
-    // fatto, non una deduzione dall'orologio. Pretendere ANCHE la data
-    // rifiutava un avvio riuscito nello stesso secondo in cui parte il
-    // comando, cosa normale sul ramo "start", che non ha la pausa del ramo
-    // "restart". E il conteggio veniva calcolato e poi buttato via.
-    [block appendString:@"    if [ \"$_n\" -gt \"$_da_n\" ] 2>/dev/null; then return 0; fi\n"];
-    [block appendString:@"\n"];
-    // Il conteggio non e' confrontabile, cioe' il log e' stato ruotato o
-    // riscritto: si torna alla data, che deve stare fra la partenza del
-    // comando e adesso. Qui il secondo di scarto non si distingue, quindi si
-    // sbaglia dalla parte che non dichiara riuscito niente.
-    [block appendString:@"    _quando=$(printf '%s\\n' \"$_riga\" \\\n"];
-    [block appendString:@"        | sed -n 's/^\\[\\([^]]*\\)\\].*/\\1/p' | sed 's/\\.[0-9]*//')\n"];
-    [block appendString:@"    [ -n \"$_quando\" ] || return 2\n"];
-    [block appendString:@"    _epoca=$(date -j -f '%a %b %d %T %Y' \"$_quando\" '+%s' 2>/dev/null) || return 2\n"];
+    // Senza la misura iniziale non c'e' niente con cui confrontare.
+    [block appendString:@"    [ -n \"$_da_s\" ] && [ -n \"$_da_h\" ] || return 2\n"];
     [block appendString:@"    _adesso=$(date '+%s' 2>/dev/null) || return 2\n"];
-    [block appendString:@"    case \"$_epoca-$_adesso\" in ''|*[!0-9-]*) return 2 ;; esac\n"];
-    // ⚠️ Strettamente maggiore. La data del log ha la precisione del secondo,
-    // quindi una riga scritta NELLO STESSO secondo in cui parte il comando
-    // non si distingue da una scritta subito dopo: accettarla ha gia'
-    // prodotto due falsi successi. Un riavvio vero dura piu' di un secondo,
-    // e nel dubbio si sbaglia dalla parte che non dichiara riuscito niente.
-    [block appendString:@"    [ \"$_epoca\" -gt \"$_da\" ] || return 1\n"];
-    [block appendString:@"    [ \"$_epoca\" -le \"$_adesso\" ] || return 1\n"];
+    [block appendString:@"    _s=$(stat -f %z \"$LOG\" 2>/dev/null) || return 2\n"];
+    [block appendString:@"    case \"$_s\" in ''|*[!0-9]*) return 2 ;; esac\n"];
+    [block appendString:@"    _aggiunta=0\n"];
+    [block appendString:@"    if [ \"$_s\" -ge \"$_da_s\" ]; then\n"];
+    [block appendString:@"        vxost_primi \"$_da_s\" || return 2\n"];
+    [block appendString:@"        _h=$(shasum -a 256 < \"$T\" 2>/dev/null) || return 2\n"];
+    [block appendString:@"        [ \"$_h\" = \"$_da_h\" ] && _aggiunta=1\n"];
+    [block appendString:@"    fi\n"];
+    [block appendString:@"    if [ \"$_aggiunta\" = 1 ]; then\n"];
+    [block appendString:@"        tail -c +\"$((_da_s + 1))\" \"$LOG\" > \"$T\" 2>/dev/null || return 2\n"];
+    [block appendString:@"        _riga=$(vxost_nostra_in \"$T\" \"$_pid\") || return 2\n"];
+    [block appendString:@"        [ -n \"$_riga\" ] || return 1\n"];
+    [block appendString:@"        _ep=$(vxost_epoca \"$_riga\") || return 2\n"];
+    [block appendString:@"        [ \"$_ep\" -ge \"$_da\" ] && [ \"$_ep\" -le \"$_adesso\" ] || return 1\n"];
+    [block appendString:@"        return 0\n"];
+    [block appendString:@"    fi\n"];
+    // Il log e' stato sostituito: resta la data, strettamente successiva.
+    [block appendString:@"    _riga=$(vxost_nostra_in \"$LOG\" \"$_pid\") || return 2\n"];
+    [block appendString:@"    [ -n \"$_riga\" ] || return 1\n"];
+    [block appendString:@"    _ep=$(vxost_epoca \"$_riga\") || return 2\n"];
+    [block appendString:@"    [ \"$_ep\" -gt \"$_da\" ] && [ \"$_ep\" -le \"$_adesso\" ] || return 1\n"];
     [block appendString:@"    return 0\n"];
     [block appendString:@"}\n"];
     [block appendString:@"\n"];
@@ -815,7 +777,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"avviato=0\n"];
     [block appendString:@"attesa=0\n"];
     [block appendString:@"while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"    _da_riga=\"$prima_riga\"; _da_riga_ok=\"$prima_riga_ok\"; vxost_ripartito \"$prima\" \"$prima_n\"; esito=$?\n"];
+    [block appendString:@"    vxost_ripartito \"$prima\" \"$prima_s\" \"$prima_h\"; esito=$?\n"];
     [block appendString:@"    if [ $esito -eq 0 ]; then avviato=1; break; fi\n"];
     // Senza un log leggibile l'attesa non puo' portare nessuna prova nuova:
     // si concede il tempo di partire e si smette, invece di fermare l'utente
@@ -865,14 +827,14 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
 
     [block appendString:@"\n"];
     [block appendString:@"if [ $avviato -eq 1 ]; then\n"];
-    [block appendString:@"    rm -f \"$OUT\"\n"];
+    [block appendString:@"    rm -f \"$OUT\" \"$T\"\n"];
     [block appendString:@"    echo VXOST_OK\n"];
     // ⚠️ Non si dichiara riuscito quello che non si e' guardato, e non si
     // torna indietro per un dubbio: Apache e' su, la configurazione ha
     // passato il configtest, e riportarlo giu' sarebbe il danno peggiore.
     // Si dice com'e'.
     [block appendString:@"elif [ $avviato -eq 2 ]; then\n"];
-    [block appendString:@"    rm -f \"$OUT\"\n"];
+    [block appendString:@"    rm -f \"$OUT\" \"$T\"\n"];
     [block appendString:@"    echo \"NOTE: Apache is running, but the reload could not be verified:\"\n"];
     [block appendString:@"    echo \"the error log is not a readable file (syslog, or a program behind a pipe).\"\n"];
     [block appendString:@"    echo \"Open the site before relying on it.\"\n"];
@@ -886,13 +848,14 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // risale, la configurazione su disco e quella caricata non coincidono
     // piu', e chi legge deve saperlo da subito, non dal primo 503.
     [block appendString:@"    prima_rb=$(date +%s)\n"];
-    [block appendString:@"    prima_rb_n=$(vxost_quante) || prima_rb_n=''\n"];
-    [block appendString:@"    prima_rb_riga=$(vxost_ultima_nostra); prima_rb_riga_ok=$?\n"];
+    [block appendString:@"    prima_rb_m=$(vxost_misura) || prima_rb_m=''\n"];
+    [block appendString:@"    prima_rb_s=''; prima_rb_h=''\n"];
+    [block appendString:@"    if [ -n \"$prima_rb_m\" ]; then prima_rb_s=${prima_rb_m%% *}; prima_rb_h=${prima_rb_m#* }; fi\n"];
     [block appendString:@"    \"$CTL\" startapache >/dev/null 2>&1 || true\n"];
     [block appendString:@"    tornato=0\n"];
     [block appendString:@"    attesa=0\n"];
     [block appendString:@"    while [ $attesa -lt 15 ]; do\n"];
-    [block appendString:@"        _da_riga=\"$prima_rb_riga\"; _da_riga_ok=\"$prima_rb_riga_ok\"; vxost_ripartito \"$prima_rb\" \"$prima_rb_n\"; esito=$?\n"];
+    [block appendString:@"        vxost_ripartito \"$prima_rb\" \"$prima_rb_s\" \"$prima_rb_h\"; esito=$?\n"];
     [block appendString:@"        if [ $esito -eq 0 ]; then tornato=1; break; fi\n"];
     [block appendString:@"        if [ $esito -eq 2 ]; then\n"];
     [block appendString:@"            tornato=2\n"];
@@ -915,7 +878,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"        echo \"  sudo $CTL startapache\"\n"];
     [block appendString:@"    fi\n"];
     [block appendString:@"    cat \"$OUT\" 2>/dev/null || true\n"];
-    [block appendString:@"    rm -f \"$OUT\"\n"];
+    [block appendString:@"    rm -f \"$OUT\" \"$T\"\n"];
     [block appendString:@"    echo VXOST_RESTART_FAILED\n"];
     [block appendString:@"fi\n"];
     return block;
