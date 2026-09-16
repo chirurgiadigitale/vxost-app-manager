@@ -98,8 +98,16 @@ static const CGFloat XPEditorWidth = 420;
     self.projects = [[XPTracker shared] allProjects];
     self.projectPopup = [[NSPopUpButton alloc] init];
     self.projectPopup.translatesAutoresizingMaskIntoConstraints = NO;
+    // ⚠️ Voci costruite a mano con la chiave attaccata, non addItemWithTitle:.
+    // Quel metodo toglie una voce con lo stesso titolo: con due progetti
+    // omonimi il menu aveva una voce in meno dell'elenco, e Salva, che leggeva
+    // la POSIZIONE, registrava su un altro progetto. Il dodicesimo giro ha
+    // scelto Omega e ottenuto due ore sul secondo Twin.
     for (XPTrackableProject *project in self.projects) {
-        [self.projectPopup addItemWithTitle:project.name ?: @""];
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:project.name ?: @""
+                                                      action:nil keyEquivalent:@""];
+        item.representedObject = project.key;
+        [self.projectPopup.menu addItem:item];
     }
     self.projectPopup.enabled = (self.entry == nil);
     if (self.entry) {
@@ -110,8 +118,10 @@ static const CGFloat XPEditorWidth = 420;
             // Il progetto non esiste piu' fra quelli rilevati: si mostra il
             // nome registrato allora, o la tendina direbbe il progetto
             // sbagliato su una sessione che non si puo' nemmeno spostare.
-            [self.projectPopup addItemWithTitle:self.entry.projectName ?: @""];
-            [self.projectPopup selectItemAtIndex:self.projectPopup.numberOfItems - 1];
+            NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:self.entry.projectName ?: @""
+                                                          action:nil keyEquivalent:@""];
+            [self.projectPopup.menu addItem:item];
+            [self.projectPopup selectItem:item];
         }
     }
 
@@ -231,9 +241,9 @@ static const CGFloat XPEditorWidth = 420;
     if (self.entry) {
         ok = [[XPTracker shared] updateEntry:self.entry start:start end:end task:task];
     } else {
-        NSInteger index = self.projectPopup.indexOfSelectedItem;
-        XPTrackableProject *project = (index >= 0 && index < (NSInteger)self.projects.count)
-            ? self.projects[index] : nil;
+        NSString *key = self.projectPopup.selectedItem.representedObject;
+        NSInteger index = [key isKindOfClass:[NSString class]] ? [self indexOfProjectWithKey:key] : -1;
+        XPTrackableProject *project = index >= 0 ? self.projects[index] : nil;
         ok = [[XPTracker shared] addEntryForProject:project task:task start:start end:end] != nil;
     }
 

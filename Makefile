@@ -140,9 +140,21 @@ scripttest:
 # ⚠️ Qui si riscrivono ore gia' registrate: un errore non fa cadere niente e
 # non stampa nulla, cambia solo il totale del giorno. E' il difetto che si
 # scopre mesi dopo, quando non si ricorda piu' quante ore erano davvero.
+selettoritest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/selettoritest \
+		tests/selettoritest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/selettoritest
+
+legacytest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/legacytest \
+		tests/legacytest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/legacytest
+
 pickertest:
 	@mkdir -p build
-	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/pickertest \
+	@clang $(CFLAGS) -DVXOST_TEST $(LDFLAGS) -Isrc -o build/pickertest \
 		tests/pickertest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/pickertest
 

@@ -9,6 +9,9 @@
 #import "XPTimeEntry.h"
 #import "XPHistoryWindowController.h"
 
+/// La voce del menu che crea un progetto nuovo invece di sceglierne uno.
+static const NSInteger XPTimerNewProjectTag = 1;
+
 @interface XPTimerSectionView () <NSMenuDelegate>
 
 /// Una riga per ogni sessione aperta: si lavora su più progetti insieme.
@@ -292,8 +295,6 @@
 
 #pragma mark - Azioni
 
-/// La voce del menu che crea un progetto nuovo invece di sceglierne uno.
-static const NSInteger XPTimerNewProjectTag = 1;
 
 /// Il progetto con questa chiave nell'elenco di ADESSO, o nil.
 static XPTrackableProject *XPTimerProjectForKey(NSString *key) {
@@ -419,7 +420,14 @@ static XPTrackableProject *XPTimerProjectForKey(NSString *key) {
 }
 
 - (void)rebuildProjectPicker {
+    // ⚠️ Si conserva l'identita' di QUALUNQUE voce scelta, compresa "Nuovo
+    // progetto", che non ha una chiave ma un tag. Il dodicesimo giro l'ha
+    // dimostrato: scelto "Nuovo progetto", un aggiornamento del tracker (che
+    // arriva anche solo perche' un timer scorre) ricostruiva il menu, la
+    // selezione ripiegava sulla prima voce e "Avvia" apriva una sessione su un
+    // progetto mai scelto.
     id previous = self.projectPicker.selectedItem.representedObject;
+    BOOL previousWasNew = (self.projectPicker.selectedItem.tag == XPTimerNewProjectTag);
     NSMenu *menu = self.projectPicker.menu;
     [menu removeAllItems];
 
@@ -443,7 +451,8 @@ static XPTrackableProject *XPTimerProjectForKey(NSString *key) {
     nuovo.tag = XPTimerNewProjectTag;
     [menu addItem:nuovo];
 
-    NSInteger index = previous ? [menu indexOfItemWithRepresentedObject:previous] : -1;
+    NSInteger index = previousWasNew ? [menu indexOfItemWithTag:XPTimerNewProjectTag]
+                    : (previous ? [menu indexOfItemWithRepresentedObject:previous] : -1);
     [self.projectPicker selectItemAtIndex:index >= 0 ? index : 0];
 }
 

@@ -484,10 +484,31 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 
     NSString *path = [directory stringByAppendingPathComponent:@"timesheet.json"];
 
-    // Il recupero dello storico dalla cartella del vecchio identificatore e'
-    // stato tolto il 16/09/2026: nominava il prodotto da cui VXOST deriva, e
-    // l'unico storico da recuperare era gia' stato copiato il 21/08. La
-    // cartella vecchia resta dov'era, non la cancella nessuno.
+    // ⚠️ Le ore registrate prima della rinomina stanno sotto il vecchio
+    // identificatore del bundle, e senza questo passaggio l'app parte con lo
+    // storico vuoto: i dati non sono persi, sono in una cartella che nessuno
+    // guarda piu'. Si copia, non si sposta: sono ore di lavoro vero.
+    //
+    // ⛔ Il nome della cartella vecchia si COMPONE qui e non compare intero nel
+    // binario: il pacchetto non nomina il prodotto da cui VXOST deriva
+    // (decisione di Davide, 16/09/2026). Il 16/09 questo blocco era stato tolto
+    // per la stessa ragione, e il dodicesimo giro ha dimostrato il prezzo: con
+    // il solo storico vecchio, l'app caricava zero sessioni e al primo
+    // salvataggio ne creava uno nuovo senza quelle ore.
+    if (![fm fileExistsAtPath:path]) {
+        NSString *vecchio = [@[@"it.chirurgiadigitale.", @"xa", @"mpp"] componentsJoinedByString:@""];
+        NSString *legacy = [[support stringByAppendingPathComponent:vecchio]
+                            stringByAppendingPathComponent:@"timesheet.json"];
+        if ([fm fileExistsAtPath:legacy]) {
+            NSError *error = nil;
+            if ([fm copyItemAtPath:legacy toPath:path error:&error]) {
+                NSLog(@"VXOST: storico del time tracking recuperato dalla cartella precedente");
+            } else {
+                NSLog(@"VXOST: impossibile recuperare lo storico dalla cartella precedente: %@",
+                      error.localizedDescription);
+            }
+        }
+    }
     return path;
 }
 
