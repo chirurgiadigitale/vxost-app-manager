@@ -2304,19 +2304,48 @@ echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files read, all inside
 # E i percorsi si confrontano SCIOLTI: il dump stampa l'alias con cui il file
 # e' stato raggiunto, quindi un Include attraverso un collegamento lecito
 # veniva respinto.
-if grep -rq 'IfDefine[[:space:]]*!\{0,1\}DUMP_INCLUDES' "$MIRROR/etc" 2>/dev/null; then
-    echo "!! la configurazione si condiziona a DUMP_INCLUDES: da qui non si puo'" >&2
-    echo "   distinguere quello che Apache legge all'avvio da quello che legge" >&2
-    echo "   durante questo controllo" >&2
+# ⚠️ La guardia era un grep su una riga sola, e il nono giro ha dimostrato
+# QUATTRO grafie di sintassi valida che la attraversavano (maiuscole,
+# virgolette, continuazione, variabile) piu' una regressione all'incontrario:
+# il semplice commento "# <IfDefine DUMP_INCLUDES>" fermava la build. Un testo
+# si legge come Apache lo legge, non a occhio.
+if ! python3 "$HERE/tools/dump-includes-neutro.py" "$MIRROR/etc"; then
     exit 1
 fi
 
 if [ -f "$MIRROR/etc/extra/httpd-vxost.conf" ]; then
-    if VXATTESO="$MIRROR/etc/extra/httpd-vxost.conf" \
-       python3 "$HERE/tools/incluso-davvero.py" /tmp/configtest-includes.log; then
-        echo "  httpd-vxost.conf: Apache lo legge, la regola dei diagnostici e' attiva"
+    # ⚠️ Qui non si legge piu' l'elenco del dump, che e' prodotto con -D
+    # DUMP_INCLUDES e quindi risponde a una configurazione leggermente diversa
+    # da quella dell'avvio. Si fa invece una PROVA POSITIVA: si mette nel file
+    # una direttiva che fa fallire il configtest ORDINARIO, e si guarda se
+    # fallisce davvero nominandola.
+    #
+    # Se fallisce, Apache quel file lo legge all'avvio: non c'e' grafia di
+    # IfDefine, alias o collegamento che possa ingannare la prova, perche' non
+    # si sta leggendo un testo, si sta guardando un effetto.
+    _file="$MIRROR/etc/extra/httpd-vxost.conf"
+    _sentinella="VXOST_SENTINELLA_$$"
+    cp "$_file" "$_file.prima" || exit 1
+    # ⚠️ rm prima di riscrivere: se il file fosse un hard link verso il
+    # payload, un >> finirebbe anche la'. Questa e' una prova, non una
+    # modifica al pacchetto.
+    rm -f "$_file" || exit 1
+    cp "$_file.prima" "$_file" || exit 1
+    printf '\nError "%s"\n' "$_sentinella" >> "$_file"
+
+    "$MIRROR/bin/httpd" -t -d "$MIRROR" -f "$MIRROR/etc/httpd.conf" -DSSL -DPHP \
+        > /tmp/configtest-sentinella.log 2>&1
+    _vista=1
+    grep -q "$_sentinella" /tmp/configtest-sentinella.log || _vista=0
+
+    # Il ripristino avviene comunque, anche se la prova e' andata male.
+    rm -f "$_file" || exit 1
+    mv "$_file.prima" "$_file" || exit 1
+
+    if [ "$_vista" = 1 ]; then
+        echo "  httpd-vxost.conf: Apache lo legge all'avvio ordinario, provato"
     else
-        echo "!! httpd-vxost.conf non compare fra i file letti da Apache:" >&2
+        echo "!! httpd-vxost.conf non viene letto all'avvio ordinario:" >&2
         echo "   la regola dei diagnostici non entrerebbe mai in gioco" >&2
         exit 1
     fi
