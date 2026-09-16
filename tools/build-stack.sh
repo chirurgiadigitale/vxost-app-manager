@@ -528,118 +528,127 @@ cert_stato() {
     [ "$_ora" -ge "$_inizio" ] || return 1
     [ "$_ora" -lt "$_fine" ] || return 1
 
+    # ⚠️ Le date dicono che il certificato vale, non che vada con QUESTA
+    # chiave. Una coppia mista passava come usabile a ogni avvio, e Apache con
+    # -DSSL non partiva. Si confrontano le due chiavi pubbliche: se una delle
+    # due letture fallisce non si sa, e si conserva; se entrambe riescono e
+    # differiscono, e' una prova positiva.
+    _pub_crt=$("$OPENSSL" x509 -in "$CRT" -noout -pubkey 2>/dev/null) || return 2
+    _pub_key=$("$OPENSSL" pkey -in "$KEY" -pubout -passin pass: 2>/dev/null) || return 2
+    [ -n "$_pub_crt" ] && [ -n "$_pub_key" ] || return 2
+    [ "$_pub_crt" = "$_pub_key" ] || return 1
+
     return 0
 }
 
-# Sposta di fianco invece di cancellare.
+# ⚠️ SESTO giro su questo blocco. La versione precedente SPOSTAVA la coppia
+# nell'archivio e poi installava quella nuova: fra i due momenti il percorso
+# attivo non esisteva, e ogni guasto in mezzo richiedeva un ritorno indietro
+# che poteva fallire a sua volta. Un certificato raggiunto con un collegamento
+# relativo, spostato in un'altra cartella, smetteva di risolvere e il ritorno
+# indietro veniva saltato. E il nome dell'archivio era riservato, ma la coppia
+# ATTIVA no: due invocazioni potevano installare il certificato dell'una e la
+# chiave dell'altra, ed entrambe uscivano 0.
 #
-# ⚠️ QUINTO giro su questo blocco, e il difetto non era piu' la distruzione:
-# era che il nome dell'archivio veniva CONTROLLATO e non RISERVATO. Fra il
-# [ -e ] che lo dichiarava libero e il mv che ci scriveva dentro, un'altra
-# invocazione poteva prendersi lo stesso nome, e mv sovrascrive. Codex l'ha
-# dimostrato con due invocazioni ordinate da una barriera: la coppia iniziale
-# spariva dai file attivi E da ogni archivio.
+# Tre cambi di impostazione invece di altri controlli:
 #
-# Un altro controllo prima di mv non chiude niente, perche' la finestra fra
-# controllo e uso resta. Cambia invece l'operazione: mkdir FALLISCE se la
-# directory esiste, e fallisce in modo indivisibile. Chi la crea l'ha
-# riservata, e due invocazioni ottengono due archivi diversi.
-#
-# Da qui la seconda conseguenza: l'archivio e' una directory che contiene la
-# COPPIA, invece di due file con lo stesso suffisso in due cartelle diverse.
-# Un archivio a meta' non e' piu' rappresentabile.
-metti_da_parte() {
-    _base=$(date '+%Y%m%d-%H%M%S' 2>/dev/null || echo vecchio)
-    _n=0
-    _arch="$ROOT/etc/ssl.sostituito-$_base"
-    until mkdir "$_arch" 2>/dev/null; do
-        # ⚠️ mkdir puo' fallire anche per un motivo che il prossimo nome non
-        # risolve (cartella non scrivibile, disco pieno). Si insiste solo se
-        # il motivo e' che quel nome e' gia' preso.
-        [ -e "$_arch" ] || return 1
-        _n=$((_n + 1))
-        [ "$_n" -lt 100 ] || return 1
-        _arch="$ROOT/etc/ssl.sostituito-$_base-$_n"
-    done
+# 1. Un LUCCHETTO su tutta la sequenza, decisione compresa. Chi arriva mentre
+#    un altro lavora non tocca niente.
+# 2. Si archivia per COPIA del contenuto. I file attivi restano al loro posto
+#    finche' la coppia nuova non e' pronta, quindi non c'e' niente da
+#    rimettere indietro. Un collegamento viene seguito: si conserva quello che
+#    Apache leggeva, e il file a cui puntava non viene toccato.
+# 3. cert_stato controlla anche che certificato e chiave si CORRISPONDANO. Una
+#    coppia mista, comunque sia nata, viene riconosciuta e rifatta.
 
-    if [ -e "$CRT" ]; then
-        if ! mv "$CRT" "$_arch/server.crt" 2>/dev/null; then
-            rmdir "$_arch" 2>/dev/null
-            return 1
-        fi
+LUCCHETTO="$ROOT/etc/.vxost-ssl-init.lock"
+
+prendi_lucchetto() {
+    mkdir "$LUCCHETTO" 2>/dev/null && return 0
+    # ⚠️ Un lucchetto lasciato da un'invocazione morta bloccherebbe per sempre
+    # la rigenerazione. Oltre dieci minuti si considera abbandonato: una
+    # generazione RSA dura secondi. Si riprova UNA volta, e se nel frattempo
+    # qualcun altro l'ha preso si rinuncia.
+    if [ -n "$(find "$LUCCHETTO" -maxdepth 0 -mmin +10 2>/dev/null)" ]; then
+        rmdir "$LUCCHETTO" 2>/dev/null
+        mkdir "$LUCCHETTO" 2>/dev/null && return 0
     fi
-    if [ -e "$KEY" ]; then
-        if ! mv "$KEY" "$_arch/server.key" 2>/dev/null; then
-            # Indietro tutta: meglio la coppia vecchia al suo posto che mezza
-            # archiviata e mezza no.
-            if [ ! -e "$_arch/server.crt" ] || mv "$_arch/server.crt" "$CRT" 2>/dev/null; then
-                rmdir "$_arch" 2>/dev/null
-                return 1
-            fi
-            # ⚠️ Il ripristino e' fallito a sua volta: la coppia attiva e'
-            # SPEZZATA, il certificato e' nell'archivio e la chiave al suo
-            # posto. Prima questo caso usciva 0 dicendo "non ho cambiato
-            # niente", che era falso e lasciava HTTPS senza certificato.
-            # Adesso ha un esito suo, e il messaggio nomina i due percorsi
-            # perche' chi legge deve poterli rimettere a mano.
-            echo "vxost-ssl-init: ATTENZIONE, la coppia e' rimasta spezzata." >&2
-            echo "vxost-ssl-init: certificato in $_arch/server.crt" >&2
-            echo "vxost-ssl-init: chiave ancora in $KEY" >&2
-            return 3
-        fi
-    fi
-    echo "vxost-ssl-init: la coppia precedente e' in $_arch" >&2
-    return 0
+    return 1
 }
 
+if ! prendi_lucchetto; then
+    echo "vxost-ssl-init: un'altra invocazione sta lavorando sul certificato, non tocco niente" >&2
+    exit 0
+fi
+trap 'rm -f "$TMPCRT" "$TMPKEY" 2>/dev/null; rmdir "$LUCCHETTO" 2>/dev/null' EXIT
+TMPCRT=""
+TMPKEY=""
+
+# La decisione si prende DENTRO il lucchetto: chi e' arrivato prima potrebbe
+# aver gia' rifatto la coppia.
 cert_stato
 case $? in
     0|2) exit 0 ;;
 esac
 
-# Se c'era qualcosa, si conserva prima di rifare. Se non si riesce, non si
-# tocca niente: meglio un HTTPS fermo che una coppia buttata via.
-if [ -s "$CRT" ] || [ -s "$KEY" ]; then
-    metti_da_parte
-    case $? in
-        0) ;;
-        3)
-            # La coppia e' spezzata e il messaggio l'ha gia' detto. Non si
-            # prosegue a generare: se un mv non e' riuscito, nemmeno scrivere
-            # una coppia nuova ha buone probabilita', e uscire 0 qui
-            # significherebbe dichiarare a posto un HTTPS che non lo e'.
-            exit 1
-            ;;
-        *)
-            echo "vxost-ssl-init: non riesco a mettere da parte il certificato, lo lascio com'e'" >&2
-            exit 0
-            ;;
-    esac
-fi
-
-mkdir -p "$ROOT/etc/ssl.crt" "$ROOT/etc/ssl.key" || exit 1
-
 [ -x "$OPENSSL" ] || {
     echo "vxost-ssl-init: no openssl available" >&2
     exit 1
 }
+mkdir -p "$ROOT/etc/ssl.crt" "$ROOT/etc/ssl.key" || exit 1
 
-# Su un file temporaneo, poi spostato: se openssl fallisce a meta' non resta
-# mezzo certificato che il controllo qui sopra scambierebbe per buono.
+# Prima la coppia nuova, in file temporanei accanto a quelli veri (stesso
+# filesystem, quindi il mv finale e' un rename). Se openssl fallisce non si e'
+# toccato niente.
 TMPCRT="$CRT.tmp.$$"
 TMPKEY="$KEY.tmp.$$"
 if ! "$OPENSSL" req -new -x509 -nodes -newkey rsa:2048 \
         -keyout "$TMPKEY" -out "$TMPCRT" \
         -days 3650 -subj '/CN=virtualhost' >/dev/null 2>&1; then
-    rm -f "$TMPCRT" "$TMPKEY"
     echo "vxost-ssl-init: could not create the certificate" >&2
     exit 1
 fi
+chmod 600 "$TMPKEY" || exit 1
+chmod 644 "$TMPCRT" || exit 1
 
-chmod 600 "$TMPKEY"
-chmod 644 "$TMPCRT"
-mv "$TMPKEY" "$KEY" || exit 1
-mv "$TMPCRT" "$CRT" || exit 1
+# Poi la copia di quello che c'era. Il nome si RISERVA con mkdir, che fallisce
+# in modo indivisibile se la directory esiste.
+if [ -e "$CRT" ] || [ -e "$KEY" ]; then
+    _base=$(date '+%Y%m%d-%H%M%S' 2>/dev/null || echo vecchio)
+    _arch="$ROOT/etc/ssl.sostituito-$_base"
+    _n=0
+    until mkdir "$_arch" 2>/dev/null; do
+        [ -e "$_arch" ] || { echo "vxost-ssl-init: non riesco a creare l'archivio, lo lascio com'e'" >&2; exit 0; }
+        _n=$((_n + 1))
+        [ "$_n" -lt 100 ] || { echo "vxost-ssl-init: cento archivi con lo stesso nome, lo lascio com'e'" >&2; exit 0; }
+        _arch="$ROOT/etc/ssl.sostituito-$_base-$_n"
+    done
+    for _coppia in "$CRT:server.crt" "$KEY:server.key"; do
+        _da="${_coppia%%:*}"
+        _a="$_arch/${_coppia##*:}"
+        [ -e "$_da" ] || continue
+        # cp senza -P segue il collegamento: si conserva il CONTENUTO. cmp
+        # dimostra che la copia e' completa prima di sostituire qualunque cosa.
+        if ! cp "$_da" "$_a" 2>/dev/null || ! cmp -s "$_da" "$_a"; then
+            echo "vxost-ssl-init: la copia di sicurezza non e' riuscita, lo lascio com'e'" >&2
+            exit 0
+        fi
+    done
+    echo "vxost-ssl-init: la coppia precedente e' in $_arch" >&2
+fi
+
+# ⚠️ Due rename, e fra i due la coppia attiva e' mista. Il lucchetto impedisce
+# che un'altra invocazione ci entri in mezzo; se il secondo rename fallisce,
+# lo si dice, e alla prossima invocazione cert_stato riconosce la coppia che
+# non corrisponde e la rifa. Quella di prima e' comunque nell'archivio.
+mv "$TMPKEY" "$KEY" || { echo "vxost-ssl-init: non riesco a installare la chiave, la coppia attiva e' quella di prima" >&2; exit 1; }
+if ! mv "$TMPCRT" "$CRT"; then
+    echo "vxost-ssl-init: ATTENZIONE, chiave nuova e certificato vecchio non corrispondono." >&2
+    echo "vxost-ssl-init: la coppia precedente e' nell'archivio; al prossimo avvio verra' rifatta" >&2
+    exit 1
+fi
+TMPCRT=""
+TMPKEY=""
 exit 0
 SSLEOF
 chmod 755 "$PAYLOAD/bin/vxost-ssl-init"
