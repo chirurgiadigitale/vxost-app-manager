@@ -146,6 +146,12 @@ selettoritest:
 		tests/selettoritest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/selettoritest
 
+legacyfailtest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/legacyfailtest \
+		tests/legacyfailtest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/legacyfailtest
+
 legacytest:
 	@mkdir -p build
 	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/legacytest \

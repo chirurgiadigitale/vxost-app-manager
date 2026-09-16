@@ -504,7 +504,16 @@ static NSTimeInterval SecondsSinceLastInput(void) {
             if ([fm copyItemAtPath:legacy toPath:path error:&error]) {
                 NSLog(@"VXOST: storico del time tracking recuperato dalla cartella precedente");
             } else {
-                NSLog(@"VXOST: impossibile recuperare lo storico dalla cartella precedente: %@",
+                // ⚠️ Una copia fallita non e' un primo avvio. Prima si scriveva
+                // solo il messaggio: load trovava il file nuovo assente, partiva
+                // con lo storico vuoto, e il primo salvataggio creava un file
+                // nuovo SENZA le ore precedenti; da li' in poi il recupero non
+                // ripartiva piu', perche' il file nuovo esisteva. Il tredicesimo
+                // giro l'ha riprodotto. Ora i salvataggi si bloccano, come per
+                // uno storico illeggibile, e al prossimo avvio si riprova.
+                _storageUnusable = YES;
+                NSLog(@"VXOST: impossibile recuperare lo storico dalla cartella precedente: %@. "
+                      @"Non salvo niente finche' il recupero non riesce.",
                       error.localizedDescription);
             }
         }

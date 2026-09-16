@@ -26,6 +26,9 @@ extern NSString *const XPThemeDidChangeNotification;
 
 /// Preferenza salvata fra un avvio e l'altro.
 + (XPThemePreference)preference;
+/// Copia la scelta del tema da un altro dominio di preferenze, se qui non ce
+/// n'e' ancora una. Serve a chi aggiorna dal bundle di prima della rinomina.
++ (BOOL)importPreferenceFromDomain:(NSString *)domain;
 + (void)setPreference:(XPThemePreference)preference;
 
 /// Applica la preferenza salvata a NSApp. Da chiamare all'avvio.

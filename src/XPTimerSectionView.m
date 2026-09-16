@@ -20,6 +20,8 @@ static const NSInteger XPTimerNewProjectTag = 1;
 // Avvio di una nuova sessione
 @property (nonatomic, strong) NSView *startCard;
 @property (nonatomic, strong) NSPopUpButton *projectPicker;
+/// La voce scelta e' sparita dal menu: niente ripiego su un'altra.
+@property (nonatomic) BOOL sceltaPersa;
 @property (nonatomic, strong) NSTextField *taskField;
 @property (nonatomic, strong) XPButton *startButton;
 
@@ -453,7 +455,20 @@ static XPTrackableProject *XPTimerProjectForKey(NSString *key) {
 
     NSInteger index = previousWasNew ? [menu indexOfItemWithTag:XPTimerNewProjectTag]
                     : (previous ? [menu indexOfItemWithRepresentedObject:previous] : -1);
-    [self.projectPicker selectItemAtIndex:index >= 0 ? index : 0];
+    if (index >= 0) {
+        [self.projectPicker selectItemAtIndex:index];
+        self.sceltaPersa = NO;
+    } else if (previous || self.sceltaPersa) {
+        // ⚠️ La scelta c'era e il suo progetto non c'e' piu'. Si lascia il menu
+        // SENZA scelta, e resta cosi' agli aggiornamenti successivi finche'
+        // non se ne fa un'altra. Il tredicesimo giro: ripiegando sulla prima
+        // voce, una notifica del tracker fra la cartella tolta e il clic
+        // faceva avviare vhost:80 al posto di zz-galizzi.
+        [self.projectPicker selectItem:nil];
+        self.sceltaPersa = YES;
+    } else {
+        [self.projectPicker selectItemAtIndex:0];   // nessuna scelta ancora fatta
+    }
 }
 
 - (void)rebuildEntriesForDay:(NSDate *)day {

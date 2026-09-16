@@ -10,6 +10,7 @@
 #import <Cocoa/Cocoa.h>
 #import "XPTracker.h"
 #import "XPTimeEntry.h"
+#import "XPTheme.h"
 
 static NSString *supportRoot;
 NSArray<NSString *> *NSSearchPathForDirectoriesInDomains(NSSearchPathDirectory d, NSSearchPathDomainMask m, BOOL e) {
@@ -49,6 +50,24 @@ int main(void) { @autoreleasepool {
     NSDictionary *saved = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfFile:nuova] options:0 error:NULL];
     check([saved[@"entries"] count] == 1, @"dopo un salvataggio lo storico nuovo contiene la sessione vecchia");
     check([[NSData dataWithContentsOfFile:old] isEqual:data], @"la cartella vecchia resta identica");
+
+    printf("\n\033[1mTema scelto nel dominio precedente\033[0m\n");
+    // Un dominio FINTO, non quello vero: le preferenze di chi lancia il test
+    // non si toccano. Il metodo e' lo stesso che l'app chiama con il dominio
+    // del vecchio identificatore.
+    NSString *dominio = [NSString stringWithFormat:@"it.equipedigitale.vxost.legacytest-%d", getpid()];
+    NSUserDefaults *qui = [NSUserDefaults standardUserDefaults];
+    [qui removeObjectForKey:@"ThemePreference"];
+    CFPreferencesSetAppValue(CFSTR("ThemePreference"), (__bridge CFNumberRef)@(2), (__bridge CFStringRef)dominio);
+    CFPreferencesAppSynchronize((__bridge CFStringRef)dominio);
+    check([XPTheme importPreferenceFromDomain:dominio], @"la scelta del dominio precedente viene importata");
+    check([XPTheme preference] == XPThemePreferenceLight, @"e il tema e' quello scelto allora (chiaro)");
+    [qui setInteger:XPThemePreferenceAuto forKey:@"ThemePreference"];
+    check(![XPTheme importPreferenceFromDomain:dominio] && [XPTheme preference] == XPThemePreferenceAuto,
+          @"una scelta gia' fatta qui non viene sovrascritta");
+    CFPreferencesSetAppValue(CFSTR("ThemePreference"), NULL, (__bridge CFStringRef)dominio);
+    CFPreferencesAppSynchronize((__bridge CFStringRef)dominio);
+    [qui removeObjectForKey:@"ThemePreference"];
 
     [fm removeItemAtPath:supportRoot error:NULL];
     printf("\n\033[1m%d passati, %d falliti\033[0m\n\n", sPassed, sFailed);

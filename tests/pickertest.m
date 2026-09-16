@@ -88,6 +88,22 @@ int main(void) {
         check(indexOfTitle(picker, @"zz-galizzi") < 0, @"e il menu si e' aggiornato");
 
         [tracker stopAll];
+
+        printf("\n\033[1mProgetto sparito, poi un aggiornamento, poi Avvia: nessun ripiego\033[0m\n");
+        [fm createDirectoryAtPath:[root stringByAppendingPathComponent:@"zz-delta"]
+      withIntermediateDirectories:YES attributes:nil error:NULL];
+        if ([view respondsToSelector:@selector(menuNeedsUpdate:)]) [view menuNeedsUpdate:picker.menu];
+        [picker selectItemAtIndex:indexOfTitle(picker, @"zz-delta")];
+        [fm removeItemAtPath:[root stringByAppendingPathComponent:@"zz-delta"] error:NULL];
+        // la notifica che arriva, per esempio, mentre un timer scorre
+        [[NSNotificationCenter defaultCenter] postNotificationName:XPTrackerDidChangeNotification object:tracker];
+        [[NSNotificationCenter defaultCenter] postNotificationName:XPTrackerDidChangeNotification object:tracker];
+        prima = tracker.currentEntries.count;
+        [view startFromPicker];
+        check(tracker.currentEntries.count == prima,
+              [NSString stringWithFormat:@"nessuna sessione avviata al posto di zz-delta (avviata: %@)",
+               tracker.currentEntries.lastObject.projectKey ?: @"niente"]);
+        [tracker stopAll];
         [fm removeItemAtPath:base error:NULL];
         check(![fm fileExistsAtPath:base], @"il test non lascia niente dietro di se'");
     }

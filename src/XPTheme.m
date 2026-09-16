@@ -29,8 +29,31 @@ static NSColor *Dyn(NSColor *dark, NSColor *light) {
     // Come nella dashboard, in assenza di scelta il tema scuro è il default
     // del design system, non l'impostazione di sistema.
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:XPThemeDefaultsKey] == nil) {
+        // La scelta fatta prima della rinomina del bundle sta nelle preferenze
+        // del vecchio identificatore: senza questo passaggio chi aggiorna si
+        // ritrova il tema scuro qualunque cosa avesse scelto (tredicesimo
+        // giro). Si copia una volta, e l'identificatore si COMPONE qui, come
+        // in XPTracker, perche' il pacchetto non ne contenga il nome intero.
+        NSString *vecchio = [@[@"it.chirurgiadigitale.", @"xa", @"mpp"] componentsJoinedByString:@""];
+        [self importPreferenceFromDomain:vecchio];
+    }
     if ([defaults objectForKey:XPThemeDefaultsKey] == nil) return XPThemePreferenceDark;
     return (XPThemePreference)[defaults integerForKey:XPThemeDefaultsKey];
+}
+
++ (BOOL)importPreferenceFromDomain:(NSString *)domain {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:XPThemeDefaultsKey] != nil) return NO;   // gia' scelta qui
+    CFPropertyListRef valore = CFPreferencesCopyAppValue((__bridge CFStringRef)XPThemeDefaultsKey,
+                                                          (__bridge CFStringRef)domain);
+    if (!valore) return NO;
+    id oggetto = CFBridgingRelease(valore);
+    if (![oggetto isKindOfClass:[NSNumber class]]) return NO;
+    NSInteger n = [oggetto integerValue];
+    if (n < XPThemePreferenceAuto || n > XPThemePreferenceLight) return NO;   // valore non riconosciuto
+    [defaults setInteger:n forKey:XPThemeDefaultsKey];
+    return YES;
 }
 
 + (void)setPreference:(XPThemePreference)preference {
