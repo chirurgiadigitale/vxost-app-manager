@@ -1931,6 +1931,24 @@ if [ "$RESTI" != "0" ]; then
 fi
 echo "  no file carries the old name any more"
 
+# ------------------------------------------------------ nomi di partenza ---
+#
+# ⛔ Decisione di Davide, 16/09/2026: nel pacchetto non compaiono in nessun
+# modo il nome dello stack di partenza ne' quello di chi lo compilava. Prima
+# di oggi restavano in 405 file, quasi tutti come percorsi di build dentro i
+# binari e come percorsi di installazione dentro terminfo, sfuggiti alla
+# rinomina del 15/09 che guardava solo la radice di installazione.
+#
+# Sostituzione byte per byte a parita' di lunghezza (tools/nomi-a-monte.py).
+# PRIMA della firma, perche' tocca dei Mach-O. Provata su una copia dello
+# staging: 20.943 occorrenze in 404 file, dimensioni identiche al byte, e
+# php, perl, openssl, mysqld, httpd, mysql e curl riscritti partono ancora.
+step "Removing the names of what VXOST is built from"
+if ! python3 "$HERE/tools/nomi-a-monte.py" riscrivi "$PAYLOAD"; then
+    echo "!! the payload still names what it is built from" >&2
+    exit 1
+fi
+
 # ------------------------------------------------------------- pear.conf ---
 #
 # Rilievo C della revisione del 10/09. etc/pear.conf e' PHP serializzato, e
@@ -2110,6 +2128,14 @@ if [ -n "$_newer" ]; then
 fi
 cp -R "$APP_BUNDLE" "$STAGE/"
 echo "  VXOST.app $_app_version, $_archs, minos $_min, signed, newer than every source"
+
+# ⛔ Il controllo si ripete su TUTTO quello che parte, app compresa, e dopo
+# ogni passo che scrive: la riscrittura sopra non vede l'app, che si aggiunge
+# dopo e deve uscire gia' pulita dai sorgenti.
+step "Checking the package names nothing it is built from"
+if ! python3 "$HERE/tools/nomi-a-monte.py" verifica "$PAYLOAD" "$STAGE/VXOST.app"; then
+    exit 1
+fi
 
 # ----------------------------------------------------------------- verify ---
 

@@ -5,7 +5,7 @@
 # (the vxost script calls it until etc/vxost/rights_fixed exists) and on
 # request with "vxost fix_rights".
 #
-# ⚠️ The original (from XAMPP) ran twenty chown/chmod without looking at any
+# ⚠️ The original script ran twenty chown/chmod without looking at any
 # of them, touched htdocs/, webalizer and guestbook files that do not exist
 # in this layout, and ended with a touch: the caller read the exit status of
 # that touch, so a repair that had failed on every line still said "ok." and

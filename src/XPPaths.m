@@ -17,13 +17,15 @@
 /// all'utente.
 static NSString *XPDetectRoot(void) {
     NSFileManager *fm = [NSFileManager defaultManager];
+    // Una sola radice. Il secondo candidato, la cartella dello stack di prima
+    // della rinomina, e' stato tolto il 16/09/2026: il pacchetto non deve
+    // nominare il prodotto da cui deriva, e dal 15/09 quella cartella non
+    // esiste piu' nemmeno sulla macchina che costruisce.
     NSArray<NSString *> *candidates = @[
         @"/Applications/VXOST/vxostfiles",
-        @"/Applications/XAMPP/xamppfiles",
     ];
     for (NSString *base in candidates) {
-        NSString *script = [base stringByAppendingPathComponent:
-                            [base hasSuffix:@"vxostfiles"] ? @"vxost" : @"xampp"];
+        NSString *script = [base stringByAppendingPathComponent:@"vxost"];
         if ([fm isExecutableFileAtPath:script]) {
             return base;
         }
@@ -34,8 +36,7 @@ static NSString *XPDetectRoot(void) {
 }
 
 static NSString *XPDetectControlScript(NSString *root) {
-    NSString *name = [root hasSuffix:@"vxostfiles"] ? @"vxost" : @"xampp";
-    return [root stringByAppendingPathComponent:name];
+    return [root stringByAppendingPathComponent:@"vxost"];
 }
 
 

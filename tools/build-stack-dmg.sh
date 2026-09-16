@@ -101,8 +101,9 @@ to drop them on.
    Apple account. Open System Settings > Privacy & Security, scroll to
    the bottom, and press "Open anyway". Once only.
 
-If you already have XAMPP, stop it before starting VXOST: they both
-want port 80 and port 3306, and two servers on the same port give an
+If another local web or database server is already running on this Mac,
+stop it before starting VXOST: they both want port 80 and port 3306, and
+two servers on the same port give an
 error that explains nothing. There is a guide for moving across at
 https://vxost.com/guides/
 

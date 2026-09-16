@@ -484,27 +484,10 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 
     NSString *path = [directory stringByAppendingPathComponent:@"timesheet.json"];
 
-    // ⚠️ Le ore registrate prima della rinomina stanno sotto il vecchio
-    // identificatore del bundle, e senza questo passaggio l'app parte con lo
-    // storico vuoto: i dati non sono persi, semplicemente sono in una cartella
-    // che nessuno guarda piu'. Succede a chiunque aggiorni da una versione
-    // precedente, non solo qui.
-    //
-    // Si copia, non si sposta: se qualcosa va storto l'originale e' ancora al
-    // suo posto, e sono ore di lavoro vero.
-    if (![fm fileExistsAtPath:path]) {
-        NSString *legacy = [[support stringByAppendingPathComponent:@"it.chirurgiadigitale.xampp"]
-                            stringByAppendingPathComponent:@"timesheet.json"];
-        if ([fm fileExistsAtPath:legacy]) {
-            NSError *error = nil;
-            if ([fm copyItemAtPath:legacy toPath:path error:&error]) {
-                NSLog(@"VXOST: storico del time tracking recuperato da %@", legacy);
-            } else {
-                NSLog(@"VXOST: impossibile recuperare lo storico da %@: %@",
-                      legacy, error.localizedDescription);
-            }
-        }
-    }
+    // Il recupero dello storico dalla cartella del vecchio identificatore e'
+    // stato tolto il 16/09/2026: nominava il prodotto da cui VXOST deriva, e
+    // l'unico storico da recuperare era gia' stato copiato il 21/08. La
+    // cartella vecchia resta dov'era, non la cancella nessuno.
     return path;
 }
 

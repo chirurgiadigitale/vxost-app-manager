@@ -654,6 +654,26 @@ def candidati(lib, binario, eseguibile):
     return [lib], None
 
 
+def _carica_nomi_di_partenza():
+    """Le coppie da tools/nomi-a-monte.py, lette da li' e non ricopiate: due
+    elenchi uguali scritti in due file divergono alla prima correzione."""
+    import importlib.util
+    qui = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nomi-a-monte.py")
+    spec = importlib.util.spec_from_file_location("nomi_a_monte", qui)
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return [(a.decode(), b.decode()) for a, b in modulo.COPPIE]
+
+
+NOMI_DI_PARTENZA = _carica_nomi_di_partenza()
+
+
+def _rinomina(percorso):
+    for vecchio, nuovo in NOMI_DI_PARTENZA:
+        percorso = percorso.replace(vecchio, nuovo)
+    return percorso
+
+
 def normalizza(percorso, radici):
     """Il percorso con la radice riportata a una forma sola.
 
@@ -664,7 +684,15 @@ def normalizza(percorso, radici):
     le riscritture CHE SAPPIAMO essere state fatte, e per il resto si
     confronta alla lettera.
     """
+    # ⚠️ Anche i nomi di partenza sono una riscrittura che SAPPIAMO fatta:
+    # tools/nomi-a-monte.py li sostituisce a parita' di lunghezza prima della
+    # firma. Senza applicarla ai due lati, una dipendenza rotta ereditata si
+    # chiamava in un modo nel pacchetto e in un altro nella sorgente, e veniva
+    # dichiarata persa dal confezionamento.
+    for vecchio, nuovo in NOMI_DI_PARTENZA:
+        percorso = percorso.replace(vecchio, nuovo)
     for vecchia in radici:
+        vecchia = vecchia and _rinomina(vecchia)
         if vecchia and percorso.startswith(vecchia + "/"):
             return "<radice>/" + percorso[len(vecchia) + 1:]
     return percorso
