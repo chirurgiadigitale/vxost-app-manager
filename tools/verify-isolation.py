@@ -353,9 +353,15 @@ def percorsi_nella_configurazione(specchio):
             pila_ereditata = []
             attivo = False
         vero = os.path.realpath(intero)
-        if vero in visti:
+        # ⚠️ Visto PER CONTESTO, non per percorso. Da quando la pila viaggia
+        # con il file, lo stesso file incluso prima sotto <IfDefine NEVER> e
+        # poi senza condizioni veniva letto una volta sola, nel contesto
+        # spento, e la seconda inclusione (quella che Apache esegue) veniva
+        # saltata come gia' vista. Apache usciva 1, il validatore 0.
+        chiave = (vero, tuple(pila_ereditata))
+        if chiave in visti:
             continue
-        visti.add(vero)
+        visti.add(chiave)
         try:
             testo = open(intero, encoding="utf-8", errors="replace").read()
         except OSError as errore:
@@ -454,17 +460,19 @@ def percorsi_nella_configurazione(specchio):
             # anche il nome della direttiva: "define EXTRA" e "<IFDEFINE SSL>"
             # smettevano di essere riconosciuti e il validatore usciva 0 dove
             # Apache usciva 1.
-            # ⚠️ LoadModule in un ramo certamente attivo rende NOTO un
-            # <IfModule>. Apache accetta due grafie per lo stesso modulo, il
-            # nome simbolico (ssl_module) e il file sorgente (mod_ssl.c), e
-            # vanno registrate tutte e due o meta' delle condizioni resta
-            # ignota senza motivo.
-            _mod = re.match(r"^loadmodule\s+(\S+)\s+(\S+)", pulita, re.I)
+            # LoadModule in un ramo certamente attivo rende NOTO un
+            # <IfModule> che usa il nome simbolico (ssl_module).
+            #
+            # ⚠️ Solo quello. La forma "mod_ssl.c" e' il nome del file
+            # SORGENTE compilato dentro il modulo, e il nome del .so su disco
+            # non lo dimostra: un mod_authz_core.so rinominato mod_imaginary.so
+            # veniva registrato come mod_imaginary.c, che Apache non riconosce,
+            # e il validatore scartava un ramo che Apache esegue. Una
+            # condizione scritta con il nome sorgente resta IGNOTA, cioe'
+            # prudente, invece che certa per deduzione.
+            _mod = re.match(r"^loadmodule\s+(\S+)\s+\S+", pulita, re.I)
             if _mod and all(x is True for x in pila):
                 moduli_attivi.add(_mod.group(1).strip('"'))
-                _so = os.path.basename(_mod.group(2).strip('"'))
-                if _so.endswith(".so"):
-                    moduli_attivi.add(_so[:-3] + ".c")
 
             _def = re.match(r"^define\s+(\S+)", pulita, re.I)
             if _def:
