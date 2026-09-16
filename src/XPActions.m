@@ -672,9 +672,9 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // La domanda giusta e' un'altra: il file e' CRESCIUTO per aggiunta? Si misura
     // prima la dimensione e l'impronta dei suoi byte; dopo, se i primi N byte sono
     // ancora quelli, tutto quello che segue e' stato scritto dopo la misura, e il
-    // messaggio si cerca SOLO li'. La data serve ancora a scartare righe vecchie
-    // ricopiate in coda, ma lo stesso secondo e' ammesso: i byte nuovi bastano a
-    // legare il messaggio al tentativo, e un avvio rapido non viene rifiutato.
+    // messaggio si cerca SOLO li'. La data scarta le righe vecchie ricopiate in
+    // coda; una riga dello stesso secondo della partenza non si distingue da
+    // una copia, e l'esito e' "non verificabile".
     //
     // Se i primi N byte non sono piu' quelli, il log e' stato sostituito: resta
     // solo la data, strettamente successiva alla partenza, con il limite
@@ -756,7 +756,15 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     [block appendString:@"        _riga=$(vxost_nostra_in \"$T\" \"$_pid\") || return 2\n"];
     [block appendString:@"        [ -n \"$_riga\" ] || return 1\n"];
     [block appendString:@"        _ep=$(vxost_epoca \"$_riga\") || return 2\n"];
-    [block appendString:@"        [ \"$_ep\" -ge \"$_da\" ] && [ \"$_ep\" -le \"$_adesso\" ] || return 1\n"];
+    // ⚠️ Nei byte aggiunti una riga NELLO STESSO SECONDO della partenza non
+    // prova niente: l'undicesimo giro ha ricopiato in coda una riga gia'
+    // presente, datata quel secondo, e il codice diceva VXOST_OK senza nessun
+    // riavvio. Nessun controllo sulla riga distingue un evento nuovo da una
+    // copia, quindi non si attesta: "vivo ma non verificabile". Un avvio
+    // rapido non viene dichiarato fallito, e nemmeno riuscito.
+    [block appendString:@"        [ \"$_ep\" -le \"$_adesso\" ] || return 1\n"];
+    [block appendString:@"        [ \"$_ep\" -ge \"$_da\" ] || return 1\n"];
+    [block appendString:@"        [ \"$_ep\" -gt \"$_da\" ] || return 2\n"];
     [block appendString:@"        return 0\n"];
     [block appendString:@"    fi\n"];
     // Il log e' stato sostituito: resta la data, strettamente successiva.
