@@ -2278,86 +2278,105 @@ for _defines in "" "-DSSL -DPHP"; do
     fi
 done
 
-# La prova di isolamento: ogni file letto sta nello specchio.
+# Un controllo SUPPLEMENTARE: gli Include che Apache stesso elenca stanno
+# dentro il pacchetto.
+#
+# ⚠️ Solo questo, e il messaggio lo dice. Il dump si ottiene con
+# -D DUMP_INCLUDES, quindi descrive la configurazione con quel define IN PIU'.
+# Per quattro giri si e' cercato di dimostrare che quel define non cambiasse
+# niente, con un parser sempre piu' completo e sempre con un controesempio:
+# variabili a catena, sostituzioni parziali, estensioni qualsiasi. Un'imitazione
+# parziale di Apache ne avra' sempre uno.
+#
+# Non serve dimostrarlo, perche' la prova autorevole non passa da qui:
+# verify-isolation.py, piu' sotto, legge la configurazione con i soli define
+# dell'avvio (SSL e PHP). Un file che si nascondesse al dump con
+# <IfDefine !DUMP_INCLUDES> e' proprio un file che quel controllo legge.
 "$MIRROR/bin/httpd" -t -d "$MIRROR" -f "$MIRROR/etc/httpd.conf" -DSSL -DPHP -D DUMP_INCLUDES \
     > /tmp/configtest-includes.log 2>&1 || true
 _read="$(awk '$1 ~ /^\([^)]*\)$/ && $2 ~ /^\// {print $2}' /tmp/configtest-includes.log)"
 if [ -z "$_read" ]; then
-    echo "!! httpd -D DUMP_INCLUDES listed nothing: cannot prove what was checked" >&2
+    echo "!! httpd -D DUMP_INCLUDES listed nothing: cannot say what it read" >&2
     exit 1
 fi
 _outside="$(printf '%s\n' "$_read" | grep -v "^$MIRROR/" || true)"
 if [ -n "$_outside" ]; then
-    echo "!! the configuration test read files outside the package:" >&2
+    echo "!! Apache lists Include files outside the package:" >&2
     printf '%s\n' "$_outside" | sed 's/^/     /' >&2
     exit 1
 fi
-echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files read, all inside the package"
+echo "  $(printf '%s\n' "$_read" | wc -l | xargs) Include files listed by Apache's dump, all inside the package"
 
-# ⚠️ E la regola dei diagnostici deve stare in un file che Apache LEGGE
-# davvero. Il confronto per sottostringa che c'era prima cercava il nome di
-# httpd-vxost.conf dentro httpd.conf: diceva "incluso" anche per un nome
-# dentro un commento. Qui la domanda si fa ad Apache, che elenca i file letti.
+# La regola dei diagnostici deve stare in un file che Apache LEGGE all'avvio.
 #
-# ⚠️ Tre trappole trovate dalla revisione, tutte e tre chiuse qui.
+# Si chiede ad Apache con una prova positiva: una direttiva Error nel file, e
+# il configtest ORDINARIO deve fallire nominandola. Non si legge un testo, si
+# guarda un effetto.
 #
-# grep -qx con il percorso come MODELLO: il punto fra "vxost" e "conf" accetta
-# qualunque carattere, quindi un file "httpd-vxostXconf" incluso al posto del
-# nostro faceva dire di si'. Serve un confronto letterale.
-#
-# Il dump si ottiene con -D DUMP_INCLUDES: una configurazione che si
-# condiziona a QUEL define comparirebbe nel dump e non nell'avvio ordinario.
-# Se qualcuno scrive <IfDefine DUMP_INCLUDES> ci si ferma, perche' da qui non
-# si potrebbe piu' distinguere.
-#
-# E i percorsi si confrontano SCIOLTI: il dump stampa l'alias con cui il file
-# e' stato raggiunto, quindi un Include attraverso un collegamento lecito
-# veniva respinto.
-# ⚠️ La guardia era un grep su una riga sola, e il nono giro ha dimostrato
-# QUATTRO grafie di sintassi valida che la attraversavano (maiuscole,
-# virgolette, continuazione, variabile) piu' una regressione all'incontrario:
-# il semplice commento "# <IfDefine DUMP_INCLUDES>" fermava la build. Un testo
-# si legge come Apache lo legge, non a occhio.
-if ! python3 "$HERE/tools/dump-includes-neutro.py" "$MIRROR/etc"; then
+# ⚠️ Il file DEVE esserci. Prima il blocco stava dentro un "se esiste", e senza
+# httpd-vxost.conf il controllo veniva saltato in silenzio: il pacchetto
+# partiva con i diagnostici aperti e la build non diceva niente.
+_file="$MIRROR/etc/extra/httpd-vxost.conf"
+if [ ! -e "$_file" ]; then
+    echo "!! etc/extra/httpd-vxost.conf manca: la regola dei diagnostici non c'e'" >&2
     exit 1
 fi
 
-if [ -f "$MIRROR/etc/extra/httpd-vxost.conf" ]; then
-    # ⚠️ Qui non si legge piu' l'elenco del dump, che e' prodotto con -D
-    # DUMP_INCLUDES e quindi risponde a una configurazione leggermente diversa
-    # da quella dell'avvio. Si fa invece una PROVA POSITIVA: si mette nel file
-    # una direttiva che fa fallire il configtest ORDINARIO, e si guarda se
-    # fallisce davvero nominandola.
-    #
-    # Se fallisce, Apache quel file lo legge all'avvio: non c'e' grafia di
-    # IfDefine, alias o collegamento che possa ingannare la prova, perche' non
-    # si sta leggendo un testo, si sta guardando un effetto.
-    _file="$MIRROR/etc/extra/httpd-vxost.conf"
-    _sentinella="VXOST_SENTINELLA_$$"
-    cp "$_file" "$_file.prima" || exit 1
-    # ⚠️ rm prima di riscrivere: se il file fosse un hard link verso il
-    # payload, un >> finirebbe anche la'. Questa e' una prova, non una
-    # modifica al pacchetto.
-    rm -f "$_file" || exit 1
-    cp "$_file.prima" "$_file" || exit 1
-    printf '\nError "%s"\n' "$_sentinella" >> "$_file"
-
-    "$MIRROR/bin/httpd" -t -d "$MIRROR" -f "$MIRROR/etc/httpd.conf" -DSSL -DPHP \
-        > /tmp/configtest-sentinella.log 2>&1
-    _vista=1
-    grep -q "$_sentinella" /tmp/configtest-sentinella.log || _vista=0
-
-    # Il ripristino avviene comunque, anche se la prova e' andata male.
-    rm -f "$_file" || exit 1
-    mv "$_file.prima" "$_file" || exit 1
-
-    if [ "$_vista" = 1 ]; then
-        echo "  httpd-vxost.conf: Apache lo legge all'avvio ordinario, provato"
-    else
-        echo "!! httpd-vxost.conf non viene letto all'avvio ordinario:" >&2
-        echo "   la regola dei diagnostici non entrerebbe mai in gioco" >&2
+# ⚠️ Si scrive nel file che Apache aprira' davvero, cioe' nel BERSAGLIO se il
+# nome e' un collegamento. La versione di prima rimuoveva il nome e lo
+# ricreava come copia: un collegamento lecito si staccava, Apache leggeva
+# l'originale senza la sentinella, e un Include corretto veniva respinto.
+#
+# E il bersaglio deve stare dentro la copia della configurazione, confrontato
+# con il percorso REALE dello specchio: /tmp su macOS e' un collegamento a
+# /private/tmp, e confrontando un lato sciolto con uno no nessun file
+# risulterebbe mai dentro.
+_bersaglio="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$_file")" || exit 1
+_etc_vero="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$MIRROR/etc")" || exit 1
+case "$_bersaglio" in
+    "$_etc_vero"/*) ;;
+    *)
+        echo "!! httpd-vxost.conf porta fuori dalla copia della configurazione:" >&2
+        echo "   $_bersaglio" >&2
+        echo "   la prova non scrive fuori dallo specchio" >&2
         exit 1
-    fi
+        ;;
+esac
+
+_sentinella="VXOST_SENTINELLA_$$"
+_copia="$(mktemp "$MIRROR/.sentinella.XXXXXX")" || exit 1
+cp -p "$_bersaglio" "$_copia" || exit 1
+printf '\nError "%s"\n' "$_sentinella" >> "$_bersaglio" || exit 1
+
+# ⚠️ Il configtest DEVE fallire: e' la sentinella a farlo fallire. Con
+# "set -e" un comando che esce 1 fuori da un if ferma la build, e la prima
+# versione si fermava esattamente qui, cioe' nel caso in cui tutto era a
+# posto. Provata senza il contesto della shell, sembrava funzionare.
+_vista=0
+if "$MIRROR/bin/httpd" -t -d "$MIRROR" -f "$MIRROR/etc/httpd.conf" -DSSL -DPHP \
+        > /tmp/configtest-sentinella.log 2>&1; then
+    _vista=0
+elif grep -qF "$_sentinella" /tmp/configtest-sentinella.log; then
+    _vista=1
+fi
+
+# Il contenuto torna com'era SCRIVENDOLO nel bersaglio, non spostando un file
+# al suo posto: collegamenti e identita' restano quelli di prima. E si
+# controlla che sia tornato davvero, prima di procedere.
+cat "$_copia" > "$_bersaglio" || exit 1
+if ! cmp -s "$_copia" "$_bersaglio"; then
+    echo "!! httpd-vxost.conf non e' tornato com'era dopo la prova" >&2
+    exit 1
+fi
+rm -f "$_copia"
+
+if [ "$_vista" = 1 ]; then
+    echo "  httpd-vxost.conf: Apache lo legge all'avvio ordinario, provato"
+else
+    echo "!! httpd-vxost.conf non viene letto all'avvio ordinario:" >&2
+    echo "   la regola dei diagnostici non entrerebbe mai in gioco" >&2
+    tail -5 /tmp/configtest-sentinella.log >&2
+    exit 1
 fi
 
 # ⚠️ DUMP_INCLUDES elenca gli Include, e nient'altro: moduli, DocumentRoot,
