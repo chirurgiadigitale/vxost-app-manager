@@ -9,7 +9,7 @@
 #import "XPTimeEntry.h"
 #import "XPHistoryWindowController.h"
 
-@interface XPTimerSectionView ()
+@interface XPTimerSectionView () <NSMenuDelegate>
 
 /// Una riga per ogni sessione aperta: si lavora su più progetti insieme.
 @property (nonatomic, strong) NSStackView *runningStack;
@@ -88,6 +88,8 @@
 
     self.projectPicker = [[NSPopUpButton alloc] init];
     self.projectPicker.translatesAutoresizingMaskIntoConstraints = NO;
+    // Il menu si ricostruisce quando si apre: vedi menuNeedsUpdate:.
+    self.projectPicker.menu.delegate = self;
 
     self.taskField = [[NSTextField alloc] init];
     self.taskField.translatesAutoresizingMaskIntoConstraints = NO;
@@ -290,19 +292,51 @@
 
 #pragma mark - Azioni
 
-- (void)startFromPicker {
-    NSInteger index = self.projectPicker.indexOfSelectedItem;
-    NSArray<XPTrackableProject *> *projects = [[XPTracker shared] allProjects];
+/// La voce del menu che crea un progetto nuovo invece di sceglierne uno.
+static const NSInteger XPTimerNewProjectTag = 1;
 
-    // L'ultima voce del menu crea una voce nuova invece di sceglierne una.
-    if (index == (NSInteger)projects.count + 1) {   // +1 per il separatore
+/// Il progetto con questa chiave nell'elenco di ADESSO, o nil.
+static XPTrackableProject *XPTimerProjectForKey(NSString *key) {
+    if (![key isKindOfClass:[NSString class]]) return nil;
+    for (XPTrackableProject *project in [[XPTracker shared] allProjects]) {
+        if ([project.key isEqualToString:key]) return project;
+    }
+    return nil;
+}
+
+- (void)startFromPicker {
+    NSMenuItem *item = self.projectPicker.selectedItem;
+    if (item.tag == XPTimerNewProjectTag) {
         [self promptForCustomProject];
         return;
     }
-    if (index < 0 || index >= (NSInteger)projects.count) return;
 
-    [[XPTracker shared] startProject:projects[index] task:self.taskField.stringValue];
+    // ⚠️ Il progetto si prende dalla CHIAVE attaccata alla voce scelta, non
+    // dalla sua posizione. Prima si usava l'indice della voce dentro un elenco
+    // riletto al momento del clic, mentre il menu era stato costruito prima:
+    // bastava che nel frattempo una cartella di www/projects sparisse o
+    // comparisse, e le ore finivano su un altro progetto senza nessun avviso.
+    // Trovato da Davide il 16/09/2026 cancellando tre copie di un progetto.
+    XPTrackableProject *project = XPTimerProjectForKey(item.representedObject);
+    if (!project) {
+        // Il progetto scelto non c'e' piu' (cartella tolta mentre il menu era
+        // aperto): non si registra niente su un altro, si aggiorna l'elenco.
+        NSBeep();
+        [self rebuildProjectPicker];
+        return;
+    }
+
+    [[XPTracker shared] startProject:project task:self.taskField.stringValue];
     self.taskField.stringValue = @"";
+}
+
+/// ⚠️ L'elenco dei progetti viene dal disco, ma il menu si ricostruiva solo
+/// quando cambiava il time tracking. Una cartella aggiunta o tolta dal Finder
+/// non compariva finche' non si avviava o fermava un timer, mentre la
+/// dashboard, che rilegge la cartella a ogni pagina, la mostrava subito.
+/// Ricostruirlo nel momento in cui si apre costa una lettura della cartella.
+- (void)menuNeedsUpdate:(NSMenu *)menu {
+    if (menu == self.projectPicker.menu) [self rebuildProjectPicker];
 }
 
 - (void)promptForCustomProject {
@@ -321,9 +355,8 @@
         XPTrackableProject *project = [[XPTracker shared] addCustomProjectNamed:input.stringValue];
         [self refresh];
         if (project) {
-            NSArray<XPTrackableProject *> *projects = [[XPTracker shared] allProjects];
-            NSUInteger index = [projects indexOfObject:project];
-            if (index != NSNotFound) [self.projectPicker selectItemAtIndex:index];
+            NSInteger index = [self.projectPicker.menu indexOfItemWithRepresentedObject:project.key];
+            if (index >= 0) [self.projectPicker selectItemAtIndex:index];
         }
     }
 }
@@ -386,24 +419,32 @@
 }
 
 - (void)rebuildProjectPicker {
-    NSString *previous = self.projectPicker.titleOfSelectedItem;
-    [self.projectPicker removeAllItems];
+    id previous = self.projectPicker.selectedItem.representedObject;
+    NSMenu *menu = self.projectPicker.menu;
+    [menu removeAllItems];
 
+    // ⚠️ Voci costruite a mano, non addItemWithTitle:. Quel metodo TOGLIE una
+    // voce esistente con lo stesso titolo, e due virtual host possono avere
+    // lo stesso nome: il menu restava piu' corto dell'elenco dei progetti.
     XPTracker *tracker = [XPTracker shared];
     for (XPTrackableProject *project in [tracker allProjects]) {
-        NSString *title = project.name;
+        NSString *title = project.name ?: @"";
         // Un progetto già in corso resta nell'elenco ma si vede che lo è.
         if ([tracker currentEntryForProjectKey:project.key]) {
-            title = [NSString stringWithFormat:@"%@ ●", project.name];
+            title = [NSString stringWithFormat:@"%@ ●", title];
         }
-        [self.projectPicker addItemWithTitle:title];
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title action:nil keyEquivalent:@""];
+        item.representedObject = project.key;
+        [menu addItem:item];
     }
-    [self.projectPicker.menu addItem:[NSMenuItem separatorItem]];
-    [self.projectPicker addItemWithTitle:NSLocalizedString(@"timer.newProject", nil)];
+    [menu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *nuovo = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"timer.newProject", nil)
+                                                   action:nil keyEquivalent:@""];
+    nuovo.tag = XPTimerNewProjectTag;
+    [menu addItem:nuovo];
 
-    if (previous && [self.projectPicker itemWithTitle:previous]) {
-        [self.projectPicker selectItemWithTitle:previous];
-    }
+    NSInteger index = previous ? [menu indexOfItemWithRepresentedObject:previous] : -1;
+    [self.projectPicker selectItemAtIndex:index >= 0 ? index : 0];
 }
 
 - (void)rebuildEntriesForDay:(NSDate *)day {

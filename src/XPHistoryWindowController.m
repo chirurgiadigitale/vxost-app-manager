@@ -34,7 +34,6 @@
 @property (nonatomic, strong) XPButton *csvButton;
 /// Aggiunge a mano una sessione al giorno mostrato.
 @property (nonatomic, strong) XPButton *addButton;
-@property (nonatomic, strong) NSArray<NSString *> *reportProjectKeys;
 @end
 
 
@@ -321,21 +320,28 @@
     }
     [self.periodPicker selectItemAtIndex:MIN(period, self.periodPicker.numberOfItems - 1)];
 
-    NSString *previous = self.projectPicker.titleOfSelectedItem;
-    [self.projectPicker removeAllItems];
+    id previous = self.projectPicker.selectedItem.representedObject;
+    NSMenu *menu = self.projectPicker.menu;
+    [menu removeAllItems];
 
     // Prima voce: tutti i progetti. Le altre vengono dai progetti tracciabili.
-    NSMutableArray<NSString *> *keys = [NSMutableArray arrayWithObject:@""];
-    [self.projectPicker addItemWithTitle:NSLocalizedString(@"report.allProjects", nil)];
+    //
+    // ⚠️ La chiave sta sulla voce, non in un elenco parallelo letto per
+    // posizione. addItemWithTitle: toglie una voce con lo stesso titolo, e con
+    // due virtual host omonimi il menu restava piu' corto delle chiavi: il
+    // resoconto finiva calcolato sul progetto accanto.
+    NSMenuItem *tutti = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"report.allProjects", nil)
+                                                   action:nil keyEquivalent:@""];
+    [menu addItem:tutti];
     for (XPTrackableProject *project in [[XPTracker shared] allProjects]) {
-        [self.projectPicker addItemWithTitle:project.name];
-        [keys addObject:project.key];
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:project.name ?: @""
+                                                      action:nil keyEquivalent:@""];
+        item.representedObject = project.key;
+        [menu addItem:item];
     }
-    self.reportProjectKeys = keys;
 
-    if (previous && [self.projectPicker itemWithTitle:previous]) {
-        [self.projectPicker selectItemWithTitle:previous];
-    }
+    NSInteger index = previous ? [menu indexOfItemWithRepresentedObject:previous] : -1;
+    [self.projectPicker selectItemAtIndex:index >= 0 ? index : 0];
 
     self.clipboardButton.title = NSLocalizedString(@"report.copy", nil);
     self.csvButton.title = NSLocalizedString(@"report.csv", nil);
@@ -348,9 +354,8 @@
 
 /// nil quando è selezionato "tutti i progetti".
 - (NSString *)selectedProjectKey {
-    NSInteger index = self.projectPicker.indexOfSelectedItem;
-    if (index <= 0 || index >= (NSInteger)self.reportProjectKeys.count) return nil;
-    return self.reportProjectKeys[index];
+    id key = self.projectPicker.selectedItem.representedObject;
+    return [key isKindOfClass:[NSString class]] ? key : nil;
 }
 
 - (NSString *)selectedProjectName {
