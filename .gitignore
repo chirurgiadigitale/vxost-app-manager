@@ -16,13 +16,11 @@ dist/
 tools/forbidden.local.txt
 
 # Markdown documents: they stay local, outside the repository.
-# Two are kept for people arriving from outside: README.md, the official
-# documentation of the public project, and CONTRIBUTING.md, which holds the
-# rules for contributing. Everything else, working context included, stays on
-# disk.
+# One is kept for people arriving from outside: README.md, the official
+# documentation of the public project. The rules for contributing are in
+# CONTRIBUTING.txt. Everything else, working context included, stays on disk.
 *.md
 !README.md
-!CONTRIBUTING.md
 
 # Cache di Python: si rigenera a ogni build, non descrive il progetto.
 # Nel repository del sito era finita tracciata, ed erano 48 KB di binario che
