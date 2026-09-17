@@ -746,8 +746,18 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
     // di log che il pid non lo scrivono.
     //
     // Pid invariato: niente da attribuire, l'esito e' "non verificabile".
-    // Limite dichiarato: il riuso dello stesso numero di pid da parte di un
-    // processo diverso nello stesso intervallo.
+    // Limiti dichiarati:
+    // - il riuso dello stesso numero di pid da parte di un processo diverso
+    //   nello stesso intervallo;
+    // - ⚠️ due operazioni sulla configurazione nello stesso momento (quindicesimo
+    //   giro di Codex). Fra lo stop e lo start di restartapache un altro
+    //   tentativo puo' rimettere i file vecchi e avviare Apache: lo start di
+    //   questo trova quel processo, esce 0, pid e riga sono nuovi, e il
+    //   risultato e' VXOST_OK con la configurazione vecchia caricata. Nessuna
+    //   prova basata su pid e log lo distingue; servirebbe un lucchetto su tutta
+    //   l'operazione. Deciso da Davide il 17/09/2026: limite noto, non si
+    //   corregge ora. In pratica richiede due modifiche lanciate insieme
+    //   dall'app, o un riavvio a mano da terminale nello stesso istante.
     [block appendString:@"vxost_riga_del_pid() {\n"];
     [block appendString:@"    awk -v p=\"[pid $2]\" '/resuming normal operations/ && index($0, p) > 0 { u = $0 } END { print u }' \"$1\" 2>/dev/null\n"];
     [block appendString:@"}\n"];
