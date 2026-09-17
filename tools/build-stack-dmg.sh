@@ -101,6 +101,17 @@ to drop them on.
    Apple account. Open System Settings > Privacy & Security, scroll to
    the bottom, and press "Open anyway". Once only.
 
+UPDATING FROM AN EARLIER VERSION
+--------------------------------
+
+Your projects, databases and virtual hosts live inside the VXOST folder
+in Applications. Do NOT drag the new VXOST folder over the old one:
+Finder replaces the whole folder, and everything in it is deleted.
+
+Follow the steps at https://vxost.com/downloads/#updating instead.
+They keep the old installation aside until the new one works.
+
+
 If another local web or database server is already running on this Mac,
 stop it before starting VXOST: they both want port 80 and port 3306, and
 two servers on the same port give an
