@@ -717,34 +717,59 @@ import re, sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8", errors="replace").read()
 
-if "VXOST_SSL_DIR" in text:          # already patched, nothing to do
-    sys.exit(0)
-
 match = re.search(r"^HTTPD='(.*?)/bin/httpd", text, re.MULTILINE)
 if not match:
     sys.stderr.write("!! apachectl: no HTTPD line, cannot add the certificate step\n")
     sys.exit(1)
 prefix = match.group(1)
 
+# Idempotent: every earlier form of the block is removed first, then the
+# current one goes in. The first version looked for a marker (VXOST_SSL_DIR)
+# that no block ever contained, so on a source already patched it added a
+# second block and the old one kept making "stop" wait for the certificate
+# (fifteenth review). Known forms: the one between the markers below, and the
+# two unmarked ones of 16/09 (case "$ARGV" ... esac, and the loop ... fi).
+text = re.sub(r"\n?# >>> vxost certificate\n.*?# <<< vxost certificate\n", "\n",
+              text, flags=re.DOTALL)
+text = re.sub(r"\n?# Il certificato di questa macchina, se manca\..*?"
+              r"vxost-ssl-init' \|\| true[^\n]*\n(?:esac|fi)\n", "\n",
+              text, flags=re.DOTALL)
+if "vxost-ssl-init" in text:
+    # A form this script does not know: better to stop than to leave two.
+    sys.stderr.write("!! apachectl: unknown certificate block, remove it by hand\n")
+    sys.exit(1)
+
 block = f"""
+# >>> vxost certificate
 # Il certificato di questa macchina, se manca. Lo stesso script viene chiamato
 # dallo script vxost prima del suo controllo di sintassi: qui serve per
 # chiunque avvii Apache senza passare di li'. Non per fermarlo: il generatore
 # puo' aspettare fino a venti secondi un lucchetto, e uno stop non ha bisogno
 # di nessun certificato.
 #
-# Si decide sul VERBO, parola per parola, non sull'intera riga: lo script vxost
-# chiama "apachectl -k stop -DSSL -DPHP", che confrontata tutta insieme non e'
-# "stop" e aspettava il certificato per venti secondi (quattordicesimo giro).
-vxost_certificato=1
+# Si decide sul VERBO: la parola dopo -k, oppure il primo argomento che non e'
+# un'opzione. Le opzioni che prendono un valore (-f, -C, -c, -d, -D, -e, -E)
+# lo saltano, cosi' "-f stop -k start" non passa per uno stop.
+vxost_verbo=''
+vxost_salta=''
 for vxost_parola in "$@"; do
+    if [ -n "$vxost_salta" ]; then
+        if [ "$vxost_salta" = k ]; then vxost_verbo=$vxost_parola; break; fi
+        vxost_salta=''
+        continue
+    fi
     case "$vxost_parola" in
-        stop|graceful-stop|status|fullstatus) vxost_certificato=0 ;;
+        -k) vxost_salta=k ;;
+        -f|-C|-c|-d|-D|-e|-E) vxost_salta=valore ;;
+        -*) ;;
+        *) vxost_verbo=$vxost_parola; break ;;
     esac
 done
-if [ "$vxost_certificato" = 1 ]; then
-    '{prefix}/bin/vxost-ssl-init' || true
-fi
+case "$vxost_verbo" in
+    stop|graceful-stop|status|fullstatus) ;;
+    *) '{prefix}/bin/vxost-ssl-init' || true ;;
+esac
+# <<< vxost certificate
 """
 
 # After the envvars block, so the generated certificate is in place before any
