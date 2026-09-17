@@ -513,7 +513,24 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     [fm createDirectoryAtPath:directory withIntermediateDirectories:YES
                    attributes:nil error:NULL];
 
-    NSString *path = [directory stringByAppendingPathComponent:@"timesheet.json"];
+    return [directory stringByAppendingPathComponent:@"timesheet.json"];
+}
+
+/// Recupera lo storico dalla cartella del vecchio identificatore, se serve.
+///
+/// ⚠️ Si chiama SOLO da load, una volta, all'avvio. Stava dentro storagePath, e
+/// storagePath lo chiama anche save: il recupero veniva ritentato a ogni
+/// salvataggio. Il quindicesimo giro di Codex l'ha riprodotto: con il file
+/// corrente sparito mentre l'app era aperta e quello vecchio illeggibile, una
+/// pausa accendeva il blocco dei salvataggi con due sessioni gia' aperte, lo
+/// stop successivo cambiava solo la memoria, e al riavvio la sessione chiusa
+/// tornava aperta. Dopo l'avvio in memoria c'e' gia' tutto quello che c'era da
+/// recuperare: se il file sparisce, riscriverlo e' la cosa giusta.
+- (void)recoverLegacyStorageAtPath:(NSString *)path {
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,
+                                                         NSUserDomainMask, YES);
+    NSString *support = paths.firstObject;
+    NSFileManager *fm = [NSFileManager defaultManager];
 
     // ⚠️ Le ore registrate prima della rinomina stanno sotto il vecchio
     // identificatore del bundle, e senza questo passaggio l'app parte con lo
@@ -550,12 +567,16 @@ static NSTimeInterval SecondsSinceLastInput(void) {
             }
         }
     }
-    return path;
 }
 
 - (void)load {
     NSString *path = [self storagePath];
     NSFileManager *fm = [NSFileManager defaultManager];
+
+    // Con VXOST_TRACKER_STORE i test lavorano su un file loro: niente recupero.
+    if (NSProcessInfo.processInfo.environment[@"VXOST_TRACKER_STORE"].length == 0) {
+        [self recoverLegacyStorageAtPath:path];
+    }
 
     // Nessun file: primo avvio. È l'unico caso in cui "storico vuoto" è la
     // lettura giusta, e va distinto da tutti gli altri.

@@ -152,6 +152,12 @@ legacyfailtest:
 		tests/legacyfailtest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/legacyfailtest
 
+storagelatetest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/storagelatetest \
+		tests/storagelatetest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/storagelatetest
+
 legacytest:
 	@mkdir -p build
 	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/legacytest \

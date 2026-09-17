@@ -669,6 +669,19 @@
     XPTimeEntry *entry = [self entryWithIdentifier:sender.identifier];
     if (!entry) return;
 
+    // Lo storico non si puo' salvare: il tracker rifiuterebbe l'eliminazione,
+    // e senza questo avviso il clic sembrerebbe non fare niente.
+    if (![XPTracker shared].canRecord) {
+        NSAlert *blocked = [[NSAlert alloc] init];
+        blocked.alertStyle = NSAlertStyleWarning;
+        blocked.messageText = NSLocalizedString(@"tracker.unusable.title", nil);
+        blocked.informativeText = [NSString stringWithFormat:
+            NSLocalizedString(@"tracker.unusable.body", nil),
+            [XPTracker shared].storageProblemPath ?: @"—"];
+        [blocked beginSheetModalForWindow:self.window completionHandler:nil];
+        return;
+    }
+
     // ⚠️ Si chiede conferma perché non c'è un annulla: le ore cancellate non
     // si recuperano, e il pulsante sta a quattro punti da quello di modifica.
     NSAlert *alert = [[NSAlert alloc] init];
