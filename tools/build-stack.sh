@@ -1340,6 +1340,105 @@ text = sostituisci_funzione(text, "stopProFTPD", stop_proftpd, "vxostProcessIsOu
 
 text = sostituisci_funzione(text, "vxostOurPids", OUR_PIDS, "index() di awk")
 
+# 6b. stopMySQL diceva "not running." con MariaDB viva e in crash.
+#
+# ⚠️ Due difetti in uno, pagati il 17/09/2026 sul secondo Mac di Davide, dove
+# un MariaDB in crash e' stato rigenerato per due ore mentre il comando di
+# arresto rispondeva "not running." e usciva 0.
+#
+#   - La funzione decideva guardando il file pid (che porta il nome della
+#     macchina) e la porta 3306. Un mysqld che va in segfault all'avvio non
+#     ascolta nessuna porta e non scrive nessun pid: sembra fermo, e non lo e'.
+#   - bin/mysqld_safe apre con `trap '' 1 2 3 15`, quindi IGNORA il TERM. Finche'
+#     resta vivo rigenera mysqld dopo ogni arresto. Va fermato per primo, e
+#     l'unico segnale che non puo' intercettare e' KILL.
+#
+# ⛔ Il KILL vale per il supervisore, che e' uno script di shell senza dati
+#    aperti. A mysqld si manda sempre l'arresto ordinato: un database chiuso a
+#    randellate lascia tabelle da riparare.
+STOP_MYSQL = '''function stopMySQL() {
+\tprintf "VXOST: $($GETTEXT \'Stopping %s...\')" "MySQL"
+
+\t# Il supervisore per primo: mysqld_safe ignora TERM (trap \'\' 1 2 3 15) e
+\t# rigenera il database dopo ogni arresto. Fermarlo dopo non serve a niente.
+\tvxincerto=0
+\tif vxguardie=$(vxostOurPids mysqld_safe)
+\tthen
+\t\tfor vxg in $vxguardie
+\t\tdo
+\t\t\tkill -9 "$vxg" 2>/dev/null
+\t\tdone
+\telse
+\t\tvxincerto=1
+\tfi
+
+\t# Fermo vuol dire: nessun mysqld nostro, e la porta non risponde. Il file pid
+\t# non basta, il suo nome cambia con il nome del Mac.
+\tif vxfigli=$(vxostOurPids mysqld)
+\tthen
+\t\tif test -z "$vxfigli" && test $vxincerto -eq 0 && ! testport 3306
+\t\tthen
+\t\t\t$GETTEXT -s "not running."
+\t\t\treturn 0
+\t\tfi
+\telse
+\t\tvxincerto=1
+\tfi
+
+\tunset DYLD_LIBRARY_PATH
+\t$VXOST_ROOT/bin/mysql.server stop > /dev/null 2>&1
+
+\t# mysql.server torna con successo anche quando ha mandato il segnale a un pid
+\t# gia\' morto: l\'arresto si verifica sul processo e sulla porta.
+\tvxatteso=0
+\twhile test $vxatteso -lt 30
+\tdo
+\t\tif vxfigli=$(vxostOurPids mysqld)
+\t\tthen
+\t\t\tif test -z "$vxfigli" && ! testport 3306
+\t\t\tthen
+\t\t\t\t# ⚠️ Fermo adesso non basta se il supervisore non si e' potuto
+\t\t\t\t# guardare: quello rigenera il database un istante dopo.
+\t\t\t\tif test $vxincerto -eq 1
+\t\t\t\tthen
+\t\t\t\t\tbreak
+\t\t\t\tfi
+\t\t\t\t$GETTEXT -s "ok."
+\t\t\t\treturn 0
+\t\t\tfi
+\t\telse
+\t\t\tvxincerto=1
+\t\tfi
+\t\tsleep 1
+\t\tvxatteso=$((vxatteso + 1))
+\tdone
+
+\t# ⚠️ Non sapere non e\' un successo: si dice, e si esce con errore.
+\tif test $vxincerto -eq 1
+\tthen
+\t\t$GETTEXT -s "unverified."
+\t\techo "VXOST: " $($GETTEXT \'The process list cannot be read: whether MySQL is running is unknown.\')
+\t\treturn 1
+\tfi
+
+\t$GETTEXT -s "fail."
+\techo "VXOST: " $($GETTEXT \'MySQL is still listening on port 3306.\')
+
+\t# Il log porta il nome della macchina, e quel nome puo\' non combaciare:
+\t# se non c\'e\', si prende il piu\' recente invece di tacere.
+\tvxlog="$VXOST_ROOT/var/mysql/$(hostname).err"
+\ttest -f "$vxlog" || vxlog="$(ls -t "$VXOST_ROOT/var/mysql/"*.err 2>/dev/null | head -1)"
+\tif test -n "$vxlog" && test -f "$vxlog"
+\tthen
+\t\tprintf "$($GETTEXT -s \'Last 10 lines of \\"%s\\":\')\\n" "$vxlog"
+\t\ttail -n 10 "$vxlog"
+\tfi
+\treturn 1
+}
+'''
+
+text = sostituisci_funzione(text, "stopMySQL", STOP_MYSQL, "mysqld_safe ignora TERM")
+
 
 # 7. (R6) Gli esiti degli arresti tornavano a essere successi nei chiamanti.
 #    "exit $?" dopo un if si riferisce all'ultimo blocco condizionale, non
