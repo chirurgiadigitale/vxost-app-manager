@@ -1150,6 +1150,38 @@ OUR_PIDS = '''function vxostOurPids() {
 \treturn 0
 }
 '''
+# 6c. (28/09/2026) vxostOurPids confronta il nome dell'eseguibile, e per uno
+#     script l'eseguibile e' l'interprete: mysqld_safe in ps -o comm= si
+#     chiama /bin/sh. Cercato per nome non si trovava mai, e il supervisore
+#     restava vivo a rigenerare MariaDB mentre stopMySQL diceva di averlo
+#     fermato. Le prove precedenti passavano perche' usavano link simbolici,
+#     che ps mostra con il loro percorso: uno script vero no.
+#
+#     Uno script si riconosce dalla riga di comando: l'interprete e' una
+#     shell, e il primo argomento e' esattamente $VXOST_ROOT/bin/<nome>.
+#     Un `tail` o un editor aperti su quel file non sono il supervisore.
+OUR_SCRIPT_PIDS = '''function vxostOurScriptPids() {
+\tvxscript="$VXOST_ROOT/bin/$1"
+\tvxelenco=$(ps -axo pid=,command= 2>/dev/null) || return 1
+\ttest -n "$vxelenco" || return 1
+\tprintf '%s\\n' "$vxelenco" | awk -v vxs="$vxscript" '
+\t\t{
+\t\t\tif (match($0, /^[ \\t]*[0-9]+[ \\t]/) == 0) next
+\t\t\tvxp = $1
+\t\t\tvxcmd = substr($0, RSTART + RLENGTH)
+\t\t\tvxsp = index(vxcmd, " ")
+\t\t\tif (vxsp == 0) next
+\t\t\tvxi = substr(vxcmd, 1, vxsp - 1)
+\t\t\tsub(/^.*\\//, "", vxi)
+\t\t\tif (vxi != "sh" && vxi != "bash" && vxi != "dash" && vxi != "zsh") next
+\t\t\tvxresto = substr(vxcmd, vxsp + 1)
+\t\t\tif (index(vxresto, vxs) != 1) next
+\t\t\tvxdopo = substr(vxresto, length(vxs) + 1, 1)
+\t\t\tif (vxdopo == "" || vxdopo == " ") print vxp
+\t\t}' || return 1
+\treturn 0
+}
+'''
 AIUTANTI = '''
 # --- aggiunti da VXOST: identificare i propri processi ---------------------
 
@@ -1169,7 +1201,7 @@ function vxostProcessIsOurs() {
 \treturn 1
 }
 
-''' + OUR_PIDS + '\n'
+''' + OUR_PIDS + '\n' + OUR_SCRIPT_PIDS + '\n'
 
 if "vxostProcessIsOurs" not in text:
     inizio = text.find("function startProFTPD() {")
@@ -1234,7 +1266,20 @@ stop_apache = '''function stopApache() {
 			echo "VXOST: " $($GETTEXT 'No usable pid file and no way to list processes: whether Apache is running is unknown.')
 			return 1
 		fi
-		pid=$(echo "$elenco" | head -1)
+		# ⚠️ Il padre, non il primo dell'elenco. L'elenco segue l'ordine dei pid,
+		# e dopo un giro dei numeri il primo puo' essere un figlio: il TERM lo
+		# fa uscire, il padre ne crea un altro, e l'arresto sembrava riuscito.
+		# Il padre e' quello il cui genitore non e' un nostro httpd.
+		pid=""
+		for vxc in $elenco
+		do
+			vxpp=$(ps -o ppid= -p "$vxc" 2>/dev/null | tr -d ' ')
+			case " $(echo $elenco) " in
+				*" $vxpp "*) ;;
+				*) pid="$vxc"; break ;;
+			esac
+		done
+		test -n "$pid" || pid=$(echo "$elenco" | head -1)
 	fi
 
 	if test -z "$pid"
@@ -1255,22 +1300,51 @@ stop_apache = '''function stopApache() {
 	ctl=$?
 	kill -0 "$pid" 2>/dev/null && kill -TERM "$pid" 2>/dev/null
 
+	# Fermo vuol dire: nessun httpd nostro vivo, figli compresi. Il solo pid
+	# del padre non basta: dei figli rimasti tengono aperte le porte.
 	atteso=0
-	while test $atteso -lt 20 && kill -0 "$pid" 2>/dev/null
+	while test $atteso -lt 20
 	do
+		if ! rimasti=$(vxostOurPids httpd)
+		then
+			$GETTEXT -s "unverified."
+			echo "VXOST: " $($GETTEXT 'No usable pid file and no way to list processes: whether Apache is running is unknown.')
+			return 1
+		fi
+		if test -z "$rimasti"
+		then
+			$GETTEXT -s "ok."
+			return 0
+		fi
 		sleep 1
 		atteso=$((atteso + 1))
 	done
 
-	if kill -0 "$pid" 2>/dev/null
-	then
-		$GETTEXT -s "fail."
-		echo "httpd (pid $pid) is still running after 20 seconds (apachectl returned $ctl)."
-		return 1
-	fi
+	# ⚠️ Visto il 28/09/2026 su un Apache avviato al boot dal LaunchDaemon: il
+	# TERM arriva, kill esce 0, e il processo resta vivo senza scrivere una
+	# riga nel log, come quando il segnale e' bloccato nella maschera che il
+	# processo ha ereditato. KILL non si puo' bloccare. Apache non tiene dati
+	# aperti, quindi forzarlo e' sicuro, e si dice. A mysqld questo non si fa.
+	echo "httpd (pid $pid) is still running after 20 seconds (apachectl returned $ctl): forcing it."
+	for vxr in $rimasti
+	do
+		kill -9 "$vxr" 2>/dev/null
+	done
+	atteso=0
+	while test $atteso -lt 5
+	do
+		if rimasti=$(vxostOurPids httpd) && test -z "$rimasti"
+		then
+			$GETTEXT -s "ok (forced)."
+			return 0
+		fi
+		sleep 1
+		atteso=$((atteso + 1))
+	done
 
-	$GETTEXT -s "ok."
-	return 0
+	$GETTEXT -s "fail."
+	echo "httpd is still running even after KILL: $rimasti"
+	return 1
 }
 '''
 
@@ -1340,6 +1414,13 @@ text = sostituisci_funzione(text, "stopProFTPD", stop_proftpd, "vxostProcessIsOu
 
 text = sostituisci_funzione(text, "vxostOurPids", OUR_PIDS, "index() di awk")
 
+# Un'installazione patchata prima del 28/09 ha gli aiutanti ma non questo.
+if "function vxostOurScriptPids() {" not in text:
+    inizio = text.find("function vxostOurPids() {")
+    text = text[:inizio] + OUR_SCRIPT_PIDS + "\n" + text[inizio:]
+else:
+    text = sostituisci_funzione(text, "vxostOurScriptPids", OUR_SCRIPT_PIDS, "vxscript=")
+
 # 6b. stopMySQL diceva "not running." con MariaDB viva e in crash.
 #
 # ⚠️ Due difetti in uno, pagati il 17/09/2026 sul secondo Mac di Davide, dove
@@ -1362,7 +1443,8 @@ STOP_MYSQL = '''function stopMySQL() {
 \t# Il supervisore per primo: mysqld_safe ignora TERM (trap \'\' 1 2 3 15) e
 \t# rigenera il database dopo ogni arresto. Fermarlo dopo non serve a niente.
 \tvxincerto=0
-\tif vxguardie=$(vxostOurPids mysqld_safe)
+\t# ⚠️ Per riga di comando, non per nome: e' uno script, e in ps si chiama sh.
+\tif vxguardie=$(vxostOurScriptPids mysqld_safe)
 \tthen
 \t\tfor vxg in $vxguardie
 \t\tdo
@@ -1385,16 +1467,29 @@ STOP_MYSQL = '''function stopMySQL() {
 \t\tvxincerto=1
 \tfi
 
-\tunset DYLD_LIBRARY_PATH
-\t$VXOST_ROOT/bin/mysql.server stop > /dev/null 2>&1
-
-\t# mysql.server torna con successo anche quando ha mandato il segnale a un pid
-\t# gia\' morto: l\'arresto si verifica sul processo e sulla porta.
+\t# ⚠️ Non con mysql.server stop. Il suo su_kill esegue
+\t# `su - mysql -s /bin/sh -c kill`: il su di macOS non ha -s e la shell di
+\t# _mysql e\' /usr/bin/false, quindi il segnale non parte MAI. In cambio
+\t# conclude "not running" e cancella il file pid di un server vivo, e
+\t# l\'avvio successivo dice "Another MySQL daemon is already running".
+\t# Questo script gira come root: il TERM, che per mysqld e\' l\'arresto
+\t# ordinato come mysqladmin shutdown, lo manda direttamente.
+\t#
+\t# Si segnala ogni mysqld nostro che compare durante l\'attesa, una volta:
+\t# nel crash loop ne puo\' nascere uno fra il KILL al supervisore e qui.
+\tvxsegnalati=" "
 \tvxatteso=0
 \twhile test $vxatteso -lt 30
 \tdo
 \t\tif vxfigli=$(vxostOurPids mysqld)
 \t\tthen
+\t\t\tfor vxf in $vxfigli
+\t\t\tdo
+\t\t\t\tcase "$vxsegnalati" in
+\t\t\t\t\t*" $vxf "*) ;;
+\t\t\t\t\t*) kill -TERM "$vxf" 2>/dev/null; vxsegnalati="$vxsegnalati$vxf " ;;
+\t\t\t\tesac
+\t\t\tdone
 \t\t\tif test -z "$vxfigli" && ! testport 3306
 \t\t\tthen
 \t\t\t\t# ⚠️ Fermo adesso non basta se il supervisore non si e' potuto
