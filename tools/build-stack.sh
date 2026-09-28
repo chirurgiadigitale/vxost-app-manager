@@ -436,8 +436,12 @@ fi
 # che da' sicurezza senza darne.
 #
 # Qui le righe commentate si tolgono prima di cercare.
+# ⚠️ Un solo processo, niente pipe. Con set -o pipefail, "grep -v | grep -q"
+# falliva quando grep -q usciva alla prima riga trovata: il primo grep prendeva
+# SIGPIPE e la pipe risultava fallita. 48 volte su 50 sullo script di vxost
+# del 28/09, cresciuto con le correzioni: fino ad allora passava per fortuna.
 has_active() {
-    grep -v '^[[:space:]]*#' "$2" 2>/dev/null | grep -q -- "$1"
+    awk -v s="$1" '!/^[[:space:]]*#/ && index($0, s) { f = 1 } END { exit !f }' "$2" 2>/dev/null
 }
 
 step "Installing the certificate generator"
@@ -2212,9 +2216,9 @@ while IFS= read -r macho; do
 # guardano anche i file non eseguibili, perche' le .dylib e i .so non hanno il
 # bit di esecuzione e sono la meta' del problema.
 done < <(find "$PAYLOAD" -type f 2>/dev/null | while read -r f; do
-    file -b "$f" 2>/dev/null | grep -q "Mach-O" || continue
-    if otool -L "$f" 2>/dev/null | grep -q "$VECCHIA_RADICE" ||
-       otool -l "$f" 2>/dev/null | grep -A2 LC_RPATH | grep -q "$VECCHIA_RADICE"; then
+    file -b "$f" 2>/dev/null | grep "Mach-O" >/dev/null || continue
+    if otool -L "$f" 2>/dev/null | grep "$VECCHIA_RADICE" >/dev/null ||
+       otool -l "$f" 2>/dev/null | grep -A2 LC_RPATH | grep "$VECCHIA_RADICE" >/dev/null; then
         echo "$f"
     fi
 done || true)
@@ -2224,9 +2228,9 @@ echo "  $RISCRITTI binaries repointed"
 # dipendenze ne' fra gli rpath. Un conteggio, non un campione: e' l'unico
 # controllo che distingue "l'ho fatto" da "funziona".
 RESIDUI="$(find "$PAYLOAD" -type f 2>/dev/null | while read -r f; do
-    file -b "$f" 2>/dev/null | grep -q "Mach-O" || continue
-    if otool -L "$f" 2>/dev/null | grep -q "$VECCHIA_RADICE" ||
-       otool -l "$f" 2>/dev/null | grep -A2 LC_RPATH | grep -q "$VECCHIA_RADICE"; then
+    file -b "$f" 2>/dev/null | grep "Mach-O" >/dev/null || continue
+    if otool -L "$f" 2>/dev/null | grep "$VECCHIA_RADICE" >/dev/null ||
+       otool -l "$f" 2>/dev/null | grep -A2 LC_RPATH | grep "$VECCHIA_RADICE" >/dev/null; then
         echo "$f"
     fi
 done | wc -l | xargs || true)"
@@ -2369,7 +2373,7 @@ step "Signing the binaries"
 # non parte, e l'errore parla del modulo, non della firma.
 mach_o_files() {
     find "$PAYLOAD" -type f 2>/dev/null | while read -r f; do
-        file "$f" 2>/dev/null | grep -q "Mach-O" && echo "$f"
+        file "$f" 2>/dev/null | grep "Mach-O" >/dev/null && echo "$f"
     done
 }
 
@@ -2609,7 +2613,7 @@ step "Checking no private key got in"
 # era una scelta: composer e la parte HTTP di phpMyAdmin lo usano.
 LEAKED="$( {
     find "$STAGE" -type f -size -100k -not -name "*.pem" 2>/dev/null | while IFS= read -r f; do
-        head -c 4096 "$f" 2>/dev/null | grep -qE '^-----BEGIN [A-Z ]*PRIVATE KEY-----' && echo "$f"
+        head -c 4096 "$f" 2>/dev/null | grep -E '^-----BEGIN [A-Z ]*PRIVATE KEY-----' >/dev/null && echo "$f"
     done
     find "$STAGE" -type f \( -name "*.key" -o -name "*.p12" -o -name "*.pfx" -o -name "*.der" \) 2>/dev/null
     find "$STAGE" -type f -name "*.pem" 2>/dev/null | while IFS= read -r f; do
