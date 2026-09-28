@@ -63,9 +63,12 @@
 
     XPTimeEntry *entry = [[XPTimeEntry alloc] init];
     if ([dictionary[@"id"] isKindOfClass:[NSString class]]) entry.identifier = dictionary[@"id"];
-    entry.projectKey  = dictionary[@"projectKey"];
-    entry.projectName = dictionary[@"projectName"];
-    entry.task        = dictionary[@"task"];
+    // Solo testo: un numero al posto del nome faceva cadere l'app al primo
+    // confronto. Lo storico lo controlla gia' prima; questa e' la seconda rete.
+    id key = dictionary[@"projectKey"], name = dictionary[@"projectName"], task = dictionary[@"task"];
+    entry.projectKey  = [key isKindOfClass:[NSString class]]  ? key  : nil;
+    entry.projectName = [name isKindOfClass:[NSString class]] ? name : nil;
+    entry.task        = [task isKindOfClass:[NSString class]] ? task : nil;
     entry.startDate   = [NSDate dateWithTimeIntervalSince1970:start.doubleValue];
 
     NSNumber *end = dictionary[@"end"];

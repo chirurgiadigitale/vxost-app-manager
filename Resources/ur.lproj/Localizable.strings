@@ -38,6 +38,9 @@
 
 "btn.cancel" = "منسوخ";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "بند کریں";
+
 "btn.folder" = "فولڈر";
 
 "btn.more" = "مزید…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "جاری رکھیں";
 
 "btn.quit" = "باہر نکلیں";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "پھر بھی بند کریں";
 
 "btn.restart" = "دوبارہ شروع";
 
@@ -568,13 +574,19 @@
 "tool.security" = "سیکیورٹی جانچ";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST آپ کے گھنٹے محفوظ نہیں کر سکا، اس لیے جو آپ دیکھ رہے ہیں وہ ابھی ڈسک پر نہیں ہے۔ ہر تبدیلی پر دوبارہ کوشش ہوگی، اور کامیاب ہوتے ہی یہ انتباہ غائب ہو جائے گا۔ دیکھیں کہ ڈسک پر جگہ خالی ہے اور یہ فائل لکھی جا سکتی ہے:\n%@";
+"tracker.notice.savefailed.body" = "VXOST آپ کے گھنٹے محفوظ نہیں کر سکا، اس لیے جو آپ دیکھ رہے ہیں وہ ابھی ڈسک پر نہیں ہے۔ ہر تبدیلی پر دوبارہ کوشش ہوگی، اور بند ہونے سے پہلے آپ سے پوچھا جائے گا، تاکہ آپ کے علم کے بغیر کچھ ضائع نہ ہو۔ دیکھیں کہ ڈسک پر جگہ خالی ہے اور یہ فائل لکھی جا سکتی ہے:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "آپ کے گھنٹوں کا ریکارڈ پڑھا نہیں جا سکا، اس لیے VXOST نے اسے مٹانے کے بجائے الگ رکھ دیا اور نیا شروع کیا۔ پہلے کے گھنٹے ضائع نہیں ہوئے: وہ اس فائل میں ہیں، جسے کسی بھی ٹیکسٹ ایڈیٹر سے کھولا جا سکتا ہے:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "آپ کے گھنٹوں کو دیکھنے کی ضرورت ہے";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST نے دوبارہ کوشش کی اور اب بھی یہ فائل نہیں لکھ سکتا۔ اگر آپ ابھی بند کریں تو آخری کامیاب محفوظ کرنے کے بعد درج کیے گئے گھنٹے ضائع ہو جائیں گے:\n%@\n\nڈسک پر جگہ خالی کریں یا فائل کی اجازتیں درست کریں، پھر دوبارہ بند کریں۔";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "آپ کے تازہ گھنٹے محفوظ نہیں ہیں";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST آپ کا موجودہ ٹائم شیٹ نہیں پڑھ سکتا، اس لیے نئے گھنٹے درج نہیں کرے گا: ایپ بند ہونے پر وہ ضائع ہو جاتے۔ موجودہ گھنٹوں میں کوئی تبدیلی نہیں کی گئی۔\n\nاس فائل کی اجازتیں چیک کریں، پھر VXOST دوبارہ کھولیں:\n%@";

@@ -45,7 +45,11 @@ int main(void) { @autoreleasepool {
     setenv("VXOST_TRACKER_STORE", path.fileSystemRepresentation, 1);
 
     for (NSString *contenuto in @[@"{\"entries\":\"x\"}", @"{\"open\":{\"a\":1}}",
-                                  @"{\"customProjects\":7}", @"{\"entries\":["]) {
+                                  @"{\"customProjects\":7}", @"{\"entries\":[",
+                                  // Un livello piu' giu': un campo di testo che non e' testo
+                                  // faceva cadere l'app al primo calcolo dei totali.
+                                  @"{\"entries\":[{\"start\":1000,\"end\":2000,\"projectKey\":5}]}",
+                                  @"{\"open\":[{\"start\":1000,\"task\":[1]}]}"]) {
         printf("\n\033[1mStorico %s\033[0m\n", contenuto.UTF8String);
         [fm removeItemAtPath:dir error:NULL];
         [fm createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:NULL];
@@ -63,7 +67,21 @@ int main(void) { @autoreleasepool {
         check(parte.count == 1 && [t.storageNoticePath isEqualToString:parte.firstObject],
               @"e dice dove sta il file");
         check(t.canRecord, @"si puo' continuare a registrare");
+        BOOL cade = NO;
+        @try { [t totalForProjectKey:@"custom:prova" onDay:[NSDate dateWithTimeIntervalSince1970:1500]]; }
+        @catch (NSException *e) { cade = YES; }
+        check(!cade, @"i totali si calcolano senza cadere");
     }
+
+    printf("\n\033[1mUn null dove ci sarebbe un elenco vuoto\033[0m\n");
+    [fm removeItemAtPath:dir error:NULL];
+    [fm createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:NULL];
+    [@"{\"entries\":[{\"start\":1000,\"end\":2000,\"projectKey\":\"custom:prova\",\"projectName\":\"prova\"}],\"open\":null}"
+        writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    XPTracker *n = [[XPTracker alloc] init];
+    check(n.storageNotice == XPStorageNoticeNone, @"non e' un file rotto: niente avviso");
+    check(messiDaParte(path).count == 0, @"e non viene messo da parte");
+    check([n entriesForDay:[NSDate dateWithTimeIntervalSince1970:1500]].count == 1, @"la sessione c'e'");
 
     printf("\n\033[1mIl salvataggio fallisce a sessione avviata\033[0m\n");
     [fm removeItemAtPath:dir error:NULL];
@@ -82,10 +100,13 @@ int main(void) { @autoreleasepool {
     check(avvisi == 1, @"con una notifica");
     [t pauseEntry:[t currentEntryForProjectKey:@"custom:prova"]];
     check(avvisi == 1, @"una volta sola, non a ogni tentativo");
+    // Alla chiusura l'app chiede un ultimo salvataggio: deve sapere com'e' andato.
+    check(![t saveNow], @"saveNow dice che il salvataggio non e' riuscito");
 
     chmod(dir.fileSystemRepresentation, 0755);          // il disco torna a posto
     [t resumeEntry:[t currentEntryForProjectKey:@"custom:prova"]];
     check(t.storageNotice == XPStorageNoticeNone, @"al primo salvataggio riuscito l'avviso sparisce");
+    check([t saveNow], @"e saveNow, adesso, dice che e' riuscito");
     check([fm fileExistsAtPath:path], @"e le ore sono sul disco");
     XPTracker *r = [[XPTracker alloc] init];
     check([r currentEntryForProjectKey:@"custom:prova"] != nil, @"al riavvio la sessione c'e'");

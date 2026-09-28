@@ -20,6 +20,8 @@
 
 @interface XPAppDelegate : NSObject <NSApplicationDelegate>
 @property (nonatomic, strong) XPStatusController *statusController;
+/// Un avviso sullo storico e' gia' a video: non se ne apre un secondo.
+@property (nonatomic) BOOL storageAlertOnScreen;
 @end
 
 @implementation XPAppDelegate
@@ -64,6 +66,15 @@
 /// problema; qui si mostra, senza bloccare niente: si puo' continuare a
 /// lavorare, ma chi guarda deve sapere dove sono le ore.
 - (void)trackerStorageNotice:(NSNotification *)note {
+    // ⚠️ Mai dentro la notifica. Arriva da save, che gira dentro un clic, un
+    // timer o il pannello della barra dei menu: un ciclo modale li' sospende
+    // l'azione a meta' e lascia l'interfaccia indietro. Si mostra al giro
+    // successivo del ciclo principale, e una volta sola.
+    if (note) {
+        dispatch_async(dispatch_get_main_queue(), ^{ [self trackerStorageNotice:nil]; });
+        return;
+    }
+    if (self.storageAlertOnScreen) return;
     XPTracker *tracker = [XPTracker shared];
     NSString *key = nil;
     switch (tracker.storageNotice) {
@@ -76,7 +87,29 @@
     alert.messageText = NSLocalizedString(@"tracker.notice.title", nil);
     alert.informativeText = [NSString stringWithFormat:NSLocalizedString(key, nil),
                              tracker.storageNoticePath ?: @"—"];
+    self.storageAlertOnScreen = YES;
+    [NSApp activateIgnoringOtherApps:YES];
     [alert runModal];
+    self.storageAlertOnScreen = NO;
+}
+
+/// ⚠️ Con un salvataggio che fallisce, le ore stanno solo in memoria:
+/// chiudere l'app le perde. Si ritenta, e se non va si chiede.
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
+    XPTracker *tracker = [XPTracker shared];
+    if (tracker.storageNotice != XPStorageNoticeSaveFailed || [tracker saveNow]) {
+        return NSTerminateNow;
+    }
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.alertStyle = NSAlertStyleCritical;
+    alert.messageText = NSLocalizedString(@"tracker.quit.title", nil);
+    alert.informativeText = [NSString stringWithFormat:NSLocalizedString(@"tracker.quit.body", nil),
+                             tracker.storageNoticePath ?: @"—"];
+    // Il pulsante predefinito e' quello che non perde niente.
+    [alert addButtonWithTitle:NSLocalizedString(@"btn.cancel", nil)];
+    [alert addButtonWithTitle:NSLocalizedString(@"btn.quitAnyway", nil)];
+    [NSApp activateIgnoringOtherApps:YES];
+    return [alert runModal] == NSAlertSecondButtonReturn ? NSTerminateNow : NSTerminateCancel;
 }
 
 /// Clic sull'icona nel Dock ad app già avviata: la finestra torna in primo

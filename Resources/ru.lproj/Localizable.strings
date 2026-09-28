@@ -38,6 +38,9 @@
 
 "btn.cancel" = "Отмена";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "Закрыть";
+
 "btn.folder" = "Папка";
 
 "btn.more" = "Ещё…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "Продолжить";
 
 "btn.quit" = "Выход";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "Всё равно выйти";
 
 "btn.restart" = "Перезапустить";
 
@@ -568,13 +574,19 @@
 "tool.security" = "Проверка безопасности";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST не удалось сохранить часы, поэтому то, что вы видите, ещё не на диске. Попытка повторится при каждом изменении, и это предупреждение исчезнет, как только сохранение удастся. Проверьте, есть ли свободное место на диске и можно ли записать этот файл:\n%@";
+"tracker.notice.savefailed.body" = "VXOST не удалось сохранить часы, поэтому то, что вы видите, ещё не на диске. Попытка повторится при каждом изменении, а перед выходом программа спросит вас, чтобы ничего не потерялось незаметно. Проверьте, есть ли свободное место на диске и можно ли записать этот файл:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "Не удалось прочитать журнал часов, поэтому VXOST отложил его, а не перезаписал, и начал новый. Прежние часы не потеряны: они в этом файле, его можно открыть любым текстовым редактором:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "Нужно проверить ваши часы";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST попробовал ещё раз и всё равно не может записать этот файл. Если выйти сейчас, часы, записанные после последнего успешного сохранения, будут потеряны:\n%@\n\nОсвободите место на диске или исправьте права доступа к файлу, затем выйдите снова.";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "Последние часы не сохранены";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST не может прочитать журнал часов, поэтому не записывает новые: они пропали бы при закрытии приложения. Уже записанные часы не изменены.\n\nПроверьте права доступа к этому файлу и снова откройте VXOST:\n%@";

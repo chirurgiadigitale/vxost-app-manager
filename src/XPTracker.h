@@ -61,6 +61,10 @@ typedef NS_ENUM(NSInteger, XPStorageNotice) {
 /// Il file da guardare: quello messo da parte, o quello non salvato.
 @property (nonatomic, readonly, copy) NSString *storageNoticePath;
 
+/// Salva adesso e dice se e' riuscito. Serve alla chiusura dell'app: con un
+/// salvataggio che fallisce, uscire vuol dire perdere le ore in memoria.
+- (BOOL)saveNow;
+
 #pragma mark - Sessioni in corso
 //
 // Si può lavorare su più progetti nello stesso momento, quindi il tracker

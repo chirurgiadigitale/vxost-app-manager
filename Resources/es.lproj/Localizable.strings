@@ -38,6 +38,9 @@
 
 "btn.cancel" = "Cancelar";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "Cerrar";
+
 "btn.folder" = "Carpeta";
 
 "btn.more" = "Más…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "Continuar";
 
 "btn.quit" = "Salir";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "Salir de todos modos";
 
 "btn.restart" = "Reiniciar";
 
@@ -568,13 +574,19 @@
 "tool.security" = "Comprobación de seguridad";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST no pudo guardar tus horas, así que lo que ves aún no está en el disco. Lo intentará de nuevo con cada cambio, y este aviso desaparecerá en cuanto se guarde. Comprueba que el disco tenga espacio libre y que este archivo se pueda escribir:\n%@";
+"tracker.notice.savefailed.body" = "VXOST no pudo guardar tus horas, así que lo que ves aún no está en el disco. Lo intentará de nuevo con cada cambio y, antes de cerrarse, te preguntará, para que nada se pierda sin que lo sepas. Comprueba que el disco tenga espacio libre y que este archivo se pueda escribir:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "No se pudo leer tu registro de horas, así que VXOST lo apartó en lugar de sobrescribirlo y empezó uno nuevo. Tus horas anteriores no se han perdido: están en este archivo, que puedes abrir con cualquier editor de texto:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "Tus horas necesitan una revisión";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST lo ha intentado de nuevo y sigue sin poder escribir este archivo. Si sales ahora, se perderán las horas registradas desde el último guardado correcto:\n%@\n\nLibera espacio en el disco o corrige los permisos del archivo y vuelve a salir.";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "Tus últimas horas no están guardadas";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST no puede leer tu registro de horas, así que no registrará horas nuevas: se perderían al cerrar la app. Tus horas existentes no se han modificado.\n\nRevisa los permisos de este archivo y vuelve a abrir VXOST:\n%@";

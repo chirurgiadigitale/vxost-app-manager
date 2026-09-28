@@ -13,6 +13,7 @@
 #import "XPDatabase.h"
 #import "XPPhpVersion.h"
 #import "XPPaths.h"
+#import "XPExposure.h"
 
 /// I metodi che il wizard usa e che l'intestazione non pubblica.
 @interface XPActions (Test)
@@ -124,8 +125,22 @@ int main(void) { @autoreleasepool {
     // test: chiusa (il pacchetto dal 11/09) scrive "Listen 127.0.0.1:4321",
     // aperta "Listen 4321". Il test pretendeva la seconda e falliva su ogni
     // Mac installato come si deve.
-    check([plain containsString:@"Listen 4321"] ||
-          [plain containsString:@"Listen 127.0.0.1:4321"], @"apre la porta in httpd.conf");
+    //
+    // ⚠️ Ma non "l'una o l'altra": con l'OR, un'installazione chiusa che
+    // scrivesse la Listen aperta, cioe' la regressione che espone la porta
+    // alla rete, passava. Si pretende la forma che vale per QUESTA
+    // installazione.
+    NSString *attesa = [XPExposure listenDirectiveForPort:4321 scope:[XPExposure currentScope]];
+    // La riga sta da sola nell'heredoc: "Listen 4321" non deve poter passare
+    // perche' e' contenuta in "Listen 127.0.0.1:4321" o viceversa.
+    check([plain containsString:[NSString stringWithFormat:@"\n%@\n", attesa]],
+          [NSString stringWithFormat:@"apre la porta in httpd.conf come %@", attesa]);
+
+    // E la regola stessa, per ogni esposizione.
+    check([[XPExposure listenDirectiveForPort:4321 scope:XPExposureScopeThisMac]
+            isEqualToString:@"Listen 127.0.0.1:4321"], @"questo Mac: solo 127.0.0.1");
+    check([[XPExposure listenDirectiveForPort:4321 scope:XPExposureScopeLocalNetwork]
+            isEqualToString:@"Listen 4321"], @"rete locale: tutte le interfacce");
     check([plain containsString:@"<VirtualHost *:4321>"], @"scrive il blocco");
 
     NSString *described = [actions privilegedScriptForProject:@"demo"

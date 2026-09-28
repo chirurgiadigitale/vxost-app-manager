@@ -33,8 +33,11 @@ NSString *XPUnverifiedMessage(NSString *output) {
         if (!dentro || t.length == 0 || [t hasPrefix:@"VXOST_"]) continue;
         [righe addObject:t];
     }
+    // Senza la riga NOTE: si dice lo stesso cosa e' successo. Il ripiego era
+    // "operazione fallita", in ambra accanto a un progetto creato: il testo
+    // diceva una cosa e il colore un'altra.
     return righe.count ? [righe componentsJoinedByString:@" "]
-                       : NSLocalizedString(@"msg.failed", nil);
+                       : @"Apache is running, but the reload could not be verified. Open the site before relying on it.";
 }
 
 @implementation XPActions

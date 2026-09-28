@@ -608,9 +608,33 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     // controllo sul dizionario e poi faceva cadere l'app nel for qui sotto,
     // a ogni avvio, finche' qualcuno non toccava il file a mano. Una forma
     // sbagliata si tratta come un file rotto.
+    //
+    // ⚠️ E un livello piu' giu': "projectKey": 5 passava, e l'app cadeva al
+    // primo calcolo dei totali. Scartare la sola sessione sbagliata non va
+    // bene: al primo salvataggio sparirebbe dal disco senza che nessuno lo
+    // sappia. Il file intero si mette da parte, e lo si dice.
+    //
+    // null vale assente: {"open": null} e' uno storico sano.
     BOOL forma = [root isKindOfClass:[NSDictionary class]];
+    if (forma) {
+        NSMutableDictionary *pulito = [root mutableCopy];
+        for (NSString *chiave in root) {
+            if ([root[chiave] isKindOfClass:[NSNull class]]) [pulito removeObjectForKey:chiave];
+        }
+        root = pulito;
+    }
     for (NSString *chiave in @[@"entries", @"customProjects", @"open"]) {
         if (forma && root[chiave] && ![root[chiave] isKindOfClass:[NSArray class]]) forma = NO;
+    }
+    for (NSString *chiave in @[@"entries", @"open"]) {
+        for (id raw in (forma ? root[chiave] : nil)) {
+            if (![raw isKindOfClass:[NSDictionary class]]) continue;   // la scarta gia' entryFromDictionary
+            for (NSString *campo in @[@"projectKey", @"projectName", @"task", @"id"]) {
+                id valore = raw[campo];
+                if (valore && ![valore isKindOfClass:[NSNull class]] &&
+                    ![valore isKindOfClass:[NSString class]]) forma = NO;
+            }
+        }
     }
     if (!forma) {
         // JSON rotto: si mette da parte con la data, invece di lasciarlo
@@ -661,7 +685,12 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     if (legacy && legacy.isRunning) [self.openEntries addObject:legacy];
 }
 
-- (void)save {
+- (BOOL)saveNow {
+    return [self save];
+}
+
+/// YES se quello che c'e' in memoria e' sul disco.
+- (BOOL)save {
     NSMutableArray *entries = [NSMutableArray array];
     for (XPTimeEntry *entry in self.entries) {
         [entries addObject:[entry dictionaryRepresentation]];
@@ -687,7 +716,9 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     // la perdita invece di limitarla.
     if (_storageUnusable) {
         NSLog(@"VXOST: salvataggio saltato, lo storico su disco non è leggibile.");
-        return;
+        // Con il blocco acceso ogni modifica e' rifiutata: in memoria c'e'
+        // quello che c'era sul disco, e non c'e' niente da perdere.
+        return YES;
     }
 
     NSError *error = nil;
@@ -697,7 +728,7 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     if (!data) {
         NSLog(@"VXOST: le ore non si riescono a convertire in JSON (%@). "
               @"Niente è stato scritto.", error.localizedDescription);
-        return;
+        return NO;
     }
 
     // Scrittura atomica: un'interruzione a metà lascerebbe il file dei tempi
@@ -715,13 +746,14 @@ static NSTimeInterval SecondsSinceLastInput(void) {
         // salvataggio puo' riuscire (disco liberato, volume rimontato). Ma
         // finche' non riesce, chi guarda la finestra deve saperlo.
         [self announceStorageNotice:XPStorageNoticeSaveFailed path:target];
-        return;
+        return NO;
     }
     if (_storageNotice == XPStorageNoticeSaveFailed) {
         _storageNotice = XPStorageNoticeNone;
         _storageNoticePath = nil;
         [self notifyChange];
     }
+    return YES;
 }
 
 /// Un avviso per problema: annunciato una volta, non a ogni tentativo.

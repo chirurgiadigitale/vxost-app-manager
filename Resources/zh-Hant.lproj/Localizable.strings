@@ -38,6 +38,9 @@
 
 "btn.cancel" = "取消";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "關閉";
+
 "btn.folder" = "資料夾";
 
 "btn.more" = "更多…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "繼續";
 
 "btn.quit" = "結束";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "仍然結束";
 
 "btn.restart" = "重新啟動";
 
@@ -568,13 +574,19 @@
 "tool.security" = "安全檢查";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST 無法儲存你的工時，因此你看到的內容還沒有寫入磁碟。每次修改時都會重試，儲存成功後此警告會立即消失。請檢查磁碟是否有可用空間，以及此檔案是否可寫入：\n%@";
+"tracker.notice.savefailed.body" = "VXOST 無法儲存你的工時，因此你看到的內容還沒有寫入磁碟。每次修改時都會重試，結束前也會先詢問你，不會在你不知情的情況下遺失任何內容。請檢查磁碟是否有可用空間，以及此檔案是否可寫入：\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "無法讀取你的工時紀錄，因此 VXOST 沒有覆寫它，而是將其移到一旁並開始了新的紀錄。之前的工時沒有遺失：它們在這個檔案中，可以用任何文字編輯器開啟：\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "需要檢查你的工時";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST 再次嘗試，仍然無法寫入此檔案。如果現在結束，上次成功儲存之後記錄的工時將會遺失：\n%@\n\n請釋放磁碟空間或修正檔案權限，然後再結束。";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "最近的工時尚未儲存";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST 無法讀取現有的工時紀錄，因此不會記錄新的工時：結束 App 時它們會遺失。現有工時沒有被更改。\n\n請檢查此檔案的權限，然後重新開啟 VXOST：\n%@";

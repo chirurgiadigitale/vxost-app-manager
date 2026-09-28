@@ -38,6 +38,9 @@
 
 "btn.cancel" = "İptal";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "Kapat";
+
 "btn.folder" = "Klasör";
 
 "btn.more" = "Daha fazla…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "Devam et";
 
 "btn.quit" = "Çık";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "Yine de çık";
 
 "btn.restart" = "Yeniden başlat";
 
@@ -568,13 +574,19 @@
 "tool.security" = "Güvenlik denetimi";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST saatlerinizi kaydedemedi, yani gördükleriniz henüz diskte değil. Her değişiklikte yeniden deneyecek ve bir kayıt başarılı olur olmaz bu uyarı kaybolacak. Diskte boş alan olduğunu ve bu dosyaya yazılabildiğini kontrol edin:\n%@";
+"tracker.notice.savefailed.body" = "VXOST saatlerinizi kaydedemedi, yani gördükleriniz henüz diskte değil. Her değişiklikte yeniden deneyecek ve kapanmadan önce size soracak, böylece haberiniz olmadan hiçbir şey kaybolmaz. Diskte boş alan olduğunu ve bu dosyaya yazılabildiğini kontrol edin:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "Saat kaydınız okunamadı, bu yüzden VXOST onu üzerine yazmak yerine kenara aldı ve yenisini başlattı. Önceki saatleriniz kaybolmadı: herhangi bir metin düzenleyiciyle açabileceğiniz bu dosyadalar:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "Saatlerinizin kontrol edilmesi gerekiyor";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST bir kez daha denedi ve bu dosyaya hâlâ yazamıyor. Şimdi çıkarsanız, son başarılı kayıttan sonra kaydedilen saatler kaybolur:\n%@\n\nDiskte yer açın veya dosyanın izinlerini düzeltin, sonra yeniden çıkın.";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "Son saatleriniz kaydedilmedi";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST mevcut saat kaydını okuyamıyor, bu yüzden yeni saat kaydetmiyor: uygulama kapanınca kaybolurlardı. Mevcut saatleriniz değiştirilmedi.\n\nBu dosyanın izinlerini kontrol edin, ardından VXOST'u yeniden açın:\n%@";

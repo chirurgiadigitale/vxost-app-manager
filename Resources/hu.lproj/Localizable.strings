@@ -38,6 +38,9 @@
 
 "btn.cancel" = "Mégse";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "Bezárás";
+
 "btn.folder" = "Mappa";
 
 "btn.more" = "Továbbiak…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "Folytatás";
 
 "btn.quit" = "Kilépés";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "Kilépés mégis";
 
 "btn.restart" = "Újraindítás";
 
@@ -568,13 +574,19 @@
 "tool.security" = "Biztonsági ellenőrzés";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "A VXOST nem tudta menteni az óráidat, így amit látsz, még nincs a lemezen. Minden módosításnál újra próbálkozik, és ez a figyelmeztetés eltűnik, amint egy mentés sikerül. Ellenőrizd, hogy van-e szabad hely a lemezen, és hogy ez a fájl írható-e:\n%@";
+"tracker.notice.savefailed.body" = "A VXOST nem tudta menteni az óráidat, így amit látsz, még nincs a lemezen. Minden módosításnál újra próbálkozik, és kilépés előtt rákérdez, hogy semmi ne vesszen el a tudtod nélkül. Ellenőrizd, hogy van-e szabad hely a lemezen, és hogy ez a fájl írható-e:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "Az óranyilvántartást nem sikerült beolvasni, ezért a VXOST félretette ahelyett, hogy felülírta volna, és újat kezdett. A korábbi óráid nem vesztek el: ebben a fájlban vannak, amely bármely szövegszerkesztővel megnyitható:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "Az óráidat érdemes ellenőrizni";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "A VXOST újra megpróbálta, de továbbra sem tudja írni ezt a fájlt. Ha most kilépsz, az utolsó sikeres mentés óta rögzített órák elvesznek:\n%@\n\nSzabadíts fel helyet a lemezen, vagy javítsd a fájl jogosultságait, majd lépj ki újra.";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "A legutóbbi óráid nincsenek mentve";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "A VXOST nem tudja beolvasni a meglévő óranyilvántartást, ezért nem rögzít új órákat: az alkalmazás bezárásakor elvesznének. A meglévő órák nem változtak.\n\nEllenőrizd a fájl jogosultságait, majd nyisd meg újra a VXOST-ot:\n%@";

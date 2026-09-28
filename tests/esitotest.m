@@ -48,6 +48,9 @@ int main(void) { @autoreleasepool {
     check([m containsString:@"Open the site before relying on it"], @"dice cosa fare");
     check(![m containsString:@"VXOST_OK"], @"non mostra il marcatore");
     check(![m containsString:@"\n"], @"sta su una riga, senza a capo spezzati");
+    NSString *senzaNota = XPUnverifiedMessage(@"VXOST_OK_UNVERIFIED\n");
+    check([senzaNota containsString:@"could not be verified"],
+          @"senza la riga NOTE: dice comunque 'non verificato', non 'fallito'");
 
     section(@"Lo script stampa davvero quel testo");
     NSString *script = [[XPActions shared] configurationScriptFor:@{@"/tmp/a": @"/tmp/b"}];

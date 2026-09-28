@@ -38,6 +38,9 @@
 
 "btn.cancel" = "キャンセル";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "閉じる";
+
 "btn.folder" = "フォルダ";
 
 "btn.more" = "その他…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "続ける";
 
 "btn.quit" = "終了";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "それでも終了";
 
 "btn.restart" = "再起動";
 
@@ -568,13 +574,19 @@
 "tool.security" = "セキュリティ確認";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST は作業時間を保存できませんでした。表示されている内容はまだディスクにありません。変更のたびに再試行し、保存に成功するとこの警告は消えます。ディスクに空き容量があり、このファイルに書き込めるか確認してください:\n%@";
+"tracker.notice.savefailed.body" = "VXOST は作業時間を保存できませんでした。表示されている内容はまだディスクにありません。変更のたびに再試行し、終了する前に確認するので、知らないうちに失われることはありません。ディスクに空き容量があり、このファイルに書き込めるか確認してください:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "作業時間の記録を読み込めなかったため、VXOST は上書きせずに別の場所へ移し、新しい記録を始めました。以前の作業時間は失われていません。テキストエディタで開けるこのファイルに残っています:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "作業時間の確認が必要です";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST はもう一度試みましたが、このファイルにまだ書き込めません。今終了すると、最後に保存に成功した後に記録した作業時間は失われます:\n%@\n\nディスクの空き容量を増やすかファイルのアクセス権を直してから、もう一度終了してください。";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "最新の作業時間が保存されていません";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST は既存の作業時間の記録を読み込めないため、新しい時間を記録しません。記録してもアプリの終了時に失われてしまいます。既存の時間は変更されていません。\n\n次のファイルのアクセス権を確認してから、VXOST を開き直してください：\n%@";

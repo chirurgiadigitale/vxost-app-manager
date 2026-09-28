@@ -38,6 +38,9 @@
 
 "btn.cancel" = "Anulează";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "Închide";
+
 "btn.folder" = "Dosar";
 
 "btn.more" = "Mai mult…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "Continuă";
 
 "btn.quit" = "Ieșire";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "Ieși oricum";
 
 "btn.restart" = "Repornește";
 
@@ -568,13 +574,19 @@
 "tool.security" = "Verificare de securitate";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST nu a putut salva orele, deci ce vezi nu este încă pe disc. Va încerca din nou la fiecare modificare, iar acest avertisment dispare imediat ce o salvare reușește. Verifică dacă discul are spațiu liber și dacă acest fișier poate fi scris:\n%@";
+"tracker.notice.savefailed.body" = "VXOST nu a putut salva orele, deci ce vezi nu este încă pe disc. Va încerca din nou la fiecare modificare și te va întreba înainte de a se închide, ca nimic să nu se piardă fără să știi. Verifică dacă discul are spațiu liber și dacă acest fișier poate fi scris:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "Evidența orelor nu a putut fi citită, așa că VXOST a mutat-o deoparte în loc să o suprascrie și a început una nouă. Orele de dinainte nu sunt pierdute: se află în acest fișier, care se deschide cu orice editor de text:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "Orele tale trebuie verificate";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST a mai încercat o dată și tot nu poate scrie acest fișier. Dacă ieși acum, orele înregistrate după ultima salvare reușită se pierd:\n%@\n\nEliberează spațiu pe disc sau corectează permisiunile fișierului, apoi ieși din nou.";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "Ultimele ore nu sunt salvate";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST nu poate citi istoricul orelor, așa că nu înregistrează ore noi: s-ar pierde la închiderea aplicației. Orele existente nu au fost modificate.\n\nVerifică permisiunile acestui fișier, apoi redeschide VXOST:\n%@";

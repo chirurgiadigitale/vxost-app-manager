@@ -38,6 +38,9 @@
 
 "btn.cancel" = "Cancel";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "Close";
+
 "btn.folder" = "Folder";
 
 "btn.more" = "More…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "Proceed";
 
 "btn.quit" = "Quit";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "Quit anyway";
 
 "btn.restart" = "Restart";
 
@@ -568,13 +574,19 @@
 "tool.security" = "Security check";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST could not save your hours, so what you see is not on disk yet. It will try again at every change, and this warning disappears as soon as a save succeeds. Check that the disk has free space and that this file can be written:\n%@";
+"tracker.notice.savefailed.body" = "VXOST could not save your hours, so what you see is not on disk yet. It will try again at every change, and before quitting it will ask you, so nothing is lost without you knowing. Check that the disk has free space and that this file can be written:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "Your timesheet could not be read, so VXOST moved it aside instead of overwriting it, and started a new one. Your earlier hours are not lost: they are in this file, which you can open with any text editor:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "Your hours need a look";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST tried once more and still cannot write this file. If you quit now, the hours recorded since the last successful save are lost:\n%@\n\nFree some disk space or fix the file's permissions, then quit again.";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "Your latest hours are not saved";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST can't read your existing timesheet, so it won't record new hours: they would be lost when the app quits. Your existing hours have not been changed.\n\nCheck the permissions of this file, then reopen VXOST:\n%@";

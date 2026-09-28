@@ -431,7 +431,9 @@ static XPProjectWizard *sOpenWizard = nil;
             // ⚠️ Creato ma non verificato: il foglio resta aperto con
             // l'avviso, che chiudendosi nessuno leggerebbe. Crea resta spento,
             // perche' il progetto c'e' gia' e un secondo clic farebbe un
-            // doppione; si esce con Annulla.
+            // doppione; si esce con Chiudi, perche' "Annulla" non annullerebbe
+            // niente.
+            self.cancelButton.title = NSLocalizedString(@"btn.close", nil);
             self.cancelButton.enabled = YES;
         } else {
             self.createButton.enabled = YES;

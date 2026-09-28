@@ -38,6 +38,9 @@
 
 "btn.cancel" = "Abbrechen";
 
+/* Pulsante: chiudere il foglio del wizard dopo che il progetto e' stato creato */
+"btn.close" = "Schließen";
+
 "btn.folder" = "Ordner";
 
 "btn.more" = "Mehr…";
@@ -54,6 +57,9 @@
 "btn.proceed" = "Fortfahren";
 
 "btn.quit" = "Beenden";
+
+/* Pulsante: uscire comunque, perdendo le ore non salvate */
+"btn.quitAnyway" = "Trotzdem beenden";
 
 "btn.restart" = "Neu starten";
 
@@ -568,13 +574,19 @@
 "tool.security" = "Sicherheitsprüfung";
 
 /* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
-"tracker.notice.savefailed.body" = "VXOST konnte deine Stunden nicht speichern, was du siehst, ist also noch nicht auf dem Datenträger. Bei jeder Änderung wird es erneut versucht, und diese Warnung verschwindet, sobald das Speichern gelingt. Prüfe, ob freier Speicherplatz vorhanden ist und diese Datei beschrieben werden kann:\n%@";
+"tracker.notice.savefailed.body" = "VXOST konnte deine Stunden nicht speichern, was du siehst, ist also noch nicht auf dem Datenträger. Bei jeder Änderung wird es erneut versucht, und vor dem Beenden wirst du gefragt, damit nichts unbemerkt verloren geht. Prüfe, ob freier Speicherplatz vorhanden ist und diese Datei beschrieben werden kann:\n%@";
 
 /* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
 "tracker.notice.setaside.body" = "Deine Zeiterfassung konnte nicht gelesen werden. VXOST hat sie deshalb beiseitegelegt statt sie zu überschreiben, und eine neue begonnen. Deine bisherigen Stunden sind nicht verloren: Sie stehen in dieser Datei, die sich mit jedem Texteditor öffnen lässt:\n%@";
 
 /* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
 "tracker.notice.title" = "Deine Stunden brauchen einen Blick";
+
+/* Corpo alla chiusura: uscire perde le ore in memoria. %@ e' il file che non si scrive */
+"tracker.quit.body" = "VXOST hat es noch einmal versucht und kann diese Datei weiterhin nicht schreiben. Wenn du jetzt beendest, gehen die seit dem letzten erfolgreichen Speichern erfassten Stunden verloren:\n%@\n\nGib Speicherplatz frei oder korrigiere die Zugriffsrechte der Datei und beende dann erneut.";
+
+/* Titolo alla chiusura dell'app quando le ore non si riescono a salvare */
+"tracker.quit.title" = "Deine letzten Stunden sind nicht gespeichert";
 
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST kann Ihre bisherige Zeiterfassung nicht lesen und erfasst daher keine neuen Stunden: Sie gingen beim Beenden der App verloren. Ihre bisherigen Stunden wurden nicht verändert.\n\nPrüfen Sie die Berechtigungen dieser Datei und öffnen Sie VXOST erneut:\n%@";
