@@ -924,7 +924,7 @@ if [ -f "$PAYLOAD/vxost" ]; then
     # ⛔ Un messaggio di esito che non verifica l'esito e' peggio del silenzio:
     # manda a cercare la causa ovunque tranne dove sta.
     python3 - "$PAYLOAD/vxost" <<'PYEOF'
-import re, sys
+import hashlib, re, sys
 
 path = sys.argv[1]
 text = open(path, encoding="utf-8", errors="replace").read()
@@ -1164,7 +1164,12 @@ OUR_SCRIPT_PIDS = '''function vxostOurScriptPids() {
 \tvxscript="$VXOST_ROOT/bin/$1"
 \tvxelenco=$(ps -axo pid=,command= 2>/dev/null) || return 1
 \ttest -n "$vxelenco" || return 1
-\tprintf '%s\\n' "$vxelenco" | awk -v vxs="$vxscript" '
+\t# ⚠️ Un supervisore lanciato con un percorso relativo (./bin/mysqld_safe,
+\t# da dentro la radice) e' nostro, ma non si puo' dimostrarlo: come in
+\t# vxostOurPids, e' un non lo so, e fa uscire 1. Ignorarlo faceva dire
+\t# "not running." con il crash loop ancora in corso.
+\tvxtrovati=$(printf '%s\\n' "$vxelenco" | awk -v vxs="$vxscript" -v vxnome="$1" '
+\t\tBEGIN { dubbio = 0 }
 \t\t{
 \t\t\tif (match($0, /^[ \\t]*[0-9]+[ \\t]/) == 0) next
 \t\t\tvxp = $1
@@ -1175,10 +1180,22 @@ OUR_SCRIPT_PIDS = '''function vxostOurScriptPids() {
 \t\t\tsub(/^.*\\//, "", vxi)
 \t\t\tif (vxi != "sh" && vxi != "bash" && vxi != "dash" && vxi != "zsh") next
 \t\t\tvxresto = substr(vxcmd, vxsp + 1)
-\t\t\tif (index(vxresto, vxs) != 1) next
-\t\t\tvxdopo = substr(vxresto, length(vxs) + 1, 1)
-\t\t\tif (vxdopo == "" || vxdopo == " ") print vxp
-\t\t}' || return 1
+\t\t\tif (index(vxresto, vxs) == 1) {
+\t\t\t\tvxdopo = substr(vxresto, length(vxs) + 1, 1)
+\t\t\t\tif (vxdopo == "" || vxdopo == " ") print vxp
+\t\t\t\tnext
+\t\t\t}
+\t\t\tvxarg = vxresto
+\t\t\tsub(/ .*$/, "", vxarg)
+\t\t\tif (substr(vxarg, 1, 1) == "/") next
+\t\t\tvxcoda = "bin/" vxnome
+\t\t\tif (vxarg == vxcoda || substr(vxarg, length(vxarg) - length(vxcoda)) == "/" vxcoda) dubbio = 1
+\t\t}
+\t\tEND { if (dubbio) print "?" }') || return 1
+\tcase "$vxtrovati" in
+\t\t*"?"*) return 1 ;;
+\tesac
+\ttest -z "$vxtrovati" || printf '%s\\n' "$vxtrovati"
 \treturn 0
 }
 '''
@@ -1213,6 +1230,41 @@ else:
     print("  vxost: aiutanti gia' presenti")
 
 
+# ⚠️ (28/09/2026) Le versioni che questa patch ha scritto in passato. Senza
+# questo elenco, cambiare il corpo di una funzione fermava la build su ogni
+# script gia' patchato ("patchata ma diversa"): lo staging, e qualunque
+# installazione aggiornata, che il commento sopra dice essere la sorgente
+# normale. Il rifiuto resta per i corpi SCONOSCIUTI, cioe' modificati a mano.
+# Le impronte sono di tutte le 34 versioni della patch nella storia di git,
+# applicate allo script del pacchetto di partenza: si ricalcolano cosi' e non
+# si scrivono a memoria.
+VERSIONI_PRECEDENTI = {
+    "stopApache": {
+        "c8a816109acdd174fe9fc5a3387c857734cb3250bc8de4e14c077a76e68f442d",
+        "de169e01ab19871ba224b5fb7a4efef7641e2e3ed0e6b1eba1d7f69e43e211c9",
+        "88bb70b728ff384637ae6e2abdd9fb051b28748cd7b623c5887398f5edbda668",
+    },
+    "stopProFTPD": {
+        "65bdbdaaf96fea6bda1b9aeb026eeb3f58026ba90acd7a7c38d6280d77af0159",
+        "41dcd65809e3c1564c7adf3fe200055834b745f1573a1ace1ac887432e522c4a",
+    },
+    "vxostOurPids": {
+        "44f2294e27807e4459ab155b27269256080affa2157e3042a9fe6bb9b829530f",
+        "42d872a4894305fd7750dab16b8cb3ebaa2225d9b8f9ce7253813e1684a88e93",
+        "2d3c120a50754aca98a450c59c7b153b5c30caf7aba66eb752841c793d43f389",
+        "b4d57d8a30d2a1ca9502fc65b24abc7bd458931759c2c4f4defd046e45944b73",
+    },
+    "stopMySQL": {
+        "c0652197385781d37557ed0422d6fefe8149c348d93d089ed60368cccc19d0a6",
+        "a06f2abd988dec66d688d682752225065466ff8f99f80c6f1ebe1c5d6628f701",
+        "4acbec2d8d03af3caf7b5ad4ae58f1cab0c8cfe5da95aba3f18ec3460e6f2e7b",
+    },
+    "vxostOurScriptPids": {
+        "63e7549e0146d188e31843f00d08b7fd073799fac2a000b9a221e167084cdeb3",
+    },
+}
+
+
 def sostituisci_funzione(text, nome, corpo, marcatore):
     """Come patch_blocco: "gia' patchata" si dimostra confrontando il corpo.
 
@@ -1227,6 +1279,10 @@ def sostituisci_funzione(text, nome, corpo, marcatore):
     if m.group(0) == corpo:
         print("  vxost: " + nome + " gia' patchata, lasciata com'e'")
         return text
+    impronta = hashlib.sha256(m.group(0).encode("utf-8")).hexdigest()
+    if impronta in VERSIONI_PRECEDENTI.get(nome, ()):
+        print("  vxost: " + nome + " aggiornata da una versione precedente")
+        return text[:m.start()] + corpo + text[m.end():]
     if marcatore in m.group(0):
         sys.stderr.write("!! vxost: " + nome + " e' patchata ma diversa da quella "
                          "attesa: non la sovrascrivo\n")
@@ -1274,6 +1330,8 @@ stop_apache = '''function stopApache() {
 		for vxc in $elenco
 		do
 			vxpp=$(ps -o ppid= -p "$vxc" 2>/dev/null | tr -d ' ')
+			# Sparito fra l'elenco e qui: non e' il padre, e' un figlio uscito.
+			test -n "$vxpp" || continue
 			case " $(echo $elenco) " in
 				*" $vxpp "*) ;;
 				*) pid="$vxc"; break ;;
@@ -1326,15 +1384,23 @@ stop_apache = '''function stopApache() {
 	# processo ha ereditato. KILL non si puo' bloccare. Apache non tiene dati
 	# aperti, quindi forzarlo e' sicuro, e si dice. A mysqld questo non si fa.
 	echo "httpd (pid $pid) is still running after 20 seconds (apachectl returned $ctl): forcing it."
-	for vxr in $rimasti
-	do
-		kill -9 "$vxr" 2>/dev/null
-	done
+	# L'elenco si rilegge adesso: quello del giro prima ha un secondo, e un
+	# pid in quel secondo puo' essere stato riusato da un altro programma.
+	if rimasti=$(vxostOurPids httpd)
+	then
+		for vxr in $rimasti
+		do
+			kill -9 "$vxr" 2>/dev/null
+		done
+	fi
 	atteso=0
 	while test $atteso -lt 5
 	do
 		if rimasti=$(vxostOurPids httpd) && test -z "$rimasti"
 		then
+			# Il file pid del processo ucciso resta: lo si toglie, come farebbe
+			# Apache uscendo da solo.
+			rm -f "$pidfile"
 			$GETTEXT -s "ok (forced)."
 			return 0
 		fi
@@ -1458,7 +1524,9 @@ STOP_MYSQL = '''function stopMySQL() {
 \t# non basta, il suo nome cambia con il nome del Mac.
 \tif vxfigli=$(vxostOurPids mysqld)
 \tthen
-\t\tif test -z "$vxfigli" && test $vxincerto -eq 0 && ! testport 3306
+\t\t# Se c\'era un supervisore non e\' "not running": e\' appena stato fermato,
+\t\t# e si verifica nel ciclo qui sotto che non torni.
+\t\tif test -z "$vxfigli" && test -z "$vxguardie" && test $vxincerto -eq 0 && ! testport 3306
 \t\tthen
 \t\t\t$GETTEXT -s "not running."
 \t\t\treturn 0
@@ -1481,6 +1549,18 @@ STOP_MYSQL = '''function stopMySQL() {
 \tvxatteso=0
 \twhile test $vxatteso -lt 30
 \tdo
+\t\t# ⚠️ Il supervisore si ricontrolla a ogni giro. Il KILL puo\' non essere
+\t\t# arrivato, e cercato una volta sola un supervisore vivo non impediva
+\t\t# di dire "ok." mentre rigenerava il database.
+\t\tif vxguardie=$(vxostOurScriptPids mysqld_safe)
+\t\tthen
+\t\t\tfor vxg in $vxguardie
+\t\t\tdo
+\t\t\t\tkill -9 "$vxg" 2>/dev/null
+\t\t\tdone
+\t\telse
+\t\t\tvxincerto=1
+\t\tfi
 \t\tif vxfigli=$(vxostOurPids mysqld)
 \t\tthen
 \t\t\tfor vxf in $vxfigli
@@ -1490,7 +1570,7 @@ STOP_MYSQL = '''function stopMySQL() {
 \t\t\t\t\t*) kill -TERM "$vxf" 2>/dev/null; vxsegnalati="$vxsegnalati$vxf " ;;
 \t\t\t\tesac
 \t\t\tdone
-\t\t\tif test -z "$vxfigli" && ! testport 3306
+\t\t\tif test -z "$vxfigli" && test -z "$vxguardie" && ! testport 3306
 \t\t\tthen
 \t\t\t\t# ⚠️ Fermo adesso non basta se il supervisore non si e' potuto
 \t\t\t\t# guardare: quello rigenera il database un istante dopo.
@@ -1517,7 +1597,15 @@ STOP_MYSQL = '''function stopMySQL() {
 \tfi
 
 \t$GETTEXT -s "fail."
-\techo "VXOST: " $($GETTEXT \'MySQL is still listening on port 3306.\')
+\tif test -n "$vxguardie"
+\tthen
+\t\techo "VXOST: mysqld_safe is still running (pid $(echo $vxguardie)) and restarts the database."
+\telif test -n "$vxfigli"
+\tthen
+\t\techo "VXOST: mysqld is still running (pid $(echo $vxfigli)) after 30 seconds."
+\telse
+\t\techo "VXOST: " $($GETTEXT \'MySQL is still listening on port 3306.\')
+\tfi
 
 \t# Il log porta il nome della macchina, e quel nome puo\' non combaciare:
 \t# se non c\'e\', si prende il piu\' recente invece di tacere.
@@ -1575,6 +1663,14 @@ def patch_blocco(text, nome, vecchio, nuovo, marcatore=None):
     sys.stderr.write("!! vxost: " + nome + " non ha ne' la forma vecchia ne' "
                      "quella nuova: qualcuno l'ha toccata\n")
     sys.exit(1)
+
+# (28/09/2026) stopmysql era l'unico arresto senza checkRoot, e ora il
+# segnale lo manda la funzione stessa: senza root il KILL al supervisore e il
+# TERM a mysqld falliscono, e il messaggio lo direbbe solo dopo 30 secondi.
+text = patch_blocco(
+    text, "stopmysql controlla root",
+    '\t"stopmysql")\n\t\tstopMySQL\n\t\texit $?\n\t\t;;\n',
+    '\t"stopmysql")\n\t\tcheckRoot\n\t\tstopMySQL\n\t\texit $?\n\t\t;;\n')
 
 text = patch_blocco(
     text, "stop propaga l'errore",
