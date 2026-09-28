@@ -10,6 +10,7 @@
 #import <CoreGraphics/CoreGraphics.h>
 
 NSString *const XPTrackerDidChangeNotification = @"XPTrackerDidChangeNotification";
+NSString *const XPTrackerStorageNoticeNotification = @"XPTrackerStorageNoticeNotification";
 
 /// Dopo quanti secondi senza tastiera né mouse la sessione va in pausa da sola.
 static const NSTimeInterval XPIdleThreshold = 10 * 60;
@@ -29,6 +30,8 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
     BOOL _storageUnusable;
     /// Il file che ha reso lo storico non salvabile, per dirlo all'utente.
     NSString *_storageProblemPath;
+    XPStorageNotice _storageNotice;
+    NSString *_storageNoticePath;
 }
 @property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *openEntries;
 @property (nonatomic, strong) NSMutableArray<XPTimeEntry *> *entries;
@@ -87,6 +90,9 @@ static const NSTimeInterval XPIdleCheckInterval = 30;
 - (BOOL)canRecord {
     return !_storageUnusable;
 }
+
+- (XPStorageNotice)storageNotice { return _storageNotice; }
+- (NSString *)storageNoticePath { return _storageNoticePath; }
 
 - (NSString *)storageProblemPath {
     return _storageUnusable ? _storageProblemPath : nil;
@@ -598,7 +604,15 @@ static NSTimeInterval SecondsSinceLastInput(void) {
 
     NSDictionary *root = [NSJSONSerialization JSONObjectWithData:data
                                                          options:0 error:&error];
-    if (![root isKindOfClass:[NSDictionary class]]) {
+    // ⚠️ JSON valido non vuol dire storico. {"entries":"x"} passava il
+    // controllo sul dizionario e poi faceva cadere l'app nel for qui sotto,
+    // a ogni avvio, finche' qualcuno non toccava il file a mano. Una forma
+    // sbagliata si tratta come un file rotto.
+    BOOL forma = [root isKindOfClass:[NSDictionary class]];
+    for (NSString *chiave in @[@"entries", @"customProjects", @"open"]) {
+        if (forma && root[chiave] && ![root[chiave] isKindOfClass:[NSArray class]]) forma = NO;
+    }
+    if (!forma) {
         // JSON rotto: si mette da parte con la data, invece di lasciarlo
         // sovrascrivere. Quello che c'è dentro è spesso ancora leggibile a
         // mano, e comunque non tocca a noi decidere di buttarlo.
@@ -607,6 +621,10 @@ static NSTimeInterval SecondsSinceLastInput(void) {
         if ([fm moveItemAtPath:path toPath:quarantine error:&error]) {
             NSLog(@"VXOST: lo storico non è JSON valido. Messo da parte in %@, "
                   @"si riparte da zero senza perdere il file.", quarantine);
+            // ⚠️ E si dice. Prima restava un NSLog: la cronologia ripartiva
+            // vuota, e le ore di prima stavano in un file che nessuno sapeva
+            // di dover cercare.
+            [self announceStorageNotice:XPStorageNoticeSetAside path:quarantine];
         } else {
             NSLog(@"VXOST: lo storico non è JSON valido e non si riesce a "
                   @"metterlo da parte (%@). Non verrà sovrascritto.",
@@ -688,11 +706,31 @@ static NSTimeInterval SecondsSinceLastInput(void) {
     // ⚠️ L'esito si guarda. Disco pieno, cartella senza permessi, volume
     // smontato: senza questo controllo l'app continua a mostrare le ore in
     // finestra come se fossero al sicuro, e non lo sono.
-    if (![data writeToFile:[self storagePath] options:NSDataWritingAtomic
+    NSString *target = [self storagePath];
+    if (![data writeToFile:target options:NSDataWritingAtomic
                      error:&error]) {
         NSLog(@"VXOST: le ore non sono state salvate (%@)",
               error.localizedDescription);
+        // ⚠️ Non si blocca niente: le ore sono in memoria, e il prossimo
+        // salvataggio puo' riuscire (disco liberato, volume rimontato). Ma
+        // finche' non riesce, chi guarda la finestra deve saperlo.
+        [self announceStorageNotice:XPStorageNoticeSaveFailed path:target];
+        return;
     }
+    if (_storageNotice == XPStorageNoticeSaveFailed) {
+        _storageNotice = XPStorageNoticeNone;
+        _storageNoticePath = nil;
+        [self notifyChange];
+    }
+}
+
+/// Un avviso per problema: annunciato una volta, non a ogni tentativo.
+- (void)announceStorageNotice:(XPStorageNotice)notice path:(NSString *)path {
+    if (_storageNotice == notice && [_storageNoticePath isEqualToString:path]) return;
+    _storageNotice = notice;
+    _storageNoticePath = [path copy];
+    [[NSNotificationCenter defaultCenter] postNotificationName:XPTrackerStorageNoticeNotification
+                                                        object:self];
 }
 
 - (void)notifyChange {

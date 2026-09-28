@@ -16,6 +16,21 @@
 /// Inviata a ogni cambiamento: avvio, pausa, ripresa, stop, tick del secondo.
 extern NSString *const XPTrackerDidChangeNotification;
 
+/// Postata quando lo storico ha bisogno che qualcuno lo guardi: una volta per
+/// problema, non a ogni tentativo.
+extern NSString *const XPTrackerStorageNoticeNotification;
+
+/// Cosa e' successo allo storico, quando non impedisce di registrare.
+typedef NS_ENUM(NSInteger, XPStorageNotice) {
+    XPStorageNoticeNone,
+    /// Il file non era leggibile come storico ed e' stato messo da parte:
+    /// le ore di prima stanno li', non nella cronologia.
+    XPStorageNoticeSetAside,
+    /// L'ultimo salvataggio non e' riuscito: le ore a video non sono sul
+    /// disco. Si ritenta a ogni modifica.
+    XPStorageNoticeSaveFailed,
+};
+
 /// Un progetto tracciabile, che venga da un virtual host o creato a mano.
 @interface XPTrackableProject : NSObject
 @property (nonatomic, copy) NSString *key;    ///< "vhost:4005" o "custom:<nome>"
@@ -40,6 +55,11 @@ extern NSString *const XPTrackerDidChangeNotification;
 /// Il file che impedisce di registrare, da mostrare all'utente. nil se
 /// `canRecord` vale YES.
 @property (nonatomic, readonly, copy) NSString *storageProblemPath;
+
+/// Un problema che NON blocca la registrazione ma va detto (vedi sopra).
+@property (nonatomic, readonly) XPStorageNotice storageNotice;
+/// Il file da guardare: quello messo da parte, o quello non salvato.
+@property (nonatomic, readonly, copy) NSString *storageNoticePath;
 
 #pragma mark - Sessioni in corso
 //

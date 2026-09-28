@@ -16,6 +16,7 @@
 #import "XPLogWindowController.h"
 #import "XPActions.h"
 #import "XPTheme.h"
+#import "XPTracker.h"
 
 @interface XPAppDelegate : NSObject <NSApplicationDelegate>
 @property (nonatomic, strong) XPStatusController *statusController;
@@ -45,6 +46,37 @@
     // vuoto, e chiudendolo si troverebbe la finestra che compare dopo, come se
     // fosse successo qualcosa.
     [XPSetupWizard presentIfNeeded];
+
+    // ⚠️ Lo storico che non si legge viene messo da parte durante il
+    // caricamento, cioe' prima che esista qualcuno ad ascoltare: l'avviso si
+    // guarda adesso, e poi si ascolta per quelli che arrivano dopo (un
+    // salvataggio che fallisce a sessione avviata).
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(trackerStorageNotice:)
+                                                 name:XPTrackerStorageNoticeNotification
+                                               object:nil];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self trackerStorageNotice:nil];
+    });
+}
+
+/// L'avviso sullo storico delle ore. Il tracker lo annuncia una volta per
+/// problema; qui si mostra, senza bloccare niente: si puo' continuare a
+/// lavorare, ma chi guarda deve sapere dove sono le ore.
+- (void)trackerStorageNotice:(NSNotification *)note {
+    XPTracker *tracker = [XPTracker shared];
+    NSString *key = nil;
+    switch (tracker.storageNotice) {
+        case XPStorageNoticeNone:       return;
+        case XPStorageNoticeSetAside:   key = @"tracker.notice.setaside.body"; break;
+        case XPStorageNoticeSaveFailed: key = @"tracker.notice.savefailed.body"; break;
+    }
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.alertStyle = NSAlertStyleWarning;
+    alert.messageText = NSLocalizedString(@"tracker.notice.title", nil);
+    alert.informativeText = [NSString stringWithFormat:NSLocalizedString(key, nil),
+                             tracker.storageNoticePath ?: @"—"];
+    [alert runModal];
 }
 
 /// Clic sull'icona nel Dock ad app già avviata: la finestra torna in primo

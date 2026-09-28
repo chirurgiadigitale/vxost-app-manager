@@ -567,6 +567,15 @@
 
 "tool.security" = "Verificação de segurança";
 
+/* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
+"tracker.notice.savefailed.body" = "O VXOST não conseguiu salvar suas horas, então o que você vê ainda não está no disco. Ele tentará de novo a cada alteração, e este aviso desaparece assim que um salvamento der certo. Verifique se o disco tem espaço livre e se este arquivo pode ser gravado:\n%@";
+
+/* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
+"tracker.notice.setaside.body" = "Não foi possível ler seu registro de horas, então o VXOST o separou em vez de sobrescrevê-lo e começou um novo. Suas horas anteriores não foram perdidas: estão neste arquivo, que você pode abrir com qualquer editor de texto:\n%@";
+
+/* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
+"tracker.notice.title" = "Suas horas precisam de uma verificação";
+
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "O VXOST não consegue ler seu histórico de horas, então não registrará horas novas: elas se perderiam ao fechar o app. Suas horas existentes não foram alteradas.\n\nVerifique as permissões deste arquivo e abra o VXOST novamente:\n%@";
 

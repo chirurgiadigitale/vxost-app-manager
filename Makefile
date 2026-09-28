@@ -38,7 +38,7 @@ CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS) -mmacosx-
 # tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security
 
-.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest exposuretest phptest scripttest esitotest
+.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest exposuretest phptest scripttest esitotest storicotest
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
@@ -157,6 +157,12 @@ legacyfailtest:
 	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/legacyfailtest \
 		tests/legacyfailtest.m $(filter-out src/main.m,$(SOURCES))
 	@./build/legacyfailtest
+
+storicotest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/storicotest \
+		tests/storicotest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/storicotest
 
 storagelatetest:
 	@mkdir -p build

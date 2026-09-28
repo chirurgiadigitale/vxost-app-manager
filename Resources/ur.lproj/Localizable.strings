@@ -567,6 +567,15 @@
 
 "tool.security" = "سیکیورٹی جانچ";
 
+/* Corpo: l'ultimo salvataggio non e' riuscito, le ore a video non sono sul disco. %@ e' il percorso del file */
+"tracker.notice.savefailed.body" = "VXOST آپ کے گھنٹے محفوظ نہیں کر سکا، اس لیے جو آپ دیکھ رہے ہیں وہ ابھی ڈسک پر نہیں ہے۔ ہر تبدیلی پر دوبارہ کوشش ہوگی، اور کامیاب ہوتے ہی یہ انتباہ غائب ہو جائے گا۔ دیکھیں کہ ڈسک پر جگہ خالی ہے اور یہ فائل لکھی جا سکتی ہے:\n%@";
+
+/* Corpo: lo storico non era leggibile ed e' stato spostato, non cancellato. %@ e' il percorso del file spostato */
+"tracker.notice.setaside.body" = "آپ کے گھنٹوں کا ریکارڈ پڑھا نہیں جا سکا، اس لیے VXOST نے اسے مٹانے کے بجائے الگ رکھ دیا اور نیا شروع کیا۔ پہلے کے گھنٹے ضائع نہیں ہوئے: وہ اس فائل میں ہیں، جسے کسی بھی ٹیکسٹ ایڈیٹر سے کھولا جا سکتا ہے:\n%@";
+
+/* Titolo dell'avviso sullo storico delle ore: file messo da parte o salvataggio non riuscito. Si puo' continuare a lavorare */
+"tracker.notice.title" = "آپ کے گھنٹوں کو دیکھنے کی ضرورت ہے";
+
 /* Corpo dell'avviso. %@ e' il percorso del file che non si legge */
 "tracker.unusable.body" = "VXOST آپ کا موجودہ ٹائم شیٹ نہیں پڑھ سکتا، اس لیے نئے گھنٹے درج نہیں کرے گا: ایپ بند ہونے پر وہ ضائع ہو جاتے۔ موجودہ گھنٹوں میں کوئی تبدیلی نہیں کی گئی۔\n\nاس فائل کی اجازتیں چیک کریں، پھر VXOST دوبارہ کھولیں:\n%@";
 
