@@ -120,7 +120,12 @@ int main(void) { @autoreleasepool {
     check(scriptIsValidShell(plain), @"senza descrizione è shell valida");
     check(![plain containsString:@"localhost"], @"non nomina localhost");
     check([plain containsString:@"ServerName "], @"scrive un ServerName");
-    check([plain containsString:@"Listen 4321"], @"apre la porta in httpd.conf");
+    // ⚠️ La forma dipende da com'e' esposta l'installazione su cui gira il
+    // test: chiusa (il pacchetto dal 11/09) scrive "Listen 127.0.0.1:4321",
+    // aperta "Listen 4321". Il test pretendeva la seconda e falliva su ogni
+    // Mac installato come si deve.
+    check([plain containsString:@"Listen 4321"] ||
+          [plain containsString:@"Listen 127.0.0.1:4321"], @"apre la porta in httpd.conf");
     check([plain containsString:@"<VirtualHost *:4321>"], @"scrive il blocco");
 
     NSString *described = [actions privilegedScriptForProject:@"demo"
