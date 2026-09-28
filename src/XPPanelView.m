@@ -232,13 +232,19 @@ static const CGFloat XPRowH         = 52.0;
 }
 
 - (void)showMessage:(NSString *)message isError:(BOOL)isError {
+    [self showMessage:message isError:isError isWarning:NO];
+}
+
+- (void)showMessage:(NSString *)message isError:(BOOL)isError isWarning:(BOOL)isWarning {
     self.messageLabel.stringValue = message ?: @"";
-    self.messageLabel.textColor = isError ? [XPTheme danger] : [XPTheme textMuted];
+    self.messageLabel.textColor = isError ? [XPTheme danger]
+                                : (isWarning ? [XPTheme amber] : [XPTheme textMuted]);
 
     [self.messageTimer invalidate];
     if (message.length > 0) {
-        // I messaggi si cancellano da soli: il pannello resta pulito.
-        self.messageTimer = [NSTimer scheduledTimerWithTimeInterval:(isError ? 10.0 : 5.0)
+        // I messaggi si cancellano da soli: il pannello resta pulito. Un
+        // avviso resta quanto un errore: va letto, non e' una conferma.
+        self.messageTimer = [NSTimer scheduledTimerWithTimeInterval:((isError || isWarning) ? 10.0 : 5.0)
                                                             repeats:NO
                                                               block:^(NSTimer *t) {
             self.messageLabel.stringValue = @"";

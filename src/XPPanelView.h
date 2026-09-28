@@ -38,5 +38,7 @@
 
 /// Mostra un messaggio temporaneo nella barra di stato del pannello.
 - (void)showMessage:(NSString *)message isError:(BOOL)isError;
+/// Un avviso: ambra, e resta quanto un errore.
+- (void)showMessage:(NSString *)message isError:(BOOL)isError isWarning:(BOOL)isWarning;
 
 @end

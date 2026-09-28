@@ -606,13 +606,16 @@ static const CGFloat XPWinPadding = 22.0;
 - (void)actionDidReport:(NSNotification *)note {
     NSString *message = note.userInfo[@"message"];
     BOOL isError = [note.userInfo[@"isError"] boolValue];
+    BOOL isWarning = [note.userInfo[@"isWarning"] boolValue];
 
     self.messageLabel.stringValue = message ?: @"";
-    self.messageLabel.textColor = isError ? [XPTheme danger] : [XPTheme textMuted];
+    self.messageLabel.textColor = isError ? [XPTheme danger]
+                                : (isWarning ? [XPTheme amber] : [XPTheme textMuted]);
 
     [self.messageTimer invalidate];
     if (message.length > 0) {
-        self.messageTimer = [NSTimer scheduledTimerWithTimeInterval:(isError ? 12.0 : 6.0)
+        // Un avviso resta quanto un errore: va letto, non e' una conferma.
+        self.messageTimer = [NSTimer scheduledTimerWithTimeInterval:((isError || isWarning) ? 12.0 : 6.0)
                                                             repeats:NO
                                                               block:^(NSTimer *t) {
             self.messageLabel.stringValue = @"";

@@ -418,15 +418,21 @@ static XPProjectWizard *sOpenWizard = nil;
                                       port:port
                                 phpVersion:phpVersion
                                   database:database
-                                completion:^(BOOL ok) {
+                                completion:^(BOOL ok, BOOL verified) {
         __strong typeof(weakSelf) self = weakSelf;
         if (!self) return;
 
         [[NSNotificationCenter defaultCenter] removeObserver:self
                                                         name:XPActionMessageNotification
                                                       object:nil];
-        if (ok) {
+        if (ok && verified) {
             [self dismiss];
+        } else if (ok) {
+            // ⚠️ Creato ma non verificato: il foglio resta aperto con
+            // l'avviso, che chiudendosi nessuno leggerebbe. Crea resta spento,
+            // perche' il progetto c'e' gia' e un secondo clic farebbe un
+            // doppione; si esce con Annulla.
+            self.cancelButton.enabled = YES;
         } else {
             self.createButton.enabled = YES;
             self.cancelButton.enabled = YES;
@@ -436,7 +442,9 @@ static XPProjectWizard *sOpenWizard = nil;
 
 - (void)actionDidReport:(NSNotification *)note {
     BOOL isError = [note.userInfo[@"isError"] boolValue];
-    self.statusLabel.textColor = isError ? [XPTheme danger] : [XPTheme textSoft];
+    BOOL isWarning = [note.userInfo[@"isWarning"] boolValue];
+    self.statusLabel.textColor = isError ? [XPTheme danger]
+                               : (isWarning ? [XPTheme amber] : [XPTheme textSoft]);
     self.statusLabel.stringValue = note.userInfo[@"message"] ?: @"";
 }
 

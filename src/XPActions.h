@@ -20,6 +20,23 @@
 /// Inviata a ogni esito. userInfo: @{@"message": NSString, @"isError": NSNumber}
 extern NSString *const XPActionMessageNotification;
 
+/// L'esito dello script che scrive la configurazione, quando non e' uno dei
+/// fallimenti con un marcatore proprio.
+///
+/// ⚠️ Tre valori, non un BOOL. VXOST_OK_UNVERIFIED diventava ok = YES, e il
+/// wizard si chiudeva come dopo un successo verificato (28/09/2026).
+typedef NS_ENUM(NSInteger, XPScriptOutcome) {
+    XPScriptOutcomeFailed,
+    XPScriptOutcomeVerified,
+    XPScriptOutcomeUnverified,
+};
+
+/// Legge l'esito in un punto solo: prima esisteva in due copie.
+FOUNDATION_EXPORT XPScriptOutcome XPScriptOutcomeOf(NSString *output);
+
+/// Il testo completo del caso non verificato, su una riga e senza marcatori.
+FOUNDATION_EXPORT NSString *XPUnverifiedMessage(NSString *output);
+
 @interface XPActions : NSObject
 
 + (instancetype)shared;
@@ -90,7 +107,7 @@ extern NSString *const XPActionMessageNotification;
                       port:(NSInteger)port
                phpVersion:(XPPhpVersion *)phpVersion
                   database:(NSString *)database
-                completion:(void (^)(BOOL ok))completion;
+                completion:(void (^)(BOOL ok, BOOL verified))completion;
 
 #pragma mark - Utilità
 
@@ -117,5 +134,10 @@ extern NSString *const XPActionMessageNotification;
                   completion:(void (^)(BOOL ok))completion;
 
 - (void)postMessage:(NSString *)message isError:(BOOL)isError;
+
+/// Come sopra, ma un avviso: non e' un errore e non e' un successo. Le
+/// interfacce lo mostrano in ambra e lo lasciano leggere, invece di farlo
+/// sparire come una conferma.
+- (void)postMessage:(NSString *)message isError:(BOOL)isError isWarning:(BOOL)isWarning;
 
 @end

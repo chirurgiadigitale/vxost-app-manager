@@ -221,7 +221,8 @@
 
 - (void)actionDidReport:(NSNotification *)note {
     [self.panel showMessage:note.userInfo[@"message"]
-                    isError:[note.userInfo[@"isError"] boolValue]];
+                    isError:[note.userInfo[@"isError"] boolValue]
+                  isWarning:[note.userInfo[@"isWarning"] boolValue]];
 }
 
 /// L'esito del controllo si dice solo quando c'è qualcosa da dire.

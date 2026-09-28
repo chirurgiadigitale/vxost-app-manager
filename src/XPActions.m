@@ -13,6 +13,30 @@
 
 NSString *const XPActionMessageNotification = @"XPActionMessageNotification";
 
+XPScriptOutcome XPScriptOutcomeOf(NSString *output) {
+    // ⚠️ Prima UNVERIFIED: containsString: trova VXOST_OK anche li' dentro.
+    if ([output containsString:@"VXOST_OK_UNVERIFIED"]) return XPScriptOutcomeUnverified;
+    if ([output containsString:@"VXOST_OK"]) return XPScriptOutcomeVerified;
+    return XPScriptOutcomeFailed;
+}
+
+NSString *XPUnverifiedMessage(NSString *output) {
+    // Dalla riga NOTE: in poi, senza i marcatori. Prima si mostrava solo la
+    // prima riga, che finiva sui due punti: la frase che dice cosa fare non
+    // arrivava mai.
+    NSMutableArray<NSString *> *righe = [NSMutableArray array];
+    BOOL dentro = NO;
+    for (NSString *line in [output componentsSeparatedByString:@"\n"]) {
+        NSString *t = [line stringByTrimmingCharactersInSet:
+                       [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if ([t hasPrefix:@"NOTE:"]) dentro = YES;
+        if (!dentro || t.length == 0 || [t hasPrefix:@"VXOST_"]) continue;
+        [righe addObject:t];
+    }
+    return righe.count ? [righe componentsJoinedByString:@" "]
+                       : NSLocalizedString(@"msg.failed", nil);
+}
+
 @implementation XPActions
 
 + (instancetype)shared {
@@ -401,7 +425,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
                       port:(NSInteger)port
                 phpVersion:(XPPhpVersion *)phpVersion
                   database:(NSString *)database
-                completion:(void (^)(BOOL ok))completion {
+                completion:(void (^)(BOOL ok, BOOL verified))completion {
 
     NSCharacterSet *spaces = [NSCharacterSet whitespaceAndNewlineCharacterSet];
     NSString *project = [name stringByTrimmingCharactersInSet:spaces];
@@ -416,7 +440,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
     }
     if (problem) {
         [self postMessage:problem isError:YES];
-        if (completion) completion(NO);
+        if (completion) completion(NO, NO);
         return;
     }
 
@@ -434,7 +458,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (failure) {
                 [self postMessage:failure isError:YES];
-                if (completion) completion(NO);
+                if (completion) completion(NO, NO);
                 return;
             }
             [self installVirtualHostForProject:project
@@ -495,7 +519,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
                                 port:(NSInteger)port
                           phpVersion:(XPPhpVersion *)phpVersion
                             database:(NSString *)database
-                          completion:(void (^)(BOOL ok))completion {
+                          completion:(void (^)(BOOL ok, BOOL verified))completion {
 
     NSFileManager *fm = [NSFileManager defaultManager];
 
@@ -525,7 +549,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
                                              phpVersion:phpVersion]
             writeToFile:scriptPath atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
         [self postMessage:error.localizedDescription isError:YES];
-        if (completion) completion(NO);
+        if (completion) completion(NO, NO);
         return;
     }
     [fm setAttributes:@{NSFilePosixPermissions: @(0700)} ofItemAtPath:scriptPath error:NULL];
@@ -537,6 +561,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         [fm removeItemAtPath:scriptPath error:NULL];
 
         BOOL ok = NO;
+        BOOL unverified = NO;
         NSString *message;
         if (result.cancelled) {
             message = NSLocalizedString(@"msg.cancelled", nil);
@@ -553,10 +578,13 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         // Il messaggio qui non e' tradotto, ed e' voluto: dice cosa non si e'
         // potuto verificare, e una frase tradotta che dichiari il successo
         // sarebbe una bugia in quindici lingue invece che in una.
-        } else if ([result.output containsString:@"VXOST_OK_UNVERIFIED"]) {
+        } else if (XPScriptOutcomeOf(result.output) == XPScriptOutcomeUnverified) {
+            // Il progetto c'e' e Apache e' su: non e' un fallimento. Ma non e'
+            // nemmeno verificato, e va detto per intero, come avviso.
             ok = YES;
-            message = [self firstMeaningfulLine:result.output];
-        } else if ([result.output containsString:@"VXOST_OK"]) {
+            unverified = YES;
+            message = XPUnverifiedMessage(result.output);
+        } else if (XPScriptOutcomeOf(result.output) == XPScriptOutcomeVerified) {
             ok = YES;
             message = [NSString stringWithFormat:
                        NSLocalizedString(@"wizard.done", nil), project, (long)port];
@@ -564,7 +592,7 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
             message = [self firstMeaningfulLine:result.output];
         }
 
-        [self postMessage:message isError:!ok];
+        [self postMessage:message isError:!ok isWarning:unverified];
         [[XPServiceMonitor shared] refreshNow];
 
         // Il database si crea per ultimo, a virtual host installato.
@@ -574,7 +602,12 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
         // cercarlo in phpMyAdmin. Al contrario, un progetto senza database si
         // vede subito e si rimedia con una riga.
         if (ok && database.length > 0) {
-            [self postMessage:NSLocalizedString(@"wizard.progress.database", nil) isError:NO];
+            // ⚠️ Con un avviso a video, il messaggio di avanzamento non lo
+            // sostituisce: l'avviso resta, e il risultato del database gli
+            // viene accodato.
+            if (!unverified) {
+                [self postMessage:NSLocalizedString(@"wizard.progress.database", nil) isError:NO];
+            }
             dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
                 // Nessun utente dedicato: in locale ci si collega come root, e
                 // una credenziale in piu' sarebbe una credenziale in piu' da
@@ -583,24 +616,22 @@ static BOOL XPRepositoryURLIsValid(NSString *url) {
                                                             user:nil
                                                         password:nil];
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    if (dbProblem) {
-                        // Il progetto c'e' e funziona: il database mancante e'
-                        // un avviso, non un fallimento della creazione.
-                        [self postMessage:[NSString stringWithFormat:
-                                           NSLocalizedString(@"wizard.failed.database", nil),
-                                           dbProblem] isError:YES];
-                    } else {
-                        [self postMessage:[NSString stringWithFormat:
-                                           NSLocalizedString(@"wizard.done.database", nil),
-                                           database] isError:NO];
+                    NSString *dbMessage = dbProblem
+                        ? [NSString stringWithFormat:NSLocalizedString(@"wizard.failed.database", nil), dbProblem]
+                        : [NSString stringWithFormat:NSLocalizedString(@"wizard.done.database", nil), database];
+                    if (unverified) {
+                        dbMessage = [NSString stringWithFormat:@"%@ %@", message, dbMessage];
                     }
-                    if (completion) completion(YES);
+                    // Il progetto c'e' e funziona: il database mancante e'
+                    // un avviso, non un fallimento della creazione.
+                    [self postMessage:dbMessage isError:(dbProblem != nil) isWarning:unverified];
+                    if (completion) completion(YES, !unverified);
                 });
             });
             return;
         }
 
-        if (completion) completion(ok);
+        if (completion) completion(ok, ok && !unverified);
     }];
 }
 
@@ -1237,6 +1268,7 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
         [fm removeItemAtPath:scriptPath error:NULL];
 
         BOOL ok = NO;
+        BOOL unverified = NO;
         NSString *message;
         if (result.cancelled) {
             message = NSLocalizedString(@"msg.cancelled", nil);
@@ -1253,27 +1285,33 @@ static NSString *XPApacheRestartBlock(NSInteger port, NSString *restore) {
         // Il messaggio qui non e' tradotto, ed e' voluto: dice cosa non si e'
         // potuto verificare, e una frase tradotta che dichiari il successo
         // sarebbe una bugia in quindici lingue invece che in una.
-        } else if ([result.output containsString:@"VXOST_OK_UNVERIFIED"]) {
+        } else if (XPScriptOutcomeOf(result.output) == XPScriptOutcomeUnverified) {
             ok = YES;
-            message = [self firstMeaningfulLine:result.output];
-        } else if ([result.output containsString:@"VXOST_OK"]) {
+            unverified = YES;
+            message = XPUnverifiedMessage(result.output);
+        } else if (XPScriptOutcomeOf(result.output) == XPScriptOutcomeVerified) {
             ok = YES;
             message = success;
         } else {
             message = [self firstMeaningfulLine:result.output];
         }
 
-        [self postMessage:message isError:!ok];
+        [self postMessage:message isError:!ok isWarning:unverified];
         [[XPServiceMonitor shared] refreshNow];
         if (completion) completion(ok);
     }];
 }
 
 - (void)postMessage:(NSString *)message isError:(BOOL)isError {
+    [self postMessage:message isError:isError isWarning:NO];
+}
+
+- (void)postMessage:(NSString *)message isError:(BOOL)isError isWarning:(BOOL)isWarning {
     [[NSNotificationCenter defaultCenter] postNotificationName:XPActionMessageNotification
                                                         object:self
                                                       userInfo:@{@"message": message ?: @"",
-                                                                 @"isError": @(isError)}];
+                                                                 @"isError": @(isError),
+                                                                 @"isWarning": @(isWarning)}];
 }
 
 @end

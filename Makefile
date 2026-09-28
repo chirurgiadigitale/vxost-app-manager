@@ -38,7 +38,7 @@ CFLAGS  := -fobjc-arc -Wall -Wextra -Wno-unused-parameter -O2 $(ARCHS) -mmacosx-
 # tenerla in un file di configurazione dell'app la lascerebbe in chiaro.
 LDFLAGS := -framework Cocoa -framework UniformTypeIdentifiers -framework Security
 
-.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest exposuretest phptest scripttest
+.PHONY: all icon strings run install clean uninstall dist test wizardtest updatetest exposuretest phptest scripttest esitotest
 
 # La ricetta è su un target phony e non sul bundle: il percorso contiene una
 # directory con estensione .app e make lo tratterebbe come file da datare.
@@ -130,6 +130,12 @@ phptest:
 # letteralmente "httpd.conf.vxost-$$STAMP.bak", perche' dentro gli apici
 # singoli la shell non espande le variabili. Non dava errore: teneva un backup
 # solo, sovrascritto a ogni operazione.
+esitotest:
+	@mkdir -p build
+	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/esitotest \
+		tests/esitotest.m $(filter-out src/main.m,$(SOURCES))
+	@./build/esitotest
+
 scripttest:
 	@mkdir -p build
 	@clang $(CFLAGS) $(LDFLAGS) -Isrc -o build/scripttest \
