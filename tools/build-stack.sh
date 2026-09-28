@@ -436,12 +436,17 @@ fi
 # che da' sicurezza senza darne.
 #
 # Qui le righe commentate si tolgono prima di cercare.
-# ⚠️ Un solo processo, niente pipe. Con set -o pipefail, "grep -v | grep -q"
-# falliva quando grep -q usciva alla prima riga trovata: il primo grep prendeva
-# SIGPIPE e la pipe risultava fallita. 48 volte su 50 sullo script di vxost
-# del 28/09, cresciuto con le correzioni: fino ad allora passava per fortuna.
+# ⚠️ Niente grep -q in fondo alla pipe. Con set -o pipefail, "grep -v | grep
+# -q" falliva quando grep -q usciva alla prima riga trovata: il primo grep
+# prendeva SIGPIPE e la pipe risultava fallita. 48 volte su 50 sullo script di
+# vxost del 28/09, cresciuto con le correzioni: fino ad allora passava per
+# fortuna. Il secondo grep legge tutto e scarta l'uscita.
+#
+# ⚠️ E resta grep: $1 e' un'espressione regolare ("bin/httpd -d .* -f ..."),
+# non un testo. Un primo rimedio con index() di awk la confrontava alla
+# lettera, e la build successiva si e' fermata su apachectl.
 has_active() {
-    awk -v s="$1" '!/^[[:space:]]*#/ && index($0, s) { f = 1 } END { exit !f }' "$2" 2>/dev/null
+    grep -v '^[[:space:]]*#' "$2" 2>/dev/null | grep -- "$1" >/dev/null
 }
 
 step "Installing the certificate generator"
