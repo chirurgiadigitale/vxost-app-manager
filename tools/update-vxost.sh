@@ -16,9 +16,12 @@
 #      contiene data e ora, e non puo' collidere con niente.
 #   3. MariaDB non si ferma mai con KILL: se non si ferma da sola, lo script
 #      si ferma e non tocca niente.
-#   4. Progetti e database si COPIANO nella nuova installazione: la vecchia
-#      resta intera finche' non la si cancella a mano, e tornare indietro e'
-#      spostare due cartelle.
+#   4. Il database si COPIA nella nuova installazione: quello vecchio resta
+#      intatto. I progetti invece si SPOSTANO (29/09/2026): copiarli chiedeva
+#      altrettanto spazio libero, e 46 GB di progetti su un disco con 55 GB
+#      liberi non si copiano. Lo spostamento sullo stesso disco e' istantaneo,
+#      non occupa spazio, e il percorso finale e' lo stesso di prima. Se
+#      qualcosa fallisce, i progetti tornano nella vecchia installazione.
 #
 # Per le prove: VXOST_APPS sostituisce /Applications, e VXOST_UPDATE_SANDBOX=1
 # salta il controllo di root e la chiusura dell'app. Non servono ad altro.
@@ -47,7 +50,7 @@ MARKER=".vxost-update"
 # indivisibile, quindi fa anche da lucchetto contro due esecuzioni insieme.
 JOURNAL="$APPS/.vxost-update-in-progress"
 NOLIST="cannot read the process list, so whether VXOST is running is unknown."
-togli_giornale() { rm -f "$JOURNAL/backup" "$JOURNAL/pid" "$JOURNAL/inode"; rmdir "$JOURNAL" 2>/dev/null; }
+togli_giornale() { rm -f "$JOURNAL/backup" "$JOURNAL/pid" "$JOURNAL/inode" "$JOURNAL/projects"; rmdir "$JOURNAL" 2>/dev/null; }
 
 say()  { printf '%s\n' "$*"; }
 stop() {
@@ -96,9 +99,22 @@ if [ -d "$JOURNAL" ]; then
 	if [ -n "$prev" ] && [ ! -e "$prev" ] && [ -n "$jino" ] && [ "$jino" = "$adesso" ]; then
 		togli_giornale || stop "cannot remove $JOURNAL."
 	else
-		stop "a previous update was interrupted before it finished. Your previous installation, with its projects and databases, is in:
-  ${prev:-(unknown)}
-Do not run the update again. Put it back with:
+		# I progetti si spostano: se l'interruzione e' arrivata dopo, stanno
+		# nella nuova installazione, e il messaggio lo deve dire.
+		pnew=$(sed -n 1p "$JOURNAL/projects" 2>/dev/null || true)
+		pold=$(sed -n 2p "$JOURNAL/projects" 2>/dev/null || true)
+		nota=""
+		mossi=""
+		if [ -n "$pnew" ] && [ -e "$pnew" ]; then
+			nota="
+Your projects were moved (not copied) and are now in:
+  $pnew"
+			mossi="
+  sudo mv \"$pnew\" \"$pold\""
+		fi
+		stop "a previous update was interrupted before it finished. Your previous installation, with its databases, is in:
+  ${prev:-(unknown)}$nota
+Do not run the update again. Put it back with:$mossi
   sudo mv \"$OLD\" \"$APPS/VXOST-incomplete\"
   sudo mv \"${prev:-<the folder above>}\" \"$OLD\"
 then remove the folder $JOURNAL, and ask for help if in doubt."
@@ -161,10 +177,7 @@ k1=$(kb "$SRC/VXOST") || stop "cannot measure the size of $SRC/VXOST."
 k2=$(kb "$SRC/VXOST.app") || stop "cannot measure the size of $SRC/VXOST.app."
 k3=$(kb "$OLD/vxostfiles/var/mysql") || stop "cannot measure the size of your databases."
 need=$(( k1 + k2 + k3 ))
-if [ -n "$PROJNAME" ]; then
-	k4=$(kb "$OLD/vxostfiles/www/$PROJNAME") || stop "cannot measure the size of your projects."
-	need=$(( need + k4 ))
-fi
+# I progetti non contano: si spostano sullo stesso disco, senza occupare spazio.
 need=$(( need + need / 10 ))
 free=$(df -k "$APPS" | awk 'NR==2 {print $4}')
 [ "$free" -gt "$need" ] || stop "not enough free disk space: about $((need / 1024)) MB are needed, $((free / 1024)) MB are free."
@@ -219,6 +232,7 @@ mkdir "$JOURNAL" 2>/dev/null || stop "another update is running right now (or $J
 	&& printf '%s\n' "$ino" > "$JOURNAL/inode"; } \
 	|| { togli_giornale; stop "cannot write $JOURNAL."; }
 spostata=0
+progetti_spostati=0
 ripristina() {
 	local e=$?
 	set +e
@@ -232,6 +246,25 @@ ripristina() {
 	fi
 	printf '\nSomething failed. Putting the previous installation back...\n' >&2 2>/dev/null
 	mkdir -p "$APPS/VXOST-incomplete-$STAMP" 2>/dev/null
+	# ⚠️ Prima i progetti: sono stati spostati nella nuova installazione, e
+	# spostandola di lato andrebbero di lato con lei.
+	if [ $progetti_spostati -eq 1 ]; then
+		P="$OLD/vxostfiles/www/projects"
+		for f in index.php .htaccess; do
+			if [ -e "$P/$f.previous-$STAMP" ]; then
+				[ -e "$P/$f" ] && mv "$P/$f" "$APPS/VXOST-incomplete-$STAMP/projects-$f" 2>/dev/null
+				mv "$P/$f.previous-$STAMP" "$P/$f" 2>/dev/null
+			fi
+		done
+		if mv "$P" "$BACKUP/vxostfiles/www/$PROJNAME" 2>/dev/null; then
+			progetti_spostati=0
+		else
+			# Non si sposta nient'altro: i progetti restano dove sono, e il
+			# giornale resta a dirlo al prossimo lancio.
+			printf 'Could not move your projects back. They are intact in %s; your previous installation is in %s.\n' "$P" "$BACKUP" >&2 2>/dev/null
+			exit $e
+		fi
+	fi
 	[ -e "$OLD" ] && mv "$OLD" "$APPS/VXOST-incomplete-$STAMP/VXOST" 2>/dev/null
 	if [ -e "$BACKUP/VXOST.app.previous" ]; then
 		[ -e "$APPS/VXOST.app" ] && mv "$APPS/VXOST.app" "$APPS/VXOST-incomplete-$STAMP/VXOST.app" 2>/dev/null
@@ -341,31 +374,28 @@ ditto "$KEPT/var/mysql" "$NEW/var/mysql"
 rm -f "$NEW/var/mysql/"*.pid "$NEW/var/mysql/mysql.sock" "$NEW/var/mysql/mysql.sock.lock"
 
 if [ -n "$PROJNAME" ]; then
-	say "Copying your projects..."
+	say "Moving your projects..."
 	PROJ="$KEPT/www/$PROJNAME"
-	mkdir -p "$NEW/www/projects"
-	copiati=0
-	# ⚠️ index.php e .htaccess in cima alla cartella sono della dashboard, non
-	# dei progetti: copiandoli, quelli vecchi sostituirebbero i nuovi.
-	for voce in "$PROJ"/* "$PROJ"/.[!.]*; do
-		[ -e "$voce" ] || [ -L "$voce" ] || continue
-		nome=$(basename "$voce")
-		case "$nome" in index.php|.htaccess|.DS_Store) continue ;; esac
-		# ⚠️ Un progetto che e' un collegamento resta un collegamento: ditto lo
-		# seguirebbe, e Apache servirebbe una copia ferma mentre si lavora
-		# sull'originale. Anche quelli rotti: sono dell'utente, non nostri.
-		if [ -L "$voce" ]; then
-			ln -s "$(readlink "$voce")" "$NEW/www/projects/$nome"
-			copiati=$((copiati + 1))
-			continue
+	[ -d "$PROJ" ] || { echo "$PROJ is missing" >&2; false; }
+	# La cartella projects del pacchetto (index.php e .htaccess della
+	# dashboard) si mette di lato, e al suo posto va quella dei progetti.
+	if [ -e "$NEW/www/projects" ]; then
+		mv "$NEW/www/projects" "$NEW/www/projects.from-package-$STAMP"
+	fi
+	printf '%s\n%s\n' "$NEW/www/projects" "$PROJ" > "$JOURNAL/projects"
+	mv "$PROJ" "$NEW/www/projects"
+	progetti_spostati=1
+	# index.php e .htaccess in cima alla cartella sono della dashboard, non dei
+	# progetti: quelli vecchi si mettono di lato, e arrivano quelli nuovi.
+	for f in index.php .htaccess; do
+		if [ -e "$NEW/www/projects/$f" ]; then
+			mv "$NEW/www/projects/$f" "$NEW/www/projects/$f.previous-$STAMP"
 		fi
-		ditto "$voce" "$NEW/www/projects/$nome"
-		copiati=$((copiati + 1))
+		if [ -e "$NEW/www/projects.from-package-$STAMP/$f" ]; then
+			ditto "$NEW/www/projects.from-package-$STAMP/$f" "$NEW/www/projects/$f"
+		fi
 	done
-	# Una cartella che all'inizio aveva progetti e da cui non si copia niente
-	# e' un errore, non un'installazione senza progetti.
-	[ $copiati -gt 0 ] || { echo "no project was copied from $PROJ" >&2; false; }
-	say "  $copiati copied."
+	say "  $(ls -A "$NEW/www/projects" | wc -l | tr -d ' ') entries moved."
 fi
 
 # La radice delle installazioni di partenza, che i virtual host piu' vecchi
@@ -416,7 +446,11 @@ say "Done. VXOST $NEWVER is installed, with your projects, databases, virtual ho
 say ""
 say "Your previous installation is untouched in:"
 say "  $BACKUP"
-say "Delete it only when everything works."
+if [ -n "$PROJNAME" ]; then
+	say "Your projects were moved, not copied: they are only in"
+	say "  $NEW/www/projects"
+fi
+say "Delete the previous installation only when everything works."
 if [ "${vh_in_conf:-0}" -gt 0 ]; then
 	say ""
 	say "Note: your old httpd.conf had $vh_in_conf virtual host(s) written directly in it."
@@ -429,6 +463,10 @@ say "The old files are all in $KEPT"
 say "If you changed the database root password, phpMyAdmin will ask for it."
 say ""
 say "To go back: quit VXOST and stop the servers, then in Terminal:"
+if [ -n "$PROJNAME" ]; then
+	say "  sudo mv \"$NEW/www/projects\" \"$KEPT/www/$PROJNAME\""
+	say "  (and in that folder, rename index.php.previous-$STAMP back to index.php)"
+fi
 say "  sudo mv \"$OLD\" \"$APPS/VXOST-new-$STAMP\""
 say "  sudo mv \"$BACKUP\" \"$OLD\""
 if [ -e "$BACKUP/VXOST.app.previous" ]; then
