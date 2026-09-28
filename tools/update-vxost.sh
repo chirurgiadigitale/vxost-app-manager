@@ -47,6 +47,7 @@ MARKER=".vxost-update"
 # indivisibile, quindi fa anche da lucchetto contro due esecuzioni insieme.
 JOURNAL="$APPS/.vxost-update-in-progress"
 NOLIST="cannot read the process list, so whether VXOST is running is unknown."
+togli_giornale() { rm -f "$JOURNAL/backup" "$JOURNAL/pid" "$JOURNAL/inode"; rmdir "$JOURNAL" 2>/dev/null; }
 
 say()  { printf '%s\n' "$*"; }
 stop() {
@@ -79,9 +80,21 @@ esac
 # vuoto, dicendo "Done": si ferma e dice dove sono i dati.
 if [ -d "$JOURNAL" ]; then
 	prev=$(cat "$JOURNAL/backup" 2>/dev/null || true)
-	if [ -n "$prev" ] && [ ! -e "$prev" ] && [ -d "$OLD/vxostfiles/var/mysql" ]; then
-		# Interrotto prima di spostare qualsiasi cosa: il giornale non conta.
-		rmdir "$JOURNAL" 2>/dev/null || { rm -f "$JOURNAL/backup"; rmdir "$JOURNAL"; }
+	jpid=$(cat "$JOURNAL/pid" 2>/dev/null || true)
+	jino=$(cat "$JOURNAL/inode" 2>/dev/null || true)
+	adesso=$(stat -f %i "$OLD" 2>/dev/null || true)
+	# ⚠️ Un'altra esecuzione ancora viva (magari in attesa di MariaDB) non
+	# lascia un giornale "vecchio": e' il suo lucchetto.
+	if [ -n "$jpid" ] && kill -0 "$jpid" 2>/dev/null; then
+		stop "another update is running right now (process $jpid)."
+	fi
+	# Il giornale non conta solo se niente e' stato spostato: la copia di
+	# riserva non esiste, e $OLD e' LA STESSA cartella di allora, riconosciuta
+	# dall'inode, che una rinomina conserva. "Sembra un'installazione" non
+	# basta: anche la copia incompleta del pacchetto ha un var/mysql, e al
+	# rilancio ci si copiava sopra il database vuoto dicendo "Done".
+	if [ -n "$prev" ] && [ ! -e "$prev" ] && [ -n "$jino" ] && [ "$jino" = "$adesso" ]; then
+		togli_giornale || stop "cannot remove $JOURNAL."
 	else
 		stop "a previous update was interrupted before it finished. Your previous installation, with its projects and databases, is in:
   ${prev:-(unknown)}
@@ -127,6 +140,12 @@ elif pieno "$OLD/vxostfiles/www/projects"; then
 	PROJNAME=projects
 elif pieno "$OLD/vxostfiles/www/progetti"; then
 	PROJNAME=progetti
+fi
+# ⚠️ Se la cartella dei progetti e' essa stessa un collegamento, copiarla
+# darebbe ad Apache una copia ferma mentre si lavora sull'originale. Quale
+# delle due scelte sia giusta lo sa chi l'ha fatto: si chiede.
+if [ -n "$PROJNAME" ] && [ -L "$OLD/vxostfiles/www/$PROJNAME" ]; then
+	stop "www/$PROJNAME is a symbolic link to $(readlink "$OLD/vxostfiles/www/$PROJNAME"). Updating it would serve a frozen copy of your projects. Ask for help, or update by hand."
 fi
 
 # Spazio: la nuova installazione, piu' una copia del database e dei progetti.
@@ -194,15 +213,21 @@ pids_others() {
 
 # Da qui un'uscita qualsiasi passa dal ripristino, che toglie anche il giornale
 # se non si era ancora spostato niente.
+ino=$(stat -f %i "$OLD") || stop "cannot read $OLD."
 mkdir "$JOURNAL" 2>/dev/null || stop "another update is running right now (or $JOURNAL was left behind)."
-printf '%s\n' "$BACKUP" > "$JOURNAL/backup"
+{ printf '%s\n' "$BACKUP" > "$JOURNAL/backup" && printf '%s\n' "$$" > "$JOURNAL/pid" \
+	&& printf '%s\n' "$ino" > "$JOURNAL/inode"; } \
+	|| { togli_giornale; stop "cannot write $JOURNAL."; }
 spostata=0
 ripristina() {
 	local e=$?
 	set +e
 	[ $e -eq 0 ] && return
 	if [ $spostata -eq 0 ]; then
-		rm -f "$JOURNAL/backup"; rmdir "$JOURNAL" 2>/dev/null
+		# Un segnale arrivato fra lo spostamento e "spostata=1": la cartella e'
+		# gia' di lato. Si rimette a posto.
+		if [ -e "$BACKUP" ] && [ ! -e "$OLD" ]; then mv "$BACKUP" "$OLD" 2>/dev/null; fi
+		togli_giornale
 		exit $e
 	fi
 	printf '\nSomething failed. Putting the previous installation back...\n' >&2 2>/dev/null
@@ -214,7 +239,7 @@ ripristina() {
 	fi
 	if [ ! -e "$OLD" ] && mv "$BACKUP" "$OLD" 2>/dev/null; then
 		# Tornato tutto com'era: il giornale non serve piu'.
-		rm -f "$JOURNAL/backup"; rmdir "$JOURNAL" 2>/dev/null
+		togli_giornale
 		printf 'Your previous VXOST is back in %s. The incomplete copy is in %s.\n' "$OLD" "$APPS/VXOST-incomplete-$STAMP" >&2 2>/dev/null
 	else
 		# Il giornale resta: il prossimo lancio si fermera' e dira' dove sono i dati.
@@ -296,10 +321,14 @@ ditto "$SRC/VXOST.app" "$APPS/VXOST.app"
 # toglie dalla cartella dello stack, come fa il wizard del primo avvio, e si
 # verifica prima di avviare qualsiasi cosa.
 xattr -rd com.apple.quarantine "$OLD" 2>/dev/null || true
-if xattr -lr "$OLD" 2>/dev/null | grep -q 'com.apple.quarantine'; then
-	echo "the new installation is still quarantined by macOS" >&2
-	false
-fi
+# ⚠️ Non "xattr | grep -q": con pipefail, grep -q esce alla prima riga, xattr
+# prende SIGPIPE e la pipe risulta falsa proprio quando la quarantena c'e'.
+q=$(xattr -lr "$OLD" 2>/dev/null || true)
+case "$q" in
+	*com.apple.quarantine*)
+		echo "the new installation is still quarantined by macOS" >&2
+		false ;;
+esac
 
 NEW="$OLD/vxostfiles"
 KEPT="$BACKUP/vxostfiles"
@@ -372,7 +401,7 @@ fi
 
 printf '%s\n' "$NEWVER" > "$NEW/$MARKER"
 trap - EXIT
-rm -f "$JOURNAL/backup"; rmdir "$JOURNAL" 2>/dev/null || true
+togli_giornale || true
 
 # --- 4. Avvio. ---------------------------------------------------------------
 
