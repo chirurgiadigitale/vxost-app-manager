@@ -112,11 +112,17 @@ Your projects were moved (not copied) and are now in:
 			mossi="
   sudo mv \"$pnew\" \"$pold\""
 		fi
+		app=""
+		if [ -n "$prev" ] && [ -e "$prev/VXOST.app.previous" ]; then
+			app="
+  sudo mv \"$APPS/VXOST.app\" \"$APPS/VXOST-incomplete.app\"
+  sudo mv \"$prev/VXOST.app.previous\" \"$APPS/VXOST.app\""
+		fi
 		stop "a previous update was interrupted before it finished. Your previous installation, with its databases, is in:
   ${prev:-(unknown)}$nota
 Do not run the update again. Put it back with:$mossi
   sudo mv \"$OLD\" \"$APPS/VXOST-incomplete\"
-  sudo mv \"${prev:-<the folder above>}\" \"$OLD\"
+  sudo mv \"${prev:-<the folder above>}\" \"$OLD\"$app
 then remove the folder $JOURNAL, and ask for help if in doubt."
 	fi
 fi
@@ -160,6 +166,13 @@ fi
 # ⚠️ Se la cartella dei progetti e' essa stessa un collegamento, copiarla
 # darebbe ad Apache una copia ferma mentre si lavora sull'originale. Quale
 # delle due scelte sia giusta lo sa chi l'ha fatto: si chiede.
+# ⚠️ I progetti si spostano, e uno spostamento fra due dischi non e' uno
+# spostamento: mv copia e poi cancella l'originale, senza che il controllo
+# dello spazio lo sappia. Succede se www, o la cartella stessa, e' un
+# collegamento verso un altro disco.
+if [ -n "$PROJNAME" ] && [ "$(stat -f %d "$OLD/vxostfiles/www/$PROJNAME/")" != "$(stat -f %d "$APPS")" ]; then
+	stop "your projects folder is on another disk than $APPS (www or www/$PROJNAME is a link to it). Moving it would copy $(du -sh "$OLD/vxostfiles/www/$PROJNAME/" 2>/dev/null | cut -f1) and delete the original. Ask for help, or update by hand."
+fi
 if [ -n "$PROJNAME" ] && [ -L "$OLD/vxostfiles/www/$PROJNAME" ]; then
 	stop "www/$PROJNAME is a symbolic link to $(readlink "$OLD/vxostfiles/www/$PROJNAME"). Updating it would serve a frozen copy of your projects. Ask for help, or update by hand."
 fi
@@ -233,6 +246,7 @@ mkdir "$JOURNAL" 2>/dev/null || stop "another update is running right now (or $J
 	|| { togli_giornale; stop "cannot write $JOURNAL."; }
 spostata=0
 progetti_spostati=0
+dal_pacchetto=""
 ripristina() {
 	local e=$?
 	set +e
@@ -248,13 +262,19 @@ ripristina() {
 	mkdir -p "$APPS/VXOST-incomplete-$STAMP" 2>/dev/null
 	# ⚠️ Prima i progetti: sono stati spostati nella nuova installazione, e
 	# spostandola di lato andrebbero di lato con lei.
-	if [ $progetti_spostati -eq 1 ]; then
+	# ⚠️ Si decide da dove sono DAVVERO i progetti, non solo dal flag: un
+	# segnale arrivato fra il mv e la riga dopo trovava il flag a 0, e il
+	# ripristino seppelliva i progetti nella copia incompleta dicendo che era
+	# tutto a posto (revisione del 29/09). Il flag si alza PRIMA del mv; se il
+	# mv non e' avvenuto, la sorgente c'e' ancora e questo blocco si salta.
+	if [ $progetti_spostati -eq 1 ] && [ ! -e "$BACKUP/vxostfiles/www/$PROJNAME" ] && [ -d "$OLD/vxostfiles/www/projects" ]; then
 		P="$OLD/vxostfiles/www/projects"
 		for f in index.php .htaccess; do
-			if [ -e "$P/$f.previous-$STAMP" ]; then
-				[ -e "$P/$f" ] && mv "$P/$f" "$APPS/VXOST-incomplete-$STAMP/projects-$f" 2>/dev/null
-				mv "$P/$f.previous-$STAMP" "$P/$f" 2>/dev/null
-			fi
+			# Il file arrivato dal pacchetto se ne va; quello vecchio torna.
+			case " $dal_pacchetto " in
+				*" $f "*) [ -e "$P/$f" ] && mv "$P/$f" "$APPS/VXOST-incomplete-$STAMP/projects-$f" 2>/dev/null ;;
+			esac
+			[ -e "$P/$f.previous-$STAMP" ] && mv "$P/$f.previous-$STAMP" "$P/$f" 2>/dev/null
 		done
 		if mv "$P" "$BACKUP/vxostfiles/www/$PROJNAME" 2>/dev/null; then
 			progetti_spostati=0
@@ -379,12 +399,16 @@ if [ -n "$PROJNAME" ]; then
 	[ -d "$PROJ" ] || { echo "$PROJ is missing" >&2; false; }
 	# La cartella projects del pacchetto (index.php e .htaccess della
 	# dashboard) si mette di lato, e al suo posto va quella dei progetti.
+	# ⚠️ mv su una cartella che esiste gia' non la sostituisce: ci entra dentro,
+	# ed esce 0. Prima di ogni spostamento, la destinazione non deve esistere.
 	if [ -e "$NEW/www/projects" ]; then
+		[ ! -e "$NEW/www/projects.from-package-$STAMP" ] || { echo "projects.from-package-$STAMP already exists" >&2; false; }
 		mv "$NEW/www/projects" "$NEW/www/projects.from-package-$STAMP"
 	fi
+	[ ! -e "$NEW/www/projects" ] || { echo "$NEW/www/projects appeared while updating" >&2; false; }
 	printf '%s\n%s\n' "$NEW/www/projects" "$PROJ" > "$JOURNAL/projects"
-	mv "$PROJ" "$NEW/www/projects"
 	progetti_spostati=1
+	mv "$PROJ" "$NEW/www/projects"
 	# index.php e .htaccess in cima alla cartella sono della dashboard, non dei
 	# progetti: quelli vecchi si mettono di lato, e arrivano quelli nuovi.
 	for f in index.php .htaccess; do
@@ -392,6 +416,7 @@ if [ -n "$PROJNAME" ]; then
 			mv "$NEW/www/projects/$f" "$NEW/www/projects/$f.previous-$STAMP"
 		fi
 		if [ -e "$NEW/www/projects.from-package-$STAMP/$f" ]; then
+			dal_pacchetto="$dal_pacchetto $f"
 			ditto "$NEW/www/projects.from-package-$STAMP/$f" "$NEW/www/projects/$f"
 		fi
 	done
@@ -431,7 +456,7 @@ fi
 
 printf '%s\n' "$NEWVER" > "$NEW/$MARKER"
 trap - EXIT
-togli_giornale || true
+togli_giornale || say "Note: could not remove $JOURNAL. The update is complete: remove that folder by hand, or the next update will stop."
 
 # --- 4. Avvio. ---------------------------------------------------------------
 
@@ -461,11 +486,24 @@ say "directly in www/ outside the projects folder, virtual hosts and certificate
 say "in httpd-ssl.conf, phpMyAdmin settings, and hand changes to php.ini or my.cnf."
 say "The old files are all in $KEPT"
 say "If you changed the database root password, phpMyAdmin will ask for it."
+if [ "$PROJNAME" = progetti ]; then
+	say "Your projects folder was called progetti: it is now www/projects. Paths"
+	say "written by hand with /www/progetti/ (.env files, crontab, editors) must be updated."
+fi
+say "Links inside your projects that point outside them with a relative path"
+say "(../something) now point inside the new installation."
 say ""
-say "To go back: quit VXOST and stop the servers, then in Terminal:"
+say "To go back: quit VXOST and stop the servers, then in Terminal. Anything"
+say "written to the databases after the update is lost when going back."
 if [ -n "$PROJNAME" ]; then
-	say "  sudo mv \"$NEW/www/projects\" \"$KEPT/www/$PROJNAME\""
-	say "  (and in that folder, rename index.php.previous-$STAMP back to index.php)"
+	P="$NEW/www/projects"
+	for f in index.php .htaccess; do
+		case " $dal_pacchetto " in
+			*" $f "*) say "  sudo mv \"$P/$f\" \"$P/$f.from-package-$STAMP\"" ;;
+		esac
+		[ -e "$P/$f.previous-$STAMP" ] && say "  sudo mv \"$P/$f.previous-$STAMP\" \"$P/$f\""
+	done
+	say "  sudo mv \"$P\" \"$KEPT/www/$PROJNAME\""
 fi
 say "  sudo mv \"$OLD\" \"$APPS/VXOST-new-$STAMP\""
 say "  sudo mv \"$BACKUP\" \"$OLD\""
