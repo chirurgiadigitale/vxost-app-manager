@@ -25,6 +25,14 @@
 
 set -euo pipefail
 
+# ⚠️ Un segnale deve portare al ripristino. In bash 3.2, dentro il trap EXIT,
+# $? vale 0 dopo un HUP o un TERM: il ripristino credeva che fosse andato tutto
+# bene e non rimetteva niente a posto. Il caso vero e' la finestra del
+# Terminale chiusa durante la copia (revisione del 28/09).
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 APPS="${VXOST_APPS:-/Applications}"
 SANDBOX="${VXOST_UPDATE_SANDBOX:-}"
 # Solo per le prove: quanto aspettare MariaDB. Tre minuti di default.
@@ -34,6 +42,11 @@ OLD="$APPS/VXOST"
 STAMP="$(date '+%Y%m%d-%H%M%S')"
 BACKUP="$APPS/VXOST-old-$STAMP"
 MARKER=".vxost-update"
+# Il giornale: esiste dal momento in cui si comincia a cambiare qualcosa a
+# quando si e' finito, e dice dove sta la vecchia installazione. mkdir e'
+# indivisibile, quindi fa anche da lucchetto contro due esecuzioni insieme.
+JOURNAL="$APPS/.vxost-update-in-progress"
+NOLIST="cannot read the process list, so whether VXOST is running is unknown."
 
 say()  { printf '%s\n' "$*"; }
 stop() {
@@ -60,10 +73,36 @@ case "$SRC/" in
 	"$OLD"/*) stop "this script must run from the disk image, not from inside $OLD." ;;
 esac
 
+# Un aggiornamento interrotto senza ripristino: spegnimento improvviso, o un
+# ripristino che non e' riuscito. Rilanciare adesso prenderebbe la copia
+# incompleta per "la vecchia installazione" e ci copierebbe sopra un database
+# vuoto, dicendo "Done": si ferma e dice dove sono i dati.
+if [ -d "$JOURNAL" ]; then
+	prev=$(cat "$JOURNAL/backup" 2>/dev/null || true)
+	if [ -n "$prev" ] && [ ! -e "$prev" ] && [ -d "$OLD/vxostfiles/var/mysql" ]; then
+		# Interrotto prima di spostare qualsiasi cosa: il giornale non conta.
+		rmdir "$JOURNAL" 2>/dev/null || { rm -f "$JOURNAL/backup"; rmdir "$JOURNAL"; }
+	else
+		stop "a previous update was interrupted before it finished. Your previous installation, with its projects and databases, is in:
+  ${prev:-(unknown)}
+Do not run the update again. Put it back with:
+  sudo mv \"$OLD\" \"$APPS/VXOST-incomplete\"
+  sudo mv \"${prev:-<the folder above>}\" \"$OLD\"
+then remove the folder $JOURNAL, and ask for help if in doubt."
+	fi
+fi
+
 if [ ! -e "$OLD" ]; then
+	vecchie=$(ls -d "$APPS"/VXOST-old-* 2>/dev/null || true)
+	[ -n "$vecchie" ] && stop "there is no VXOST in $APPS, but there are earlier installations kept aside:
+$vecchie
+Move the one you want back to $OLD before updating."
 	stop "there is no VXOST in $APPS to update. For a new installation, drag the VXOST folder and VXOST.app onto Applications."
 fi
 [ -L "$OLD" ] && stop "$OLD is a symbolic link. Update it by hand, or ask for help."
+# Anche per strade diverse: un disco montato dentro Applications, un alias.
+[ "$(cd "$SRC/VXOST" && pwd -P)" = "$(cd "$OLD" && pwd -P)" ] \
+	&& stop "the new VXOST folder and the installed one are the same folder."
 [ -d "$OLD/vxostfiles/var/mysql" ] || stop "$OLD/vxostfiles/var/mysql is missing: this does not look like a VXOST installation."
 
 if [ -f "$OLD/vxostfiles/$MARKER" ] && [ "$(cat "$OLD/vxostfiles/$MARKER")" = "$NEWVER" ]; then
@@ -91,9 +130,22 @@ elif pieno "$OLD/vxostfiles/www/progetti"; then
 fi
 
 # Spazio: la nuova installazione, piu' una copia del database e dei progetti.
-kb() { du -sk "$1" 2>/dev/null | awk '{print $1}'; }
-need=$(( $(kb "$SRC/VXOST") + $(kb "$SRC/VXOST.app") + $(kb "$OLD/vxostfiles/var/mysql") ))
-[ -n "$PROJNAME" ] && need=$(( need + $(kb "$OLD/vxostfiles/www/$PROJNAME") ))
+# ⚠️ Un du che fallisce non vale zero: si ferma con un messaggio invece di
+# uscire in silenzio da un'espressione aritmetica vuota.
+kb() {
+	local n
+	n=$(du -sk "$1" 2>/dev/null | awk '{print $1}') || return 1
+	case "$n" in ''|*[!0-9]*) return 1 ;; esac
+	printf '%s\n' "$n"
+}
+k1=$(kb "$SRC/VXOST") || stop "cannot measure the size of $SRC/VXOST."
+k2=$(kb "$SRC/VXOST.app") || stop "cannot measure the size of $SRC/VXOST.app."
+k3=$(kb "$OLD/vxostfiles/var/mysql") || stop "cannot measure the size of your databases."
+need=$(( k1 + k2 + k3 ))
+if [ -n "$PROJNAME" ]; then
+	k4=$(kb "$OLD/vxostfiles/www/$PROJNAME") || stop "cannot measure the size of your projects."
+	need=$(( need + k4 ))
+fi
 need=$(( need + need / 10 ))
 free=$(df -k "$APPS" | awk 'NR==2 {print $4}')
 [ "$free" -gt "$need" ] || stop "not enough free disk space: about $((need / 1024)) MB are needed, $((free / 1024)) MB are free."
@@ -124,17 +176,53 @@ ours() {
 }
 # ⚠️ Un elenco che non si legge non e' un elenco vuoto: vuoto vorrebbe dire
 # "tutto fermo", e si andrebbe avanti con MariaDB accesa.
+#
+# ⚠️ E non chiamano stop: dentro $(...) uscirebbe solo dalla sottoshell, e lo
+# script andrebbe avanti con un elenco vuoto. Restituiscono un errore, e
+# decide chi le chiama.
 pids_matching() {
 	local elenco
-	elenco=$(ours) || stop "cannot read the process list, so whether VXOST is running is unknown."
+	elenco=$(ours) || return 1
 	printf '%s\n' "$elenco" | awk -v s="$1" 'index($0, s) { print $1 }'
 }
 # Tutti i nostri tranne il database e il suo supervisore, che hanno regole loro.
 pids_others() {
 	local elenco
-	elenco=$(ours) || stop "cannot read the process list, so whether VXOST is running is unknown."
+	elenco=$(ours) || return 1
 	printf '%s\n' "$elenco" | awk 'NF && !index($0, "/sbin/mysqld") && !index($0, "/bin/mysqld_safe") { print $1 }'
 }
+
+# Da qui un'uscita qualsiasi passa dal ripristino, che toglie anche il giornale
+# se non si era ancora spostato niente.
+mkdir "$JOURNAL" 2>/dev/null || stop "another update is running right now (or $JOURNAL was left behind)."
+printf '%s\n' "$BACKUP" > "$JOURNAL/backup"
+spostata=0
+ripristina() {
+	local e=$?
+	set +e
+	[ $e -eq 0 ] && return
+	if [ $spostata -eq 0 ]; then
+		rm -f "$JOURNAL/backup"; rmdir "$JOURNAL" 2>/dev/null
+		exit $e
+	fi
+	printf '\nSomething failed. Putting the previous installation back...\n' >&2 2>/dev/null
+	mkdir -p "$APPS/VXOST-incomplete-$STAMP" 2>/dev/null
+	[ -e "$OLD" ] && mv "$OLD" "$APPS/VXOST-incomplete-$STAMP/VXOST" 2>/dev/null
+	if [ -e "$BACKUP/VXOST.app.previous" ]; then
+		[ -e "$APPS/VXOST.app" ] && mv "$APPS/VXOST.app" "$APPS/VXOST-incomplete-$STAMP/VXOST.app" 2>/dev/null
+		mv "$BACKUP/VXOST.app.previous" "$APPS/VXOST.app" 2>/dev/null
+	fi
+	if [ ! -e "$OLD" ] && mv "$BACKUP" "$OLD" 2>/dev/null; then
+		# Tornato tutto com'era: il giornale non serve piu'.
+		rm -f "$JOURNAL/backup"; rmdir "$JOURNAL" 2>/dev/null
+		printf 'Your previous VXOST is back in %s. The incomplete copy is in %s.\n' "$OLD" "$APPS/VXOST-incomplete-$STAMP" >&2 2>/dev/null
+	else
+		# Il giornale resta: il prossimo lancio si fermera' e dira' dove sono i dati.
+		printf 'Could not move it back: your previous VXOST is intact in %s.\n' "$BACKUP" >&2 2>/dev/null
+	fi
+	exit $e
+}
+trap ripristina EXIT
 
 say "Stopping VXOST..."
 if [ -z "$SANDBOX" ]; then
@@ -142,57 +230,55 @@ if [ -z "$SANDBOX" ]; then
 fi
 
 # Il supervisore per primo: ignora TERM e rigenera il database.
-for p in $(pids_matching "/bin/mysqld_safe"); do kill -9 "$p" 2>/dev/null || true; done
+l=$(pids_matching "/bin/mysqld_safe") || stop "$NOLIST"
+for p in $l; do kill -9 "$p" 2>/dev/null || true; done
 
 # MariaDB: arresto ordinato, e si aspetta. Un database grande puo' metterci.
-for p in $(pids_matching "/sbin/mysqld"); do kill -TERM "$p" 2>/dev/null || true; done
+l=$(pids_matching "/sbin/mysqld") || stop "$NOLIST"
+for p in $l; do kill -TERM "$p" 2>/dev/null || true; done
 i=0
-while [ -n "$(pids_matching "/sbin/mysqld")" ] && [ $i -lt "$DBWAIT" ]; do sleep 1; i=$((i + 1)); done
-if [ -n "$(pids_matching "/sbin/mysqld")" ]; then
-	stop "MariaDB did not stop within 3 minutes, and it is never forced: a database killed in the middle of a write can be damaged. Stop it from VXOST, or restart the Mac, then run this again."
-fi
+while :; do
+	l=$(pids_matching "/sbin/mysqld") || stop "$NOLIST"
+	[ -z "$l" ] && break
+	[ $i -ge "$DBWAIT" ] && stop "MariaDB did not stop within $DBWAIT seconds, and it is never forced: a database killed in the middle of a write can be damaged. Stop it from VXOST, or restart the Mac, then run this again."
+	sleep 1; i=$((i + 1))
+done
 
 # Il resto (Apache, ProFTPD e altri): TERM, e dopo 20 secondi KILL. Non
 # tengono dati aperti.
 #
 # ⛔ MariaDB e' esclusa da questo ciclo: qui arriva gia' ferma, e se un
 # mysqld fosse nato nel frattempo, il KILL qui sotto lo prenderebbe.
-for p in $(pids_others); do kill -TERM "$p" 2>/dev/null || true; done
+l=$(pids_others) || stop "$NOLIST"
+for p in $l; do kill -TERM "$p" 2>/dev/null || true; done
 i=0
-while [ -n "$(pids_others)" ] && [ $i -lt 20 ]; do sleep 1; i=$((i + 1)); done
-for p in $(pids_others); do kill -9 "$p" 2>/dev/null || true; done
+while :; do
+	l=$(pids_others) || stop "$NOLIST"
+	{ [ -z "$l" ] || [ $i -ge 20 ]; } && break
+	sleep 1; i=$((i + 1))
+done
+for p in $l; do kill -9 "$p" 2>/dev/null || true; done
 sleep 1
 rimasti=$(ours) || stop "cannot read the process list, so whether VXOST is still running is unknown."
 [ -z "$rimasti" ] || stop "these VXOST processes are still running:
 $rimasti"
+
+# ⚠️ Chi usa ancora la cartella del database, qualunque nome abbia. I nomi non
+# bastano: un MariaDB avviato attraverso un alias della cartella non comincia
+# con la nostra radice, e il database sarebbe stato copiato aperto.
+command -v lsof >/dev/null 2>&1 || stop "lsof is not available, so whether the database is still in use is unknown."
+usati=$(lsof -t +d "$OLD/vxostfiles/var/mysql" 2>/dev/null || true)
+if [ -n "$usati" ]; then
+	stop "these processes are still using the database folder:
+$(ps -o pid=,command= -p "$(echo $usati | tr ' ' ',')" 2>/dev/null)
+Stop them, then run this again."
+fi
 say "  all VXOST services are stopped."
 
 # --- 3. Da qui in poi si cambia qualcosa. -----------------------------------
 
-# Se qualcosa va storto a meta', si rimette tutto come prima: la nuova
-# installazione incompleta si sposta di lato (mai cancellata), la vecchia
-# torna al suo posto.
-spostata=0
-ripristina() {
-	local e=$?
-	[ $e -eq 0 ] && return
-	[ $spostata -eq 1 ] || exit $e
-	printf '\nSomething failed. Putting the previous installation back...\n' >&2
-	mkdir -p "$APPS/VXOST-incomplete-$STAMP" 2>/dev/null || true
-	if [ -e "$OLD" ]; then mv "$OLD" "$APPS/VXOST-incomplete-$STAMP/VXOST" 2>/dev/null || true; fi
-	if [ -e "$BACKUP/VXOST.app.previous" ]; then
-		[ -e "$APPS/VXOST.app" ] && mv "$APPS/VXOST.app" "$APPS/VXOST-incomplete-$STAMP/VXOST.app" 2>/dev/null
-		mv "$BACKUP/VXOST.app.previous" "$APPS/VXOST.app" 2>/dev/null || true
-	fi
-	if mv "$BACKUP" "$OLD" 2>/dev/null; then
-		printf 'Your previous VXOST is back in %s. The incomplete copy is in %s.\n' "$OLD" "$APPS/VXOST-incomplete-$STAMP" >&2
-	else
-		printf 'Could not move it back: your previous VXOST is intact in %s.\n' "$BACKUP" >&2
-	fi
-	exit $e
-}
-trap ripristina EXIT
-
+# Da qui si cambia qualcosa. Se va storto a meta', ripristina (sopra) rimette
+# tutto come prima: la copia incompleta si sposta di lato, mai cancellata.
 say "Keeping the current installation aside..."
 mv "$OLD" "$BACKUP"
 spostata=1
@@ -204,6 +290,16 @@ if [ -e "$APPS/VXOST.app" ]; then
 	mv "$APPS/VXOST.app" "$BACKUP/VXOST.app.previous"
 fi
 ditto "$SRC/VXOST.app" "$APPS/VXOST.app"
+
+# ⚠️ ditto porta con se' la quarantena dei file scaricati, e Gatekeeper uccide
+# i binari dello stack alla prima esecuzione ("Killed: 9", 21/08/2026). La si
+# toglie dalla cartella dello stack, come fa il wizard del primo avvio, e si
+# verifica prima di avviare qualsiasi cosa.
+xattr -rd com.apple.quarantine "$OLD" 2>/dev/null || true
+if xattr -lr "$OLD" 2>/dev/null | grep -q 'com.apple.quarantine'; then
+	echo "the new installation is still quarantined by macOS" >&2
+	false
+fi
 
 NEW="$OLD/vxostfiles"
 KEPT="$BACKUP/vxostfiles"
@@ -223,9 +319,17 @@ if [ -n "$PROJNAME" ]; then
 	# ⚠️ index.php e .htaccess in cima alla cartella sono della dashboard, non
 	# dei progetti: copiandoli, quelli vecchi sostituirebbero i nuovi.
 	for voce in "$PROJ"/* "$PROJ"/.[!.]*; do
-		[ -e "$voce" ] || continue
+		[ -e "$voce" ] || [ -L "$voce" ] || continue
 		nome=$(basename "$voce")
 		case "$nome" in index.php|.htaccess|.DS_Store) continue ;; esac
+		# ⚠️ Un progetto che e' un collegamento resta un collegamento: ditto lo
+		# seguirebbe, e Apache servirebbe una copia ferma mentre si lavora
+		# sull'originale. Anche quelli rotti: sono dell'utente, non nostri.
+		if [ -L "$voce" ]; then
+			ln -s "$(readlink "$voce")" "$NEW/www/projects/$nome"
+			copiati=$((copiati + 1))
+			continue
+		fi
 		ditto "$voce" "$NEW/www/projects/$nome"
 		copiati=$((copiati + 1))
 	done
@@ -243,10 +347,11 @@ VH_NEW="$NEW/etc/extra/httpd-vhosts.conf"
 if [ -f "$VH_OLD" ]; then
 	say "Bringing back your virtual hosts..."
 	[ -f "$VH_NEW" ] && mv "$VH_NEW" "$VH_NEW.from-package-$STAMP"
-	sed -e "s#$RADICE_A_MONTE#$APPS/VXOST/vxostfiles#g" \
+	# progetti solo come nome intero: non progetti-old, non progetti2.
+	sed -E -e "s#$RADICE_A_MONTE#$APPS/VXOST/vxostfiles#g" \
 	    -e "s#/Applications/VXOST/vxostfiles#$APPS/VXOST/vxostfiles#g" \
-	    -e "s#$APPS/VXOST/vxostfiles/htdocs#$APPS/VXOST/vxostfiles/www#g" \
-	    -e "s#$APPS/VXOST/vxostfiles/www/progetti#$APPS/VXOST/vxostfiles/www/projects#g" \
+	    -e "s#$APPS/VXOST/vxostfiles/htdocs([/\"[:space:]]|\$)#$APPS/VXOST/vxostfiles/www\\1#g" \
+	    -e "s#$APPS/VXOST/vxostfiles/www/progetti([/\"[:space:]]|\$)#$APPS/VXOST/vxostfiles/www/projects\\1#g" \
 	    "$VH_OLD" > "$VH_NEW"
 fi
 
@@ -267,6 +372,7 @@ fi
 
 printf '%s\n' "$NEWVER" > "$NEW/$MARKER"
 trap - EXIT
+rm -f "$JOURNAL/backup"; rmdir "$JOURNAL" 2>/dev/null || true
 
 # --- 4. Avvio. ---------------------------------------------------------------
 
@@ -277,7 +383,7 @@ if [ -z "$SANDBOX" ]; then
 fi
 
 say ""
-say "Done. VXOST $NEWVER is installed, with your projects and databases."
+say "Done. VXOST $NEWVER is installed, with your projects, databases, virtual hosts and ports."
 say ""
 say "Your previous installation is untouched in:"
 say "  $BACKUP"
@@ -287,9 +393,16 @@ if [ "${vh_in_conf:-0}" -gt 0 ]; then
 	say "Note: your old httpd.conf had $vh_in_conf virtual host(s) written directly in it."
 	say "They were not copied. They are in $KEPT/etc/httpd.conf"
 fi
-say "Changes you made by hand to php.ini or my.cnf are not copied either:"
-say "the old files are in $KEPT/etc/"
+say "Not copied, because they may conflict with the new version: sites placed"
+say "directly in www/ outside the projects folder, virtual hosts and certificates"
+say "in httpd-ssl.conf, phpMyAdmin settings, and hand changes to php.ini or my.cnf."
+say "The old files are all in $KEPT"
+say "If you changed the database root password, phpMyAdmin will ask for it."
 say ""
 say "To go back: quit VXOST and stop the servers, then in Terminal:"
 say "  sudo mv \"$OLD\" \"$APPS/VXOST-new-$STAMP\""
 say "  sudo mv \"$BACKUP\" \"$OLD\""
+if [ -e "$BACKUP/VXOST.app.previous" ]; then
+	say "  sudo mv \"$APPS/VXOST.app\" \"$APPS/VXOST-new-$STAMP.app\""
+	say "  sudo mv \"$OLD/VXOST.app.previous\" \"$APPS/VXOST.app\""
+fi
