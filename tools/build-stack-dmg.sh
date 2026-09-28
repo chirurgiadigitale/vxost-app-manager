@@ -108,8 +108,16 @@ Your projects, databases and virtual hosts live inside the VXOST folder
 in Applications. Do NOT drag the new VXOST folder over the old one:
 Finder replaces the whole folder, and everything in it is deleted.
 
-Follow the steps at https://vxost.com/downloads/#updating instead.
-They keep the old installation aside until the new one works.
+Instead, with the old VXOST still in Applications, open Terminal and type
+"sudo bash " (with the space), drag "Update an existing VXOST.sh" from this
+disk onto the Terminal window, and press Return. One line, nothing else.
+
+The script checks everything before it changes anything, stops the
+servers and makes sure they really stopped, keeps your current
+installation untouched in Applications as "VXOST-old-<date>", installs
+this version and copies your projects, databases, virtual hosts and ports
+into it. If anything fails halfway, it puts the old installation back.
+It never deletes anything.
 
 
 If another local web or database server is already running on this Mac,
@@ -186,6 +194,19 @@ echo "Laying out the disk image"
 ditto "$STAGE/vxostfiles" "$LAYOUT/VXOST/vxostfiles"
 ditto "$STAGE/VXOST.app" "$LAYOUT/VXOST.app"
 ln -s /Applications "$LAYOUT/Applications"
+
+# Lo script di aggiornamento sta sul disco, accanto al pacchetto con cui
+# aggiorna: non ci sono versioni da abbinare, e copia lui la cartella nuova,
+# quindi nessuno deve trascinarla sopra quella vecchia (28/09/2026).
+bash -n "$HERE/tools/update-vxost.sh" || { echo "!! tools/update-vxost.sh is not valid shell" >&2; exit 1; }
+# Il verificatore dei nomi guarda lo staging, non il disco: questo file lo
+# controlla qui. /usr/bin/grep per nome, perche' ugrep non guarda dappertutto.
+if /usr/bin/grep -qiE 'xampp|bitnami' "$HERE/tools/update-vxost.sh" "$LAYOUT/READ ME FIRST.txt"; then
+    echo "!! the update script or the READ ME names the upstream stack" >&2
+    exit 1
+fi
+cp "$HERE/tools/update-vxost.sh" "$LAYOUT/Update an existing VXOST.sh"
+chmod 755 "$LAYOUT/Update an existing VXOST.sh"
 
 echo "Building the disk image (this takes a while)…"
 rm -f "$DIST/$NAME.dmg"
