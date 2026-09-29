@@ -1673,6 +1673,24 @@ def patch_blocco(text, nome, vecchio, nuovo, marcatore=None):
                      "quella nuova: qualcuno l'ha toccata\n")
     sys.exit(1)
 
+# (29/09/2026) MariaDB in una sessione sua. La trappola con eslogger ha visto
+# launchd (pid 1) mandare SIGTERM a mysqld 15-25 minuti dopo ogni avvio
+# dall'app: l'app avvia i servizi con "do shell script ... with administrator
+# privileges", launchd lo esegue come un lavoro, e chiudendolo termina tutto
+# il suo gruppo di processi. Apache e ProFTPD si staccano da soli (setsid);
+# mysql.server lanciato con & restava nel gruppo, e con lui MariaDB. Per
+# Davide era "MariaDB si spegne da sola quando mi allontano".
+#
+# Una riga sola, e si applica anche sugli script gia' patchati: sulla forma
+# nuova di startMySQL il blocco qui sopra dice "gia' patchato" e non tocca
+# niente, e la correzione non arriverebbe mai.
+text = patch_blocco(
+    text, "MariaDB parte in una sessione sua",
+    "\t$VXOST_ROOT/bin/mysql.server start > /dev/null 2>&1 &\n",
+    "\t# In una sessione sua (setsid): nel gruppo di processi di chi la avvia,\n"
+    "\t# launchd la terminava chiudendo il lavoro privilegiato dell'app.\n"
+    "\t/usr/bin/perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' \"$VXOST_ROOT/bin/mysql.server\" start > /dev/null 2>&1 &\n")
+
 # (28/09/2026) stopmysql era l'unico arresto senza checkRoot, e ora il
 # segnale lo manda la funzione stessa: senza root il KILL al supervisore e il
 # TERM a mysqld falliscono, e il messaggio lo direbbe solo dopo 30 secondi.
