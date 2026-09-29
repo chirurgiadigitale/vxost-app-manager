@@ -46,6 +46,8 @@ all: $(ICON) strings
 	@mkdir -p "$(MACOS_DIR)" "$(RES_DIR)"
 	@clang $(CFLAGS) $(LDFLAGS) -o "$(MACOS_DIR)/$(APP_NAME)" $(SOURCES)
 	@cp Resources/Info.plist "$(CONTENTS)/Info.plist"
+	@# La data della release la scrive la build: scritta a mano, restava "August".
+	@/usr/libexec/PlistBuddy -c "Add :VXReleaseDate string $$(date +%Y-%m-%d)" "$(CONTENTS)/Info.plist"
 	@cp $(ICON) "$(RES_DIR)/AppIcon.icns"
 	@# Le traduzioni: senza le .lproj nel bundle l'app mostrerebbe le chiavi.
 	@cp -R Resources/*.lproj "$(RES_DIR)/"

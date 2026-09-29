@@ -58,6 +58,16 @@ int main(void) { @autoreleasepool {
           @"la frase che il test si aspetta e' nello script generato");
     check([script containsString:@"echo VXOST_OK_UNVERIFIED"], @"e anche il marcatore");
 
+    section(@"La data della release si legge dalla build, non si scrive a mano");
+    // Il 29/09/2026 il pannello Informazioni della 9.26.4 diceva "Release
+    // August 2026": una frase scritta a mano nel catalogo, mai aggiornata.
+    check([XPReleaseLine(@"2026-09-29") isEqualToString:@"Release September 2026"],
+          @"2026-09-29 diventa Release September 2026, in inglese per scelta");
+    check([XPReleaseLine(@"2027-01-05") isEqualToString:@"Release January 2027"],
+          @"e il mese segue la data, non una lingua");
+    check(XPReleaseLine(nil).length == 0 && XPReleaseLine(@"boh").length == 0,
+          @"senza data valida non inventa niente");
+
     printf("\n\033[1m%d passati, %d falliti\033[0m\n\n", P, F);
     return F == 0 ? 0 : 1;
 }}

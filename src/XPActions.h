@@ -37,6 +37,10 @@ FOUNDATION_EXPORT XPScriptOutcome XPScriptOutcomeOf(NSString *output);
 /// Il testo completo del caso non verificato, su una riga e senza marcatori.
 FOUNDATION_EXPORT NSString *XPUnverifiedMessage(NSString *output);
 
+/// "Release September 2026" da una data AAAA-MM-GG, in inglese come il resto
+/// della riga. Stringa vuota se la data manca o non si legge.
+FOUNDATION_EXPORT NSString *XPReleaseLine(NSString *isoDate);
+
 @interface XPActions : NSObject
 
 + (instancetype)shared;

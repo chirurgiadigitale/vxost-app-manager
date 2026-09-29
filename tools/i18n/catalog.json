@@ -2888,24 +2888,6 @@
     "zh-Hans": "无法复制配置文件。没有写入任何内容。",
     "zh-Hant": "無法複製設定檔。沒有寫入任何內容。"
   },
-  "about.release": {
-    "comment": "Riga della release nel pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale)",
-    "en": "Release August 2026",
-    "it": "Release August 2026",
-    "de": "Release August 2026",
-    "es": "Release August 2026",
-    "fr": "Release August 2026",
-    "hu": "Release August 2026",
-    "ja": "Release August 2026",
-    "pl": "Release August 2026",
-    "pt-BR": "Release August 2026",
-    "ro": "Release August 2026",
-    "ru": "Release August 2026",
-    "tr": "Release August 2026",
-    "ur": "Release August 2026",
-    "zh-Hans": "Release August 2026",
-    "zh-Hant": "Release August 2026"
-  },
   "about.author": {
     "comment": "Chi pubblica VXOST, nel pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale)",
     "en": "Developed by Equipe Digitale, HARDCODE division",

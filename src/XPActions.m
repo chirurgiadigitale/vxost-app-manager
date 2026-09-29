@@ -40,6 +40,21 @@ NSString *XPUnverifiedMessage(NSString *output) {
                        : @"Apache is running, but the reload could not be verified. Open the site before relying on it.";
 }
 
+NSString *XPReleaseLine(NSString *isoDate) {
+    if (isoDate.length == 0) return @"";
+    NSDateFormatter *in = [[NSDateFormatter alloc] init];
+    in.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    in.dateFormat = @"yyyy-MM-dd";
+    NSDate *date = [in dateFromString:isoDate];
+    if (!date) return @"";
+    NSDateFormatter *out = [[NSDateFormatter alloc] init];
+    out.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    out.dateFormat = @"MMMM yyyy";
+    // In inglese in tutte le lingue, per scelta: e' la riga di un nome proprio
+    // e di una data, come il resto del pannello. Per questo niente catalogo.
+    return [@"Release " stringByAppendingString:[out stringFromDate:date]];
+}
+
 @implementation XPActions
 
 + (instancetype)shared {
@@ -263,7 +278,10 @@ NSString *XPUnverifiedMessage(NSString *output) {
 
     NSString *credits = [NSString stringWithFormat:
         @"%@\n\n%@\nwww.chirurgiadigitale.it\n\n%@",
-        NSLocalizedString(@"about.release", nil),
+        // ⚠️ La data la scrive la build nell'Info.plist (VXReleaseDate): la
+        // frase "Release August 2026" scritta a mano e' rimasta tale anche a
+        // settembre.
+        XPReleaseLine([[NSBundle mainBundle] objectForInfoDictionaryKey:@"VXReleaseDate"]),
         NSLocalizedString(@"about.author", nil),
         NSLocalizedString(@"about.licence", nil)];
 

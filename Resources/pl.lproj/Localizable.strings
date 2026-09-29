@@ -7,9 +7,6 @@
 /* Licenza, in fondo al pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
 "about.licence" = "Free software under the GNU GPL v2";
 
-/* Riga della release nel pannello Informazioni (in inglese in tutte le lingue: nomi propri e testo legale) */
-"about.release" = "Release August 2026";
-
 "alert.confirm.title" = "Potwierdzić operację?";
 
 "alert.disableSSL" = "Wyłączyć obsługę SSL w Apache? Apache zostanie uruchomiony ponownie.";
