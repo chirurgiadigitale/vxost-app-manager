@@ -112,6 +112,15 @@ Instead, with the old VXOST still in Applications, open Terminal and type
 "sudo bash " (with the space), drag "Update an existing VXOST.sh" from this
 disk onto the Terminal window, and press Return. One line, nothing else.
 
+If macOS answers that it cannot verify the script is free of malware, that
+is the download flag it puts on anything from the internet (the script is
+not notarised). Eject this disk, check the download against the checksum
+published at https://vxost.com/downloads/, then in Terminal:
+
+    xattr -d com.apple.quarantine ~/Downloads/VXOST-Stack-$VERSION.dmg
+
+Open the disk again and repeat the step above.
+
 The script checks everything before it changes anything, stops the
 servers and makes sure they really stopped, keeps your current
 installation untouched in Applications as "VXOST-old-<date>", installs
